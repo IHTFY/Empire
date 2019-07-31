@@ -8,11 +8,8 @@ document.getElementById('updateAnon').addEventListener('click', generateAnon);
 // Start list hidden
 document.getElementById('nameList').style.display = 'none';
 
-function addToList(sanitize) {
+function addToList() {
   let realName = document.getElementById('realName').value;
-  if (sanitize) {
-    realName = sanitize(realName);
-  }
   list[realName] = sanitizeName(document.getElementById('secretName').value);
   clearForm();
   updateList();
@@ -70,7 +67,7 @@ async function generateName() {
 async function generateFake() {
   document.getElementById('realName').value = 'Fake' + Date.now();
   document.getElementById('secretName').value = await generateName();
-  addToList(false);
+  addToList();
 }
 
 document.onkeydown = function (e) {
