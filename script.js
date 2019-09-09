@@ -54,7 +54,6 @@ const shuffle = a => {
 }
 
 const generateAnon = () => {
-  console.log('here');
   let mixedSecrets = shuffle(Object.values(list));
   anonList.textContent = JSON.stringify(mixedSecrets, null, 2);
 }
