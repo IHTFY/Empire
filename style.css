@@ -1,9 +1,15 @@
 body {
-  background-color: rgb(44, 48, 53);
-  color: rgb(181, 191, 224);
+  background-color: #2c3035;
+  color: #b5bfe0;
   font-family: 'century gothic', sans-serif;
 }
 
 pre {
   font-family: 'consolas', monospace;
+}
+
+input {
+  background-color: #242525;
+  border-color: #5e5d5a;
+  color: #e5e0d8;
 }
