@@ -1,4 +1,5 @@
 let list = {};
+let fakeNameList = [];
 
 const submitNames = document.getElementById('submitNames');
 const displayNames = document.getElementById('displayNames');
@@ -62,12 +63,15 @@ const generateWord = async () => {
   const url = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt';
   const response = await fetch(url);
   const text = await response.text();
-  return text.split('\n')[Math.floor(Math.random() * 10000)];
+  return text.split('\n');
 }
 
 const generateFake = async () => {
   realName.value = 'Fake' + Date.now();
-  secretName.value = await generateWord();
+  if (fakeNameList.length === 0) {
+    fakeNameList = await generateWord();
+  }
+  secretName.value = fakeNameList[Math.floor(Math.random() * 9885)];
   addToList();
 }
 
