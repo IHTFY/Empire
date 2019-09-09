@@ -8,6 +8,7 @@ const updateAnon = document.getElementById('updateAnon');
 const nameList = document.getElementById('nameList');
 const realName = document.getElementById('realName');
 const secretName = document.getElementById('secretName');
+const anonList = document.getElementById('anonList');
 
 const clearForm = () => {
   realName.value = '';
@@ -53,8 +54,9 @@ const shuffle = a => {
 }
 
 const generateAnon = () => {
-  let anonList = shuffle(Object.values(list));
-  anonList.textContent = JSON.stringify(anonList, null, 2);
+  console.log('here');
+  let mixedSecrets = shuffle(Object.values(list));
+  anonList.textContent = JSON.stringify(mixedSecrets, null, 2);
 }
 
 const generateWord = async () => {
