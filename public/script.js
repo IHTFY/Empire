@@ -59,7 +59,7 @@ const generateAnon = () => {
   anonList.textContent = JSON.stringify(mixedSecrets, null, 2);
 }
 
-const generateWord = async () => {
+const getEnglishWords = async () => {
   const url = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt';
   const response = await fetch(url);
   const text = await response.text();
@@ -67,11 +67,11 @@ const generateWord = async () => {
 }
 
 const generateFake = async () => {
-  realName.value = 'Fake' + Date.now();
   if (fakeNameList.length === 0) {
-    fakeNameList = await generateWord();
+    fakeNameList = await getEnglishWords();
   }
-  secretName.value = fakeNameList[Math.floor(Math.random() * 9885)];
+  realName.value = 'Fake' + Date.now();
+  secretName.value = fakeNameList[Math.floor(Math.random() * fakeNameList.length)];
   addToList();
 }
 
