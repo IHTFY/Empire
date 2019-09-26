@@ -13,3 +13,14 @@ input {
   border-color: #5e5d5a;
   color: #e5e0d8;
 }
+
+input[type=button] {
+  background: transparent;
+  border-radius: 5px;
+  border: 2px outset #29a0e4;
+  color: #b5bfe0;
+}
+
+input[type=button]:active {
+  border: 2px inset #29a0e4;
+}
