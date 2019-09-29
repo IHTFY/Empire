@@ -20,7 +20,7 @@
 </head>
 
 <body>
-  <div class="create">
+  <div class="create" style="display: block;">
     <label>
       Game Code: <input type="text" id="userGameCode">
     </label>
@@ -28,7 +28,7 @@
     <input id="joinButton" type="button" value="Join">
   </div>
 
-  <div class="setup">
+  <div class="setup" style="display: none;">
     <div>
       <label>
         Your Real Name: <input type="text" id="realName">
@@ -42,19 +42,21 @@
     <input id="submitNames" type="button" value="Submit">
   </div>
 
-  <div class="play">
-    <input id="displayNames" type="button" value="Show List">
-    <input id="clearNames" type="button" value="Clear List">
-    <input id="generateName" type="button" value="Generate Fake">
-  </div>
-  <div>
-    <p>Name List:</p>
-    <pre id="nameList"></pre>
-  </div>
-  <input id="updateAnon" type="button" value="Update Nickname List">
-  <div>
-    <p>Anonymous List:</p>
-    <pre id="anonList"></pre>
+  <div class="play" style="display: none;">
+    <div>
+      <input id="displayNames" type="button" value="Show List">
+      <input id="clearNames" type="button" value="Clear List">
+      <input id="generateName" type="button" value="Generate Fake">
+    </div>
+    <div>
+      <p>Name List:</p>
+      <pre id="nameList"></pre>
+    </div>
+    <input id="updateAnon" type="button" value="Update Nickname List">
+    <div>
+      <p>Anonymous List:</p>
+      <pre id="anonList"></pre>
+    </div>
   </div>
 </body>
 
