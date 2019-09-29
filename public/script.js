@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const joinButton = document.getElementById('joinButton');
 
   async function doesGameExist(code) {
-    if (!code && code != 0) return false;
+    if (code === '') return false;
     return (await db.collection('games').doc(code).get()).exists;
   }
 
@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Game ID: ${gameID}`);
 
     // change view from game code to user creation
+    document.getElementsByClassName('create')[0].style.display = 'none';
+    setupUser();
   }
 
   createButton.addEventListener('click', async () => {
@@ -59,27 +61,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  let userID = null;
+  let userRef = null;
   async function setupUser() {
-    // ask the user for their real name
-    let userRealName = prompt("Your Real Name", 'realname1');
-    // make sure name is unique within the game
+    document.getElementsByClassName('setup')[0].style.display = 'block';
+    const realName = document.getElementById('realName');
+    const secretName = document.getElementById('secretName');
+    const submitNames = document.getElementById('submitNames');
 
-    // create user
-    async function createUser(user) {
-      return (await db.collection('users').add(({ real: user, clan: user }))).id;
-    }
-    let userID = await createUser(userRealName);
-    let userRef = db.collection('users').doc(userRealName);
-    console.log(`User ID: ${userRealName}`);
 
-    // add the user to their game
-    gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(userRealName) });
+    submitNames.addEventListener('click', async () => {
+      // ask the user for their real name
+      let userRealName = realName.value;
 
-    // get the user's fake name
-    let userFakeName = prompt("Your Secret Name", 'mysteryname1');
-    // update the user profile with their fake name
-    userRef.update({ fake: userFakeName });
+      function isValidName(n) {
+        if (n === '') return false;
+        // TODO check if name is unique within the game
+        return true;
+      }
+
+      if (isValidName(userRealName)) {
+        // create user
+        async function createUser(user) {
+          return (await db.collection('users').add(({ real: user, clan: user }))).id;
+        }
+        userID = await createUser(userRealName);
+        userRef = db.collection('users').doc(userID);
+        console.log(`User ID: ${userRealName}`);
+
+        // add the user to their game
+        gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(userID) });
+
+        // get the user's fake name
+        let userFakeName = secretName.value;
+
+        function isValidSecretName(n) {
+          if (n === '') return false;
+          // TODO do checks on secret name
+          return true;
+        }
+
+        if (isValidSecretName(userFakeName)) {
+          // update the user profile with their fake name
+          userRef.update({ fake: userFakeName });
+
+          document.getElementsByClassName('setup')[0].style.display = 'none';
+          startGame();
+        } else {
+          console.log('invalid secret name')
+        }
+      } else {
+        console.log('invalid real name');
+      }
+    });
   };
+
+  async function startGame() {
+    document.getElementsByClassName('play')[0].style.display = 'block';
+  }
 
 
   function doEverythingElse() {
@@ -180,34 +219,5 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   }
-  doEverythingElse();
+  // doEverythingElse();
 });
-
-// let svg = d3.select("body")
-//     .append("svg")
-//     .attr("width", window.innerWidth)
-//     .attr("height", window.innerHeight);
-
-
-// let svg = d3.select("svg");
-
-// let canvas = svg.append('g');
-// let clickSurface = svg.append('g');
-// let clickCount = 0;
-
-// clickSurface.append('rect')
-//     .attr('width', window.innerWidth)
-//     .attr('height', window.innerHeight)
-//     .style('opacity', 0)
-//     .on('click', function (d) {
-//         canvas.append('circle')
-//             .attr('r', 50)
-//             .attr('fill', `hsl(${clickCount+=10%360},100%,50%)`)
-//             .attr('cx', d3.mouse(this)[0])
-//             .attr('cy', d3.mouse(this)[1])
-//             .transition()
-//             .duration(1000)
-//             .attr('r', window.innerHeight)
-//             .style('opacity', 0)
-//             .remove();
-//     });
