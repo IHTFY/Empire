@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async event => {
+document.addEventListener('DOMContentLoaded', async () => {
   const db = firebase.firestore();
 
   // show screen to choose: join game, or create game
@@ -7,13 +7,8 @@ document.addEventListener('DOMContentLoaded', async event => {
   const joinButton = document.getElementById('joinButton');
 
   async function doesGameExist(code) {
-    if (!code) return false;
+    if (!code && code != 0) return false;
     return (await db.collection('games').doc(code).get()).exists;
-  }
-
-  // returns gameRef
-  async function getGame(code) {
-    return db.collection('games').doc(code);
   }
 
   // add the game and save the ID, make sure we check above that the gameCode doesn't exist
@@ -24,11 +19,11 @@ document.addEventListener('DOMContentLoaded', async event => {
       "users": {},
       "clans": {}
     }
-    if (code !== '') {
+    if (code === '') {
+      return (await db.collection('games').add(game)).id;
+    } else {
       await db.collection('games').doc(code).set(game);
       return code;
-    } else {
-      return (await db.collection('games').add(game)).id;
     }
   }
 
