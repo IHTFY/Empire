@@ -7,29 +7,42 @@
   <title>Empire</title>
   <link rel="stylesheet" href="style.css">
   <!-- update the version number as needed -->
-  <script defer src="/__/firebase/6.6.2/firebase-app.js"></script>
+  <script defer src="/__/firebase/7.0.0/firebase-app.js"></script>
   <!-- include only the Firebase features as you need -->
-  <script defer src="/__/firebase/6.6.2/firebase-auth.js"></script>
-  <script defer src="/__/firebase/6.6.2/firebase-database.js"></script>
-  <script defer src="/__/firebase/6.6.2/firebase-messaging.js"></script>
-  <script defer src="/__/firebase/6.6.2/firebase-storage.js"></script>
+  <!-- <script defer src="/__/firebase/7.0.0/firebase-auth.js"></script> -->
+  <script defer src="/__/firebase/7.0.0/firebase-firestore.js"></script>
+  <!-- <script defer src="/__/firebase/7.0.0/firebase-messaging.js"></script> -->
+  <script defer src="/__/firebase/7.0.0/firebase-storage.js"></script>
   <!-- initialize the SDK after all desired features are loaded -->
   <script defer src="/__/firebase/init.js"></script>
+  <!-- Initialize Empire Game -->
+  <script defer src="script.js"></script>
 </head>
 
 <body>
-  <div>
+  <div class="create">
     <label>
-      Your Real Name: <input type="text" id="realName">
+      Game Code: <input type="text" id="userGameCode">
     </label>
+    <input id="createButton" type="button" value="Create">
+    <input id="joinButton" type="button" value="Join">
   </div>
-  <div>
-    <label>
-      Secret Nickname: <input type="password" id="secretName">
-    </label>
-  </div>
-  <div>
+
+  <div class="setup">
+    <div>
+      <label>
+        Your Real Name: <input type="text" id="realName">
+      </label>
+    </div>
+    <div>
+      <label>
+        Secret Nickname: <input type="password" id="secretName">
+      </label>
+    </div>
     <input id="submitNames" type="button" value="Submit">
+  </div>
+
+  <div class="play">
     <input id="displayNames" type="button" value="Show List">
     <input id="clearNames" type="button" value="Clear List">
     <input id="generateName" type="button" value="Generate Fake">
@@ -43,41 +56,6 @@
     <p>Anonymous List:</p>
     <pre id="anonList"></pre>
   </div>
-
-  <!-- The core Firebase JS SDK is always required and must be listed first -->
-  <script src="/__/firebase/6.6.2/firebase-app.js"></script>
-
-  <!-- TODO: Add SDKs for Firebase products that you want to use
-           https://firebase.google.com/docs/web/setup#available-libraries -->
-  <script src="/__/firebase/6.6.2/firebase-analytics.js"></script>
-
-  <!-- Initialize Firebase -->
-  <script src="/__/firebase/init.js"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-      // // The Firebase SDK is initialized and available here!
-      //
-      // firebase.auth().onAuthStateChanged(user => { });
-      // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-      // firebase.messaging().requestPermission().then(() => { });
-      // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-      //
-      // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-      try {
-        let app = firebase.app();
-        let features = ['auth', 'database', 'messaging', 'storage'].filter(feature => typeof app[feature] === 'function');
-        document.getElementById('load').innerHTML = `Firebase SDK loaded with ${features.join(', ')}`;
-      } catch (e) {
-        console.error(e);
-        document.getElementById('load').innerHTML = 'Error loading the Firebase SDK, check the console.';
-      }
-    });
-  </script>
-
-  <script src="script.js"></script>
 </body>
 
 </html>
