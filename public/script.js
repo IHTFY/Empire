@@ -6,42 +6,74 @@ document.addEventListener('DOMContentLoaded', async event => {
   const createButton = document.getElementById('createButton');
   const joinButton = document.getElementById('joinButton');
 
-  let joinOrNew = null;
-
-  // get the game code
-  let gameCode = null;
-  const setCodeAndChoice = choice => {
-    gameCode = userGameCode.value;
-    joinOrNew = choice;
-  };
-
-  const doesGameExist = async code => (await db.collection('games').doc(code).get()).exists;
+  async function doesGameExist(code) {
+    if (!code) return false;
+    return (await db.collection('games').doc(code).get()).exists;
+  }
 
   // returns gameRef
-  const getGame = async code => db.collection('games').doc(code);
+  async function getGame(code) {
+    return db.collection('games').doc(code);
+  }
 
   // add the game and save the ID, make sure we check above that the gameCode doesn't exist
-  const createGame = async (game) => {
-    if (gameCode !== '') {
-      await db.collection('games').doc(gameCode).set(game);
-      return gameCode;
+  async function createGame(code) {
+    let game = {
+      "state": "initializing",
+      // "turn": null,
+      "users": {},
+      "clans": {}
+    }
+    if (code !== '') {
+      await db.collection('games').doc(code).set(game);
+      return code;
     } else {
       return (await db.collection('games').add(game)).id;
     }
   }
 
-  const initGame = async gameID => {
+  let gameID = null;
+  let gameRef = null;
+
+  async function initGame(gameID) {
     document.title = `Empire: ${gameID}`
-    let gameRef = db.collection('games').doc(gameID);
+    gameRef = db.collection('games').doc(gameID);
     console.log(`Game ID: ${gameID}`);
 
+    // change view from game code to user creation
+  }
+
+  createButton.addEventListener('click', async () => {
+    let gameCode = userGameCode.value;
+    if (await doesGameExist(gameCode)) {
+      console.log(`${gameCode} exists already. Join or choose a new Game Code.`);
+    } else {
+      gameID = await createGame(gameCode);
+      userGameCode.value = gameID;
+      initGame(gameID);
+    }
+  });
+
+  joinButton.addEventListener('click', async () => {
+    let gameCode = userGameCode.value;
+    if (!await doesGameExist(gameCode)) {
+      console.log(`${gameCode} doesn't exist. Check the code or create a new game with this code.`);
+    } else {
+      gameID = gameCode;
+      initGame(gameID);
+    }
+  });
+
+  async function setupUser() {
     // ask the user for their real name
     let userRealName = prompt("Your Real Name", 'realname1');
     // make sure name is unique within the game
 
     // create user
-    const createUser = async (user) => await db.collection('users').doc(user).set({ clan: user });
-    await createUser(userRealName);
+    async function createUser(user) {
+      return (await db.collection('users').add(({ real: user, clan: user }))).id;
+    }
+    let userID = await createUser(userRealName);
     let userRef = db.collection('users').doc(userRealName);
     console.log(`User ID: ${userRealName}`);
 
@@ -52,38 +84,10 @@ document.addEventListener('DOMContentLoaded', async event => {
     let userFakeName = prompt("Your Secret Name", 'mysteryname1');
     // update the user profile with their fake name
     userRef.update({ fake: userFakeName });
-  }
-
-  let gameID = null;
-
-  createButton.addEventListener('click', async () => {
-    setCodeAndChoice('create');
-    if (await doesGameExist(gameCode)) {
-      console.log(`${gameCode} exists already. Join or choose a new Game Code.`);
-    } else {
-      gameID = await createGame({
-        "state": "initializing",
-        // "turn": null,
-        "users": {},
-        "clans": {}
-      });
-      initGame(gameID);
-    }
-  });
-
-  joinButton.addEventListener('click', async () => {
-    setCodeAndChoice('new');
-    if (!await doesGameExist(gameCode)) {
-      console.log(`${gameCode} doesn't exist. Check the code or create a new game with this code.`);
-    } else {
-      gameID = gameCode;
-      initGame(gameID);
-    }
-  });
+  };
 
 
-  const doEverythingElse = () => {
-
+  function doEverythingElse() {
     let list = {};
     let fakeNameList = [];
 
@@ -97,42 +101,42 @@ document.addEventListener('DOMContentLoaded', async event => {
     const secretName = document.getElementById('secretName');
     const anonList = document.getElementById('anonList');
 
-    const clearForm = () => {
+    function clearForm() {
       realName.value = '';
       secretName.value = '';
     }
 
-    const updateList = () => {
+    function updateList() {
       nameList.textContent = JSON.stringify(list, null, 2);
     }
 
-    const addToList = () => {
+    function addToList() {
       list[realName.value] = sanitizeName(secretName.value);
       clearForm();
       updateList();
     }
 
-    const clearList = () => {
+    function clearList() {
       list = {};
       updateList();
     }
 
-    const sanitizeName = raw => {
+    function sanitizeName(raw) {
       //TODO different rules for allowed characters etc.
       return raw.toUpperCase().replace(/[^A-Z]/g, '').trim();
     }
 
-    const toggleDisplay = id => {
+    function toggleDisplay(id) {
       let elt = document.getElementById(id);
       elt.style.display = elt.style.display === 'none' ? 'block' : 'none';
     }
 
-    const toggleList = () => {
+    function toggleList() {
       toggleDisplay('nameList');
       displayNames.value = displayNames.value.includes('Show') ? 'Hide List' : 'Show List';
     }
 
-    const shuffle = a => {
+    function shuffle(a) {
       for (let i = 0; i < a.length - 1; i++) {
         let j = i + Math.floor(Math.random() * (a.length - i));
         [a[i], a[j]] = [a[j], a[i]];
@@ -140,19 +144,19 @@ document.addEventListener('DOMContentLoaded', async event => {
       return a;
     }
 
-    const generateAnon = () => {
+    function generateAnon() {
       let mixedSecrets = shuffle(Object.values(list));
       anonList.textContent = JSON.stringify(mixedSecrets, null, 2);
     }
 
-    const getEnglishWords = async () => {
+    async function getEnglishWords() {
       const url = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt';
       const response = await fetch(url);
       const text = await response.text();
       return text.split('\n');
     }
 
-    const generateFake = async () => {
+    async function generateFake() {
       if (fakeNameList.length === 0) {
         fakeNameList = await getEnglishWords();
       }
