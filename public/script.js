@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (isValidName(userRealName)) {
         // create user
         async function createUser(user) {
-          return (await db.collection('users').add(({ real: user, clan: user }))).id;
+          return (await db.collection('users').add(({ game: gameID, real: user, clan: user }))).id;
         }
         userID = await createUser(userRealName);
         userRef = db.collection('users').doc(userID);
@@ -118,6 +118,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function startGame() {
     document.getElementsByClassName('play')[0].style.display = 'block';
+    // TODO
+    gameRef.onSnapshot(async snapshot => {
+      let game = snapshot.data();
+      updateUserList();
+    });
+  }
+
+  async function updateUserList() {
+    let currentUsers = (await db.collection('users').where('game', '==', gameID).get());
+    const nameList = document.getElementById('nameList');
+    nameList.innerHTML = '';
+    currentUsers.forEach(snap => {
+      let n = document.createElement('li');
+      n.textContent = snap.data()['real'];
+      nameList.appendChild(n);
+    });
   }
 
 
