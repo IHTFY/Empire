@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // trigger sidenav on mobile
   M.Sidenav.init(document.querySelectorAll('.sidenav'));
-  // can try autoinit too
+  // can try autoinit too, if no options are used
   // M.AutoInit();
 
   // show screen to choose: join game, or create game
@@ -74,10 +74,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function setupUser() {
     document.getElementsByClassName('setup')[0].style.display = 'block';
     const realName = document.getElementById('realName');
+    const realNameHelper = document.getElementById('realNameHelper');
     const secretName = document.getElementById('secretName');
+    const secretNameHelper = document.getElementById('secretNameHelper');
     const submitNames = document.getElementById('submitNames');
 
     submitNames.addEventListener('click', async () => {
+      realName.className = 'validate';
+      secretName.className = 'validate';
+
       // ask the user for their real name
       let userRealName = realName.value;
 
@@ -88,6 +93,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (isValidName(userRealName)) {
+        realName.className = 'valid';
+
         // create user
         async function createUser(user) {
           return (await db.collection('users').add(({ game: gameID, real: user, clan: user }))).id;
@@ -109,16 +116,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (isValidSecretName(userFakeName)) {
+          secretName.className = 'valid';
+
           // update the user profile with their fake name
           userRef.update({ fake: userFakeName });
 
           document.getElementsByClassName('setup')[0].remove();
           startGame();
         } else {
-          console.log('invalid secret name')
+          secretName.className = 'invalid';
+          secretNameHelper.setAttribute('data-error', 'Invalid Secret Name');
         }
       } else {
-        console.log('invalid real name');
+        realName.className = 'invalid';
+        realNameHelper.setAttribute('data-error', 'Invalid Real Name');
       }
     });
   };
