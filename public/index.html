@@ -12,7 +12,7 @@
   <!-- <script defer src="/__/firebase/7.0.0/firebase-auth.js"></script> -->
   <script defer src="/__/firebase/7.0.0/firebase-firestore.js"></script>
   <!-- <script defer src="/__/firebase/7.0.0/firebase-messaging.js"></script> -->
-  <script defer src="/__/firebase/7.0.0/firebase-storage.js"></script>
+  <!-- <script defer src="/__/firebase/7.0.0/firebase-storage.js"></script> -->
   <!-- initialize the SDK after all desired features are loaded -->
   <script defer src="/__/firebase/init.js"></script>
 
@@ -58,10 +58,12 @@
     <div class="input-field">
       <input id="realName" type="text" class="validate">
       <label for="realName">Your Real Name</label>
+      <span id="realNameHelper" class="helper-text"></span>
     </div>
     <div class="input-field">
       <input id="secretName" type="password" class="validate">
       <label for="secretName">Secret Nickname</label>
+      <span id="secretNameHelper" class="helper-text"></span>
     </div>
     <button id="submitNames" class="btn waves-effect waves-light blue" type="button">Submit</button>
   </div>
