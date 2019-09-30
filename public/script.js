@@ -3,9 +3,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // trigger sidenav on mobile
   M.Sidenav.init(document.querySelectorAll('.sidenav'));
+  // can try autoinit too
+  // M.AutoInit();
 
   // show screen to choose: join game, or create game
   const userGameCode = document.getElementById('userGameCode');
+  const userGameCodeHelper = document.getElementById('userGameCodeHelper');
   const createButton = document.getElementById('createButton');
   const joinButton = document.getElementById('joinButton');
 
@@ -46,7 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   createButton.addEventListener('click', async () => {
     let gameCode = userGameCode.value;
     if (await doesGameExist(gameCode)) {
-      console.log(`${gameCode} exists already. Join or choose a new Game Code.`);
+      userGameCode.className = 'invalid';
+      userGameCodeHelper.setAttribute('data-error', `${gameCode} already exists. Join or choose a new Game Code.`);
     } else {
       gameID = await createGame(gameCode);
       userGameCode.value = gameID;
@@ -57,7 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   joinButton.addEventListener('click', async () => {
     let gameCode = userGameCode.value;
     if (!await doesGameExist(gameCode)) {
-      console.log(`${gameCode} doesn't exist. Check the code or create a new game with this code.`);
+      userGameCode.className = 'invalid';
+      userGameCodeHelper.setAttribute('data-error', `${gameCode} doesn't exist. Check the code or create a new game with this code.`);
     } else {
       gameID = gameCode;
       initGame(gameID);
@@ -119,6 +124,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   async function startGame() {
+    let fakeNameList = [];
+    let fakes = 0;
+
+    async function getEnglishWords() {
+      const url = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt';
+      const response = await fetch(url);
+      const text = await response.text();
+      return text.split('\n');
+    }
+
+    async function generateFake() {
+      if (fakes === 0) {
+        fakeNameList = await getEnglishWords();
+      }
+      let fakeName = `Fake${fakes}`;
+      let fakeSecret = fakeNameList[Math.floor(Math.random() * fakeNameList.length)];
+
+      // add the fake user to users
+      let fakeID = (await db.collection('users').add(({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret }))).id;
+
+      // add the fake user to their game
+      gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(fakeID) });
+
+      fakes++;
+    }
+
+    const generateName = document.getElementById('generateName');
+    generateName.addEventListener('click', generateFake);
+
     document.getElementsByClassName('play')[0].style.display = 'block';
     // TODO
     gameRef.onSnapshot(async snapshot => {

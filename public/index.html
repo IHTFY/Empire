@@ -40,17 +40,18 @@
   </nav>
 
   <ul class="sidenav" id="mobile-nav">
-      <li><a href="http://www.bestpartygames.co.uk/games/empire-game">TODO instructions modal</a></li>
-      <li><a href="https://frankiemercado.com">TODO my links and code on github</a></li>
+    <li><a href="http://www.bestpartygames.co.uk/games/empire-game">TODO instructions modal</a></li>
+    <li><a href="https://frankiemercado.com">TODO my links and code on github</a></li>
   </ul>
 
   <div class="create container" style="display: block;">
     <div class="input-field">
       <input id="userGameCode" type="text" class="validate">
       <label for="userGameCode">Game Code</label>
+      <span id="userGameCodeHelper" class="helper-text"></span>
     </div>
-    <button id="createButton" class="btn waves-effect waves-light blue" type="submit">Create</button>
-    <button id="joinButton" class="btn waves-effect waves-light blue" type="submit">Join</button>
+    <button id="createButton" class="btn waves-effect waves-light blue" type="button">Create</button>
+    <button id="joinButton" class="btn waves-effect waves-light blue" type="button">Join</button>
   </div>
 
   <div class="setup container" style="display: none;">
@@ -62,14 +63,12 @@
       <input id="secretName" type="password" class="validate">
       <label for="secretName">Secret Nickname</label>
     </div>
-    <button id="submitNames" class="btn waves-effect waves-light blue" type="submit">Submit</button>
+    <button id="submitNames" class="btn waves-effect waves-light blue" type="button">Submit</button>
   </div>
 
   <div class="play container" style="display: none;">
-    <div>
-      <input id="displayNames" type="button" value="Show List">
-      <input id="clearNames" type="button" value="Clear List">
-      <input id="generateName" type="button" value="Generate Fake">
+    <div class="section">
+      <div id="generateName" class="waves-effect waves-light btn-small blue">Create Fake User</div>
     </div>
     <table>
       <thead>
@@ -80,11 +79,6 @@
       <tbody id="nameList">
       </tbody>
     </table>
-    <input id="updateAnon" type="button" value="Update Nickname List">
-    <div>
-      <p>Anonymous List:</p>
-      <pre id="anonList"></pre>
-    </div>
   </div>
 </body>
 
