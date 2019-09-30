@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const db = firebase.firestore();
 
+  // trigger sidenav on mobile
+  M.Sidenav.init(document.querySelectorAll('.sidenav'));
+
   // show screen to choose: join game, or create game
   const userGameCode = document.getElementById('userGameCode');
   const createButton = document.getElementById('createButton');
@@ -36,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Game ID: ${gameID}`);
 
     // change view from game code to user creation
-    document.getElementsByClassName('create')[0].style.display = 'none';
+    document.getElementsByClassName('create')[0].remove();//.style.display = 'none';
     setupUser();
   }
 
@@ -68,7 +71,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const realName = document.getElementById('realName');
     const secretName = document.getElementById('secretName');
     const submitNames = document.getElementById('submitNames');
-
 
     submitNames.addEventListener('click', async () => {
       // ask the user for their real name
@@ -105,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           // update the user profile with their fake name
           userRef.update({ fake: userFakeName });
 
-          document.getElementsByClassName('setup')[0].style.display = 'none';
+          document.getElementsByClassName('setup')[0].remove();
           startGame();
         } else {
           console.log('invalid secret name')
@@ -130,9 +132,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nameList = document.getElementById('nameList');
     nameList.innerHTML = '';
     currentUsers.forEach(snap => {
-      let n = document.createElement('li');
-      n.textContent = snap.data()['real'];
-      nameList.appendChild(n);
+      let row = document.createElement('tr');
+      let cell = document.createElement('td');
+      cell.textContent = snap.data()['real'];
+      row.appendChild(cell);
+      nameList.appendChild(row);
     });
   }
 
