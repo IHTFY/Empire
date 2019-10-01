@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // add the game and save the ID, make sure we check above that the gameCode doesn't exist
   async function createGame(code) {
-    let game = {
+    const game = {
       "state": "initializing",
       // "turn": null,
       "users": {},
@@ -39,14 +39,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function initGame(gameID) {
     document.title = `Empire: ${gameID}`
     gameRef = db.collection('games').doc(gameID);
+
+    let gameLink = `${window.location.origin}?code=${gameID}`;
+    
+    let shareLink = document.createElement('button');
+    shareLink.textContent = 'Get Game Link';
+    shareLink.className = 'waves-effect waves-light btn';
+    shareLink.addEventListener('click', () => {
+      navigator.clipboard.writeText(gameLink).then(function () {
+        M.toast({html: 'Copied Game Link to Clipboard'});
+      }, function (err) {
+        M.toast({html: 'Error Copying Game Link to Clipboard'});
+      });
+    });
+
+    let shareIcon = document.createElement('i');
+    shareIcon.className = "material-icons left";
+    shareIcon.textContent = 'person_add';
+    shareLink.appendChild(shareIcon)
+
+    document.getElementById('gameLink').appendChild(shareLink);
+
     console.log(`Game ID: ${gameID}`);
 
     // change view from game code to user creation
-    document.getElementsByClassName('create')[0].remove();//.style.display = 'none';
+    document.getElementsByClassName('create')[0].remove();
     setupUser();
   }
 
-  createButton.addEventListener('click', async () => {
+  async function tryCreating() {
     let gameCode = userGameCode.value;
     if (await doesGameExist(gameCode)) {
       userGameCode.className = 'invalid';
@@ -56,9 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       userGameCode.value = gameID;
       initGame(gameID);
     }
-  });
+  }
 
-  joinButton.addEventListener('click', async () => {
+  async function tryJoining() {
     let gameCode = userGameCode.value;
     if (!await doesGameExist(gameCode)) {
       userGameCode.className = 'invalid';
@@ -67,7 +88,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       gameID = gameCode;
       initGame(gameID);
     }
-  });
+  }
+
+  let urlCode = (new URL(window.location.href)).searchParams.get("code");
+  if (urlCode) {
+    document.getElementById('userGameCodeLabel').className = 'active';
+    userGameCode.value = urlCode;
+    tryJoining();
+  }
+
+  createButton.addEventListener('click', tryCreating);
+  joinButton.addEventListener('click', tryJoining);
 
   let userID = null;
   let userRef = null;
@@ -165,9 +196,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     generateName.addEventListener('click', generateFake);
 
     document.getElementsByClassName('play')[0].style.display = 'block';
-    // TODO
+    // TODO this is when anyting in the game doc changes
     gameRef.onSnapshot(async snapshot => {
-      let game = snapshot.data();
+      let game = snapshot.data(); // TODO data not used yet
       updateUserList();
     });
   }
