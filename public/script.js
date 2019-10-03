@@ -1,23 +1,29 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // // Initialize the FirebaseUI Widget using Firebase.
-  // const ui = new firebaseui.auth.AuthUI(firebase.auth());
+
+  let uid = null;
+  let userRef = null;
 
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
       // TODO ask to sign in
+      // // Initialize the FirebaseUI Widget using Firebase.
+      // const ui = new firebaseui.auth.AuthUI(firebase.auth());
       // else, Anonymously login the user
       firebase.auth().signInAnonymously().catch(err => {
         console.error(`Error code ${err.code}: ${err.message}`);
       });
     } else {
       // User is signed in.
-      var isAnonymous = user.isAnonymous;
-      var uid = user.uid;
+      let isAnonymous = user.isAnonymous;
+      uid = user.uid;
+      userRef = db.collection('users').doc(uid);
       if (isAnonymous) {
         console.log('User is anonymous.');
         // TODO prompt to connect account
       }
-      console.log(user, uid);
+      console.log(user)
+      console.log('User ID: ' + uid);
+      // TODO create signout button
     }
   });
 
@@ -125,8 +131,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   createButton.addEventListener('click', tryCreating);
   joinButton.addEventListener('click', tryJoining);
 
-  let userID = null;
-  let userRef = null;
   async function setupUser() {
     document.getElementsByClassName('setup')[0].classList.remove('hide');
     const realName = document.getElementById('realName');
@@ -152,23 +156,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         realName.classList.add('valid');
 
         // create user
-        async function createUser(user) {
-          return (await db.collection('users').add(({ game: gameID, real: user, clan: user }))).id;
-        }
-        userID = await createUser(userRealName);
-        userRef = db.collection('users').doc(userID);
-        console.log(`User ID: ${userRealName}`);
+        userRef.set({ game: gameID, real: userRealName, clan: userRealName });
 
         // add the user to their game
-        gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(userID) });
-
-        // get the user's fake name
-        let userFakeName = secretName.value;
+        gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(uid) });
 
       } else {
         realName.classList.add('invalid');
         realNameHelper.setAttribute('data-error', 'Invalid Real Name');
       }
+
+      // get the user's fake name
+      let userFakeName = secretName.value;
 
       function isValidSecretName(n) {
         if (n === '') return false;
@@ -177,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (isValidSecretName(userFakeName)) {
-        secretName.classList('valid');
+        secretName.classList.add('valid');
 
         if (isValidName(userRealName)) {
           // update the user profile with their fake name
