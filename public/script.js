@@ -4,27 +4,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // TODO allow real auth sign in, converting from anon to real, and do a check on page load whether already logged in. I think the UI has that last part bulit in.
 
-  // Anonymously login the user
-  firebase.auth().signInAnonymously().catch(err => {
-    // Handle Errors here.
-    const errorCode = err.code;
-    const errorMessage = err.message;
-    console.error(`Error code ${errorCode}: ${errorMessage}`);
-  });
-
   firebase.auth().onAuthStateChanged(user => {
-    if (user) {
+    if (!user) {
+      // User is signed out.
+      console.log('User is signed out.');
+
+      // TODO ask to sign in
+      // else, anonymous
+      // Anonymously login the user
+      firebase.auth().signInAnonymously().catch(err => {
+        console.error(`Error code ${err.code}: ${err.message}`);
+      });
+    } else {
       // User is signed in.
       var isAnonymous = user.isAnonymous;
       var uid = user.uid;
+      if (isAnonymous) {
+        console.log('User is anonymous.');
+        // TODO prompt to connect account
+      }
+      console.log(user);
       console.log(`User is signed in. ${isAnonymous ? 'Anon' : ''} ${uid}`);
-    } else {
-      // User is signed out.
-      console.log('User is signed out.');
     }
   });
-
-
 
   // Start the database instance
   const db = firebase.firestore();
