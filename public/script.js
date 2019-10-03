@@ -2,16 +2,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // // Initialize the FirebaseUI Widget using Firebase.
   // const ui = new firebaseui.auth.AuthUI(firebase.auth());
 
-  // TODO allow real auth sign in, converting from anon to real, and do a check on page load whether already logged in. I think the UI has that last part bulit in.
-
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
-      // User is signed out.
-      console.log('User is signed out.');
-
       // TODO ask to sign in
-      // else, anonymous
-      // Anonymously login the user
+      // else, Anonymously login the user
       firebase.auth().signInAnonymously().catch(err => {
         console.error(`Error code ${err.code}: ${err.message}`);
       });
@@ -23,8 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('User is anonymous.');
         // TODO prompt to connect account
       }
-      console.log(user);
-      console.log(`User is signed in. ${isAnonymous ? 'Anon' : ''} ${uid}`);
+      console.log(user, uid);
     }
   });
 
@@ -74,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let shareLink = document.createElement('button');
     shareLink.textContent = 'Get Game Link';
-    shareLink.className = 'waves-effect waves-light btn blue';
+    shareLink.classList.add('waves-effect waves-light btn blue');
     shareLink.addEventListener('click', () => {
       navigator.clipboard.writeText(gameLink).then(function () {
         M.toast({ html: 'Copied Game Link to Clipboard' });
@@ -84,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     let shareIcon = document.createElement('i');
-    shareIcon.className = "material-icons left";
+    shareIcon.classList.add("material-icons left");
     shareIcon.textContent = 'person_add';
     shareLink.appendChild(shareIcon)
 
@@ -100,7 +93,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function tryCreating() {
     let gameCode = userGameCode.value;
     if (await doesGameExist(gameCode)) {
-      userGameCode.className = 'invalid';
+      userGameCode.classList.remove('valid');
+      userGameCode.classList.add('invalid');
       userGameCodeHelper.setAttribute('data-error', `${gameCode} already exists. Join or choose a new Game Code.`);
     } else {
       gameID = await createGame(gameCode);
@@ -112,7 +106,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function tryJoining() {
     let gameCode = userGameCode.value;
     if (!await doesGameExist(gameCode)) {
-      userGameCode.className = 'invalid';
+      userGameCode.classList.remove('valid');
+      userGameCode.classList.add('invalid');
       userGameCodeHelper.setAttribute('data-error', `${gameCode} doesn't exist. Check the code or create a new game with this code.`);
     } else {
       gameID = gameCode;
@@ -122,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let urlCode = (new URL(window.location.href)).searchParams.get("code");
   if (urlCode) {
-    document.getElementById('userGameCodeLabel').className = 'active';
+    document.getElementById('userGameCodeLabel').classList.add('active');
     userGameCode.value = urlCode;
     tryJoining();
   }
@@ -145,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       secretName.className = 'validate';
 
       // ask the user for their real name
-      let userRealName = realName.value;
+      const userRealName = realName.value;
 
       function isValidName(n) {
         if (n === '') return false;
@@ -154,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (isValidName(userRealName)) {
-        realName.className = 'valid';
+        realName.classList.add('valid');
 
         // create user
         async function createUser(user) {
@@ -170,28 +165,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         // get the user's fake name
         let userFakeName = secretName.value;
 
-        function isValidSecretName(n) {
-          if (n === '') return false;
-          // TODO do checks on secret name
-          return true;
-        }
+      } else {
+        realName.classList.add('invalid');
+        realNameHelper.setAttribute('data-error', 'Invalid Real Name');
+      }
 
-        if (isValidSecretName(userFakeName)) {
-          secretName.className = 'valid';
+      function isValidSecretName(n) {
+        if (n === '') return false;
+        // TODO do checks on secret name
+        return true;
+      }
 
+      if (isValidSecretName(userFakeName)) {
+        secretName.classList('valid');
+
+        if (isValidName(userRealName)) {
           // update the user profile with their fake name
           userRef.update({ fake: userFakeName });
 
           document.getElementsByClassName('setup')[0].remove();
           startGame();
-        } else {
-          secretName.className = 'invalid';
-          secretNameHelper.setAttribute('data-error', 'Invalid Secret Name');
         }
       } else {
-        realName.className = 'invalid';
-        realNameHelper.setAttribute('data-error', 'Invalid Real Name');
+        secretName.classList.add('invalid');
+        secretNameHelper.setAttribute('data-error', 'Invalid Secret Name');
       }
+
     });
   };
 
