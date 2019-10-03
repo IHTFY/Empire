@@ -1,4 +1,32 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  // // Initialize the FirebaseUI Widget using Firebase.
+  // const ui = new firebaseui.auth.AuthUI(firebase.auth());
+
+  // TODO allow real auth sign in, converting from anon to real, and do a check on page load whether already logged in. I think the UI has that last part bulit in.
+
+  // Anonymously login the user
+  firebase.auth().signInAnonymously().catch(err => {
+    // Handle Errors here.
+    const errorCode = err.code;
+    const errorMessage = err.message;
+    console.error(`Error code ${errorCode}: ${errorMessage}`);
+  });
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      // User is signed in.
+      var isAnonymous = user.isAnonymous;
+      var uid = user.uid;
+      console.log(`User is signed in. ${isAnonymous ? 'Anon' : ''} ${uid}`);
+    } else {
+      // User is signed out.
+      console.log('User is signed out.');
+    }
+  });
+
+
+
+  // Start the database instance
   const db = firebase.firestore();
 
   // trigger sidenav on mobile
@@ -41,15 +69,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     gameRef = db.collection('games').doc(gameID);
 
     let gameLink = `${window.location.origin}?code=${gameID}`;
-    
+
     let shareLink = document.createElement('button');
     shareLink.textContent = 'Get Game Link';
     shareLink.className = 'waves-effect waves-light btn blue';
     shareLink.addEventListener('click', () => {
       navigator.clipboard.writeText(gameLink).then(function () {
-        M.toast({html: 'Copied Game Link to Clipboard'});
+        M.toast({ html: 'Copied Game Link to Clipboard' });
       }, function (err) {
-        M.toast({html: 'Error Copying Game Link to Clipboard'});
+        M.toast({ html: 'Error Copying Game Link to Clipboard' });
       });
     });
 
