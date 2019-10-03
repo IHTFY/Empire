@@ -17,12 +17,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       let isAnonymous = user.isAnonymous;
       uid = user.uid;
       userRef = db.collection('users').doc(uid);
+
       if (isAnonymous) {
         console.log('User is anonymous.');
         // TODO prompt to connect account
       }
       console.log(user)
       console.log('User ID: ' + uid);
+      if (user.displayName) {
+        document.getElementById('realName').value = user.displayName;
+        document.getElementById('realName').classList.add('disabled');
+      }
       // TODO create signout button
     }
   });
@@ -69,7 +74,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.title = `Empire: ${gameID}`
     gameRef = db.collection('games').doc(gameID);
 
-    let gameLink = `${window.location.origin}?code=${gameID}`;
+    let url = new URL(document.location);
+    url.searchParams.set('code', gameID);
+    let gameLink = url.href;
 
     let shareLink = document.createElement('button');
     shareLink.textContent = 'Get Game Link';
@@ -121,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  let urlCode = (new URL(window.location.href)).searchParams.get("code");
+  let urlCode = (new URL(document.location)).searchParams.get('code');
   if (urlCode) {
     document.getElementById('userGameCodeLabel').classList.add('active');
     userGameCode.value = urlCode;
