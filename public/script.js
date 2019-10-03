@@ -1,5 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
+  
+
+
+  const functions = firebase.functions();
+  console.log(functions);
+
   let uid = null;
   let userRef = null;
 
@@ -229,16 +235,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const generateName = document.getElementById('generateName');
     generateName.addEventListener('click', generateFake);
-
     document.getElementsByClassName('play')[0].classList.remove('hide');
     // TODO this is when anyting in the game doc changes
     gameRef.onSnapshot(async snapshot => {
-      let game = snapshot.data(); // TODO data not used yet
+      // let game = snapshot.data(); // TODO data not used yet
       updateUserList();
     });
   }
 
   async function updateUserList() {
+    // let currentUsers = await functions.httpsCallable('getGameUsers')(gameID);
     let currentUsers = (await db.collection('users').where('game', '==', gameID).get());
     const nameList = document.getElementById('nameList');
     nameList.innerHTML = '';
