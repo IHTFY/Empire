@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let userID = null;
   let userRef = null;
   async function setupUser() {
-    document.getElementsByClassName('setup')[0].style.display = 'block';
+    document.getElementsByClassName('setup')[0].classList.remove('hide');
     const realName = document.getElementById('realName');
     const realNameHelper = document.getElementById('realNameHelper');
     const secretName = document.getElementById('secretName');
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const generateName = document.getElementById('generateName');
     generateName.addEventListener('click', generateFake);
 
-    document.getElementsByClassName('play')[0].style.display = 'block';
+    document.getElementsByClassName('play')[0].classList.remove('hide');
     // TODO this is when anyting in the game doc changes
     gameRef.onSnapshot(async snapshot => {
       let game = snapshot.data(); // TODO data not used yet
