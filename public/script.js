@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let shareLink = document.createElement('button');
     shareLink.textContent = 'Get Game Link';
-    shareLink.classList.add('waves-effect waves-light btn blue');
+    shareLink.classList.add('waves-effect', 'waves-light', 'btn', 'blue');
     shareLink.addEventListener('click', () => {
       navigator.clipboard.writeText(gameLink).then(function () {
         M.toast({ html: 'Copied Game Link to Clipboard' });
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     let shareIcon = document.createElement('i');
-    shareIcon.classList.add("material-icons left");
+    shareIcon.classList.add('material-icons', 'left');
     shareIcon.textContent = 'person_add';
     shareLink.appendChild(shareIcon)
 
