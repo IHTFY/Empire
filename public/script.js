@@ -1,23 +1,23 @@
 document.addEventListener('DOMContentLoaded', async () => {
-
-  
-
-
   const functions = firebase.functions();
-  console.log(functions);
 
   let uid = null;
   let userRef = null;
 
+  // Handle login
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
-      // TODO ask to sign in
-      // // Initialize the FirebaseUI Widget using Firebase.
-      // const ui = new firebaseui.auth.AuthUI(firebase.auth());
-      // else, Anonymously login the user
-      firebase.auth().signInAnonymously().catch(err => {
-        console.error(`Error code ${err.code}: ${err.message}`);
-      });
+      if (false) {
+        // TODO ask to sign in
+        // // Initialize the FirebaseUI Widget using Firebase.
+        // const ui = new firebaseui.auth.AuthUI(firebase.auth());
+        // else, Anonymously login the user
+      } else {
+        // Sign in anonymously
+        firebase.auth().signInAnonymously().catch(err => {
+          console.error(`Error code ${err.code}: ${err.message}`);
+        });
+      }
     } else {
       // User is signed in.
       let isAnonymous = user.isAnonymous;
@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('User is anonymous.');
         // TODO prompt to connect account
       }
-      console.log(user)
       console.log('User ID: ' + uid);
       if (user.displayName) {
         document.getElementById('realName').value = user.displayName;
@@ -258,103 +257,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
 
-  function doEverythingElse() {
-    let list = {};
-    let fakeNameList = [];
 
-    const submitNames = document.getElementById('submitNames');
-    const displayNames = document.getElementById('displayNames');
-    const clearNames = document.getElementById('clearNames');
-    const generateName = document.getElementById('generateName');
-    const updateAnon = document.getElementById('updateAnon');
-    const nameList = document.getElementById('nameList');
-    const realName = document.getElementById('realName');
-    const secretName = document.getElementById('secretName');
-    const anonList = document.getElementById('anonList');
-
-    function clearForm() {
-      realName.value = '';
-      secretName.value = '';
+  // Old functions, might use later
+  //
+  function shuffle(a) {
+    for (let i = 0; i < a.length - 1; i++) {
+      let j = i + Math.floor(Math.random() * (a.length - i));
+      [a[i], a[j]] = [a[j], a[i]];
     }
-
-    function updateList() {
-      nameList.textContent = JSON.stringify(list, null, 2);
-    }
-
-    function addToList() {
-      list[realName.value] = sanitizeName(secretName.value);
-      clearForm();
-      updateList();
-    }
-
-    function clearList() {
-      list = {};
-      updateList();
-    }
-
-    function sanitizeName(raw) {
-      //TODO different rules for allowed characters etc.
-      return raw.toUpperCase().replace(/[^A-Z]/g, '').trim();
-    }
-
-    function toggleDisplay(id) {
-      let elt = document.getElementById(id);
-      elt.style.display = elt.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function toggleList() {
-      toggleDisplay('nameList');
-      displayNames.value = displayNames.value.includes('Show') ? 'Hide List' : 'Show List';
-    }
-
-    function shuffle(a) {
-      for (let i = 0; i < a.length - 1; i++) {
-        let j = i + Math.floor(Math.random() * (a.length - i));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    function generateAnon() {
-      let mixedSecrets = shuffle(Object.values(list));
-      anonList.textContent = JSON.stringify(mixedSecrets, null, 2);
-    }
-
-    async function getEnglishWords() {
-      const url = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt';
-      const response = await fetch(url);
-      const text = await response.text();
-      return text.split('\n');
-    }
-
-    async function generateFake() {
-      if (fakeNameList.length === 0) {
-        fakeNameList = await getEnglishWords();
-      }
-      realName.value = 'Fake' + Date.now();
-      secretName.value = fakeNameList[Math.floor(Math.random() * fakeNameList.length)];
-      addToList();
-    }
-
-
-    // Add listeners to buttons
-    submitNames.addEventListener('click', addToList);
-    displayNames.addEventListener('click', toggleList);
-    clearNames.addEventListener('click', clearList);
-    generateName.addEventListener('click', generateFake);
-    updateAnon.addEventListener('click', generateAnon);
-    nameList.style.display = 'none'; // Start list hidden
-
-
-    // Submit on enter
-    document.onkeydown = function (e) {
-      e = e || window.event;
-      switch (e.which || e.keyCode) {
-        case 13:
-          addToList();
-          break;
-      }
-    }
+    return a;
   }
-  // doEverythingElse();
+
+  function sanitizeName(raw) {
+    //TODO different rules for allowed characters etc.
+    return raw.toUpperCase().replace(/[^A-Z]/g, '').trim();
+  }
+  //
+
 });
