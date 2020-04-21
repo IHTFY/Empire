@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  firebase.functions().useFunctionsEmulator('http://localhost:5001');
   const functions = firebase.functions();
 
   let uid = null;
@@ -22,7 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       // User is signed in.
       let isAnonymous = user.isAnonymous;
       uid = user.uid;
-      userRef = db.collection('users').doc(uid);
+      // userRef = db.collection('users').doc(uid);
+      
+      // Don't want to have a separate users at root, only inside game
+      //userRef = db.ref(`users/${uid}`);
 
       if (isAnonymous) {
         console.log('User is anonymous.');
@@ -38,7 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Start the database instance
-  const db = firebase.firestore();
+  // const db = firebase.firestore();
+  const db = firebase.database();
 
   // trigger sidenav on mobile
   M.Sidenav.init(document.querySelectorAll('.sidenav'));
@@ -53,7 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function doesGameExist(code) {
     if (code === '') return false;
-    return (await db.collection('games').doc(code).get()).exists;
+    // return (await db.collection('games').doc(code).get()).exists;
+    let snapshot = await db.ref(`games/${code}`).once('value');
+    return snapshot.exists();
   }
 
   // add the game and save the ID, make sure we check above that the gameCode doesn't exist
@@ -65,9 +72,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       "clans": {}
     }
     if (code === '') {
-      return (await db.collection('games').add(game)).id;
+      // return (await db.collection('games').add(game)).id;
+      let newGameCode = db.ref('games').push().key;
+      db.ref(`games/${newGameCode}`).set(game);
+      return newGameCode;
     } else {
-      await db.collection('games').doc(code).set(game);
+      // await db.collection('games').doc(code).set(game);
+      await db.ref(`games/${code}`).set(game);
       return code;
     }
   }
@@ -77,7 +88,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function initGame(gameID) {
     document.title = `Empire: ${gameID}`
-    gameRef = db.collection('games').doc(gameID);
+    // gameRef = db.collection('games').doc(gameID);
+    gameRef = db.ref(`games/${gameID}`);
 
     let url = new URL(document.location);
     url.searchParams.set('code', gameID);
@@ -111,8 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function tryCreating() {
     let gameCode = userGameCode.value;
     if (await doesGameExist(gameCode)) {
-      userGameCode.classList.remove('valid');
-      userGameCode.classList.add('invalid');
+      userGameCode.classList.replace('valid', 'invalid');
       userGameCodeHelper.setAttribute('data-error', `${gameCode} already exists. Join or choose a new Game Code.`);
     } else {
       gameID = await createGame(gameCode);
@@ -124,8 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function tryJoining() {
     let gameCode = userGameCode.value;
     if (!await doesGameExist(gameCode)) {
-      userGameCode.classList.remove('valid');
-      userGameCode.classList.add('invalid');
+      userGameCode.classList.replace('valid', 'invalid');
       userGameCodeHelper.setAttribute('data-error', `${gameCode} doesn't exist. Check the code or create a new game with this code.`);
     } else {
       gameID = gameCode;
@@ -168,10 +178,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         realName.classList.add('valid');
 
         // create user
-        userRef.set({ game: gameID, real: userRealName, clan: userRealName });
+        // userRef.set({ game: gameID, real: userRealName, clan: userRealName });
 
         // add the user to their game
-        gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(uid) });
+        // gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(uid) });
+        db.ref(`games/${gameID}/users/${uid}`).set({ game: gameID, real: userRealName, clan: userRealName });
 
       } else {
         realName.classList.add('invalid');
@@ -192,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (isValidName(userRealName)) {
           // update the user profile with their fake name
-          userRef.update({ fake: userFakeName });
+          db.ref(`games/${gameID}/users/${uid}`).update({ fake: userFakeName });
 
           document.getElementsByClassName('setup')[0].remove();
           startGame();
@@ -224,10 +235,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       let fakeSecret = fakeNameList[Math.floor(Math.random() * fakeNameList.length)];
 
       // add the fake user to users
-      let fakeID = (await db.collection('users').add(({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret }))).id;
+      // let fakeID = (await db.collection('users').add(({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret }))).id;
+      let fakeID = db.ref(`games/${gameID}/users`).push().key;
 
       // add the fake user to their game
-      gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(fakeID) });
+      // gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(fakeID) });
+      db.ref(`games/${gameID}/users/${fakeID}`).set({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret });
 
       fakes++;
     }
@@ -236,24 +249,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     generateName.addEventListener('click', generateFake);
     document.getElementsByClassName('play')[0].classList.remove('hide');
     // TODO this is when anyting in the game doc changes
-    gameRef.onSnapshot(async snapshot => {
+    // gameRef.onSnapshot(async snapshot => {
+    db.ref(`games/${gameID}/users`).on('value', snapshot => {
       // let game = snapshot.data(); // TODO data not used yet
-      updateUserList();
+      updateUserList(snapshot.val());
     });
   }
 
-  async function updateUserList() {
-    // let currentUsers = await functions.httpsCallable('getGameUsers')(gameID);
-    let currentUsers = (await db.collection('users').where('game', '==', gameID).get());
+  async function updateUserList(usersObject) {
+    // let currentUsers = await db.collection('users').where('game', '==', gameID).get();
+
+    // FIXME cloud function returns empty data
+    // let currentUsersCloud = await functions.httpsCallable('getGameUsers')(gameID);
+    // console.log(currentUsersCloud);
+
+    // currentUsers.forEach(snap => console.log(snap.data()));
+    // const nameList = document.getElementById('nameList');
+    // nameList.innerHTML = '';
+    // currentUsers.forEach(snap => {
+    //   let row = document.createElement('tr');
+    //   let cell = document.createElement('td');
+    //   cell.textContent = snap.data()['real'];
+    //   row.appendChild(cell);
+    //   nameList.appendChild(row);
+    // });
+
     const nameList = document.getElementById('nameList');
     nameList.innerHTML = '';
-    currentUsers.forEach(snap => {
+    // console.log(usersObject);
+    for (let user of Object.values(usersObject)) {
+      // console.log(user);
       let row = document.createElement('tr');
       let cell = document.createElement('td');
-      cell.textContent = snap.data()['real'];
+      cell.textContent = user.real;
       row.appendChild(cell);
       nameList.appendChild(row);
-    });
+    }
   }
 
 
