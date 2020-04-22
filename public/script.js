@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const startButton = document.getElementById('revealSecrets');
     startButton.addEventListener('click', () => {
-      db.ref(`game/${gameID}`)
+      db.ref(`games/${gameID}`).update({ state: 'playing' });
       displaySecrets();
     });
   }
