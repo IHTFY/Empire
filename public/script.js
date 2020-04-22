@@ -182,7 +182,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // add the user to their game
         // gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(uid) });
-        db.ref(`games/${gameID}/users/${uid}`).set({ game: gameID, real: userRealName, clan: userRealName });
+        db.ref(`games/${gameID}/users/${uid}`).set(
+          {
+            //game: gameID,
+            real: userRealName,
+            clan: userRealName
+          }
+        );
 
       } else {
         realName.classList.add('invalid');
@@ -255,7 +261,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     const startButton = document.getElementById('revealSecrets');
-    startButton.addEventListener('click', displaySecrets);
+    startButton.addEventListener('click', () => {
+      db.ref(`game/${gameID}`)
+      displaySecrets();
+    });
   }
 
   async function updateUserList(usersObject) {
