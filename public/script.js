@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       let isAnonymous = user.isAnonymous;
       uid = user.uid;
       // userRef = db.collection('users').doc(uid);
-      
+
       // Don't want to have a separate users at root, only inside game
       //userRef = db.ref(`users/${uid}`);
 
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           db.ref(`games/${gameID}/users/${uid}`).update({ fake: userFakeName });
 
           document.getElementsByClassName('setup')[0].remove();
-          startGame();
+          lobby();
         }
       } else {
         secretName.classList.add('invalid');
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
-  async function startGame() {
+  async function lobby() {
     let fakeNameList = [];
     let fakes = 0;
 
@@ -248,12 +248,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const generateName = document.getElementById('generateName');
     generateName.addEventListener('click', generateFake);
     document.getElementsByClassName('play')[0].classList.remove('hide');
-    // TODO this is when anyting in the game doc changes
-    // gameRef.onSnapshot(async snapshot => {
+    // update user list whenever data changes in /users
     db.ref(`games/${gameID}/users`).on('value', snapshot => {
-      // let game = snapshot.data(); // TODO data not used yet
       updateUserList(snapshot.val());
     });
+
+
+    const startButton = document.getElementById('revealSecrets');
+    startButton.addEventListener('click', displaySecrets);
   }
 
   async function updateUserList(usersObject) {
@@ -287,6 +289,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function displaySecrets() {
+    document.getElementsByClassName('play')[0].classList.add('hide');
+    document.getElementsByClassName('reveal')[0].classList.remove('hide');
+    const panel = document.getElementById('revealPanel');
+
+    // TODO might be a cleaner way
+    db.ref(`games/${gameID}/users`).on('value', snapshot => {
+      show(snapshot.val());
+    });
+
+    function show(usersObject) {
+      let delay = 0;
+      shuffle(Object.values(usersObject)
+        .map(user => user.fake))
+        .forEach(n => setTimeout(() => panel.textContent = n, delay += 2000))
+
+      setTimeout(() => {
+        panel.textContent = '';
+        document.getElementsByClassName('play')[0].classList.remove('hide');
+        document.getElementsByClassName('reveal')[0].classList.add('hide');
+        lobby();
+      }, delay + 2000);
+    }
+  }
 
 
   // Old functions, might use later
