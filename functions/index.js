@@ -29,8 +29,9 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
     await db.ref(`games/${data.text}/names`).set(shuffle(fakes));
     await db.ref(`games/${data.text}/state`).set('playing');
     setTimeout(async () => {
-      await db.ref(`games/${gameID}/state`).set('initialiszing')
+      await db.ref(`games/${data.text}/state`).set('initializing')
     }, 1500);
+    return true;
   });
 });
 
