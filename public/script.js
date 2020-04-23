@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const volumeIcon = document.getElementById('volumeIcon');
   volumeIcon.addEventListener('click', () => {
     volumeIcon.textContent = volumeIcon.textContent === 'volume_off' ? 'volume_up' : 'volume_off';
-    console.log('clicked', volumeIcon.textContent);
   });
 
   // show screen to choose: join game, or create game
@@ -229,11 +228,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   async function lobby() {
+    let fakeSecretList = [];
     let fakeNameList = [];
     let fakes = 0;
 
-    async function getEnglishWords() {
-      const url = 'https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt';
+    async function populateList(url) {
       const response = await fetch(url);
       const text = await response.text();
       return text.split('\n');
@@ -241,10 +240,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function generateFake() {
       if (fakes === 0) {
-        fakeNameList = await getEnglishWords();
+        fakeSecretList = await populateList('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt');
+        fakeNameList = await populateList('https://raw.githubusercontent.com/dominictarr/random-name/master/first-names.txt');
       }
-      let fakeName = `Fake${fakes}`;
-      let fakeSecret = fakeNameList[Math.floor(Math.random() * fakeNameList.length)];
+      let fakeName = pickRandom(fakeNameList);
+      let fakeSecret = pickRandom(fakeSecretList);
 
       // add the fake user to users
       // let fakeID = (await db.collection('users').add(({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret }))).id;
@@ -257,7 +257,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           game: gameID,
           real: fakeName,
           clan: fakeName,
-          fake: fakeSecret
+          fake: fakeSecret,
+          fakeBadge: true
         });
 
       fakes++;
@@ -306,7 +307,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       let item = document.createElement('li');
       item.classList.add('collection-item');
       let txt = document.createElement('h6');
-      txt.textContent = user.real;
+      txt.textContent = user.real
+      if (user.fakeBadge) {
+        const b = document.createElement('span');
+        b.textContent = 'FAKE';
+        b.classList.add('badge');
+        txt.appendChild(b);
+      }
       item.appendChild(txt);
       nameList.appendChild(item);
     }
@@ -327,9 +334,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       let fakes = Object.values(usersObject).map(user => user.fake);
       bar.style.setProperty('width', `0%`);
 
-      const v = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
+      // const v = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
       let u = new SpeechSynthesisUtterance();
-      u.voice = v;
+      // u.voice = v;
 
       shuffle(fakes).forEach((n, i) => setTimeout(() => {
         if (volumeIcon.textContent === 'volume_up') {
@@ -351,6 +358,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Old functions, might use later
   //
+
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
   function shuffle(a) {
     for (let i = 0; i < a.length - 1; i++) {
       let j = i + Math.floor(Math.random() * (a.length - i));
