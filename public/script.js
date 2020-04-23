@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let uid = null;
   let userRef = null;
+  let fresh = true;
 
   // Handle login
   firebase.auth().onAuthStateChanged(user => {
@@ -132,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Game ID: ${gameID}`);
 
     // change view from game code to user creation
-    document.getElementsByClassName('create')[0].remove();
+    document.getElementsByClassName('create')[0].classList.add('hide');
     setupUser();
   }
 
@@ -275,52 +276,73 @@ document.addEventListener('DOMContentLoaded', async () => {
       fakes++;
     }
 
-    const generateName = document.getElementById('generateName');
-    generateName.addEventListener('click', generateFake);
     document.getElementsByClassName('play')[0].classList.remove('hide');
-    // update user list whenever data changes in /users
-    db.ref(`games/${gameID}/users`).on('value', snapshot => {
-      updateUserList(snapshot.val());
-      if (volumeIcon.textContent === 'volume_up') {
-        document.getElementById('boop').play();
+
+    // dont' want to double up listeners.
+    if (fresh) {
+      fresh = false;
+
+      const generateName = document.getElementById('generateName');
+      generateName.addEventListener('click', generateFake);
+
+      // update user list whenever data changes in /users
+      db.ref(`games/${gameID}/users`).on('value', snapshot => {
+        if (snapshot.val()) {
+          updateUserList(snapshot.val());
+        }
+        if (volumeIcon.textContent === 'volume_up') {
+          document.getElementById('boop').play();
+        }
+      });
+
+
+      const resetButton = document.getElementById('roomResetButton');
+      resetButton.addEventListener('click', () => {
+        db.ref(`games/${gameID}`).update({ state: 'resetting' });
+      });
+
+      const deleteButton = document.getElementById('roomDeleteButton');
+      deleteButton.addEventListener('click', () => {
+        db.ref(`games/${gameID}`).update({ state: 'deleting' });
+      });
+
+      function setNames() {
+        // get fakes, shuffle, store in names
+        db.ref(`games/${gameID}/users`).once('value', snapshot => {
+          let fakes = Object.values(snapshot.val()).map(user => user.fake);
+          db.ref(`games/${gameID}/names`).set(shuffle(fakes));
+        });
+
+        // once names is updated, change game state
+        db.ref(`games/${gameID}/names`).on('value', () => {
+          db.ref(`games/${gameID}`).update({ state: 'playing' });
+          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1500);
+        });
       }
-    });
 
+      const startButton = document.getElementById('revealSecrets');
+      startButton.addEventListener('click', setNames);
 
-    const resetButton = document.getElementById('roomResetButton');
-    resetButton.addEventListener('click', () => {
-      db.ref(`games/${gameID}`).update({ state: 'resetting' });
-
-    });
-
-    const deleteButton = document.getElementById('roomDeleteButton');
-    deleteButton.addEventListener('click', () => {
-      db.ref(`games/${gameID}`).update({ state: 'deleting' });
-
-    });
-
-    db.ref(`games/${gameID}/state`).on('value', snapshot => {
-      if (snapshot.val() === 'deleting') {
-        db.ref(`games/${gameID}`).remove();
-        window.location.replace('/');
-      }
-      if (snapshot.val() === 'resetting') {
-        db.ref(`games/${gameID}/users/${uid}`).remove();
-        document.getElementsByClassName('reveal')[0].classList.add('hide');
-        document.getElementsByClassName('play')[0].classList.add('hide');
-        secretName.value = '';
-        document.getElementsByClassName('setup')[0].classList.remove('hide');
-        db.ref(`games/${gameID}/users`).remove();
-        setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1000);
-      }
-    });
-
-
-    const startButton = document.getElementById('revealSecrets');
-    startButton.addEventListener('click', () => {
-      db.ref(`games/${gameID}`).update({ state: 'playing' });
-      displaySecrets();
-    });
+      db.ref(`games/${gameID}/state`).on('value', snapshot => {
+        console.log(snapshot.val());
+        if (snapshot.val() === 'playing') {
+          displaySecrets();
+        }
+        if (snapshot.val() === 'deleting') {
+          db.ref(`games/${gameID}`).remove();
+          window.location.replace('/');
+        }
+        if (snapshot.val() === 'resetting') {
+          db.ref(`games/${gameID}/users/${uid}`).remove();
+          document.getElementsByClassName('reveal')[0].classList.add('hide');
+          document.getElementsByClassName('play')[0].classList.add('hide');
+          secretName.value = '';
+          document.getElementsByClassName('setup')[0].classList.remove('hide');
+          db.ref(`games/${gameID}/users`).remove();
+          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1000);
+        }
+      });
+    }
   }
 
   async function updateUserList(usersObject) {
@@ -362,25 +384,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function displaySecrets() {
+    console.log('displaying');
     document.getElementsByClassName('play')[0].classList.add('hide');
     document.getElementsByClassName('reveal')[0].classList.remove('hide');
     const panel = document.getElementById('revealPanel');
 
-    // TODO might be a cleaner way
-    db.ref(`games/${gameID}/users`).once('value', snapshot => {
+
+    db.ref(`games/${gameID}/names`).once('value', snapshot => {
       show(snapshot.val());
     });
 
-    function show(usersObject) {
+    function show(fakes) {
       const bar = document.getElementById('progressBar');
-      let fakes = Object.values(usersObject).map(user => user.fake);
       bar.style.setProperty('width', `0%`);
 
       // const v = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
       let u = new SpeechSynthesisUtterance();
       // u.voice = v;
 
-      shuffle(fakes).forEach((n, i) => setTimeout(() => {
+      fakes.forEach((n, i) => setTimeout(() => {
         if (volumeIcon.textContent === 'volume_up') {
           u.text = n;
           speechSynthesis.speak(u);
@@ -391,6 +413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       setTimeout(() => {
         panel.textContent = '';
+        db.ref(`games/${gameID}`).update({ state: 'initializing' });
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
       }, fakes.length * 2000);
