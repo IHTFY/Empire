@@ -263,6 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // update user list whenever data changes in /users
     db.ref(`games/${gameID}/users`).on('value', snapshot => {
       updateUserList(snapshot.val());
+      document.getElementById('boop').play();
     });
 
 
@@ -320,16 +321,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       let fakes = Object.values(usersObject).map(user => user.fake);
       bar.style.setProperty('width', `0%`);
 
-      shuffle(fakes).forEach((n,i) => setTimeout(() => {
+      shuffle(fakes).forEach((n, i) => setTimeout(() => {
+        speechSynthesis.speak(new SpeechSynthesisUtterance(n));
         panel.textContent = n;
-        bar.style.setProperty('width', `${100*i/(fakes.length-1)}%`);
-      }, i*2000))
+        bar.style.setProperty('width', `${100 * i / (fakes.length - 1)}%`);
+      }, i * 2000))
 
       setTimeout(() => {
         panel.textContent = '';
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
-      }, fakes.length*2000);
+      }, fakes.length * 2000);
     }
   }
 
