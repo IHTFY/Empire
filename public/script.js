@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       txt.textContent = user.real
       if (user.fakeBadge) {
         const b = document.createElement('span');
-        b.classList.add('new', 'badge', 'purple', 'darken-3');
+        b.classList.add('new', 'badge', 'indigo', 'darken-3');
         b.setAttribute('data-badge-caption', 'FAKE');
         txt.appendChild(b);
       }
