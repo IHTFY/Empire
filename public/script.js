@@ -308,22 +308,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         db.ref(`games/${gameID}`).update({ state: 'deleting' });
       });
 
-      function setNames() {
-        // get fakes, shuffle, store in names
-        db.ref(`games/${gameID}/users`).once('value', snapshot => {
-          let fakes = Object.values(snapshot.val()).map(user => user.fake);
-          db.ref(`games/${gameID}/names`).set(shuffle(fakes));
-        });
+      // Use cloud function flashNames
+      // function setNames() {
+      //   // get fakes, shuffle, store in names
+      //   db.ref(`games/${gameID}/users`).once('value', snapshot => {
+      //     let fakes = Object.values(snapshot.val()).map(user => user.fake);
+      //     db.ref(`games/${gameID}/names`).set(shuffle(fakes));
+      //   });
 
-        // once names is updated, change game state
-        db.ref(`games/${gameID}/names`).on('value', () => {
-          db.ref(`games/${gameID}`).update({ state: 'playing' });
-          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1500);
-        });
-      }
+      //   // once names is updated, change game state
+      //   db.ref(`games/${gameID}/names`).on('value', () => {
+      //     db.ref(`games/${gameID}`).update({ state: 'playing' });
+      //     setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1500);
+      //   });
+      // }
 
       const startButton = document.getElementById('revealSecrets');
-      startButton.addEventListener('click', setNames);
+      startButton.addEventListener('click', async () => {
+        const flashNames = firebase.functions().httpsCallable('flashNames');
+        let out = await flashNames({text: gameID});
+        console.log(out);
+      });
 
       db.ref(`games/${gameID}/state`).on('value', snapshot => {
         console.log(snapshot.val());

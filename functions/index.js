@@ -11,9 +11,31 @@ admin.initializeApp({
   databaseURL: 'https://empire-ihtfy.firebaseio.com'
 });
 
-const db = admin.firestore();
+// const db = admin.firestore();
+const db = admin.database();
 
+exports.flashNames = functions.https.onCall(async (data, context) => {
+  function shuffle(a) {
+    for (let i = 0; i < a.length - 1; i++) {
+      let j = i + Math.floor(Math.random() * (a.length - i));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
 
-exports.getGameUsers = functions.https.onCall((data, context) => {
-  return db.collection('users').where('game', '==', data).get();
+  // get fakes, shuffle, store in names
+  await db.ref(`games/${data.text}/users`).once('value').then(async snapshot => {
+    let fakes = Object.values(snapshot.val()).map(user => user.fake);
+    await db.ref(`games/${data.text}/names`).set(shuffle(fakes));
+    await db.ref(`games/${data.text}/state`).set('playing');
+    setTimeout(async () => {
+      await db.ref(`games/${gameID}/state`).set('initialiszing')
+    }, 1500);
+  });
 });
+
+exports
+
+// exports.getGameUsers = functions.https.onCall((data, context) => {
+//   return db.collection('users').where('game', '==', data).get();
+// });
