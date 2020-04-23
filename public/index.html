@@ -161,14 +161,77 @@
 
     <div class="play container hide">
       <div class="section">
-        <div id="generateName" class="waves-effect waves-light btn-small indigo darken-3">
-          Create Fake User
+        <a
+          class="dropdown-trigger btn-large indigo"
+          href="#"
+          data-target="dropdown1"
+          ><i class="material-icons left">build</i>Options</a
+        >
+        <ul id="dropdown1" class="dropdown-content">
+          <li><a href="#!">Cancel</a></li>
+          <li class="divider" tabindex="-1"></li>
+          <li>
+            <a
+              id="generateName"
+              class="waves-effect waves-light indigo darken-3 white-text"
+            >
+              <i class="material-icons">adb</i>Add Fake
+            </a>
+          </li>
+
+          <li class="divider" tabindex="-1"></li>
+
+          <li>
+            <a
+              href="#confirmNewGame"
+              class="modal-trigger waves-effect waves-light orange white-text"
+              ><i class="material-icons">autorenew</i>New Game</a
+            >
+          </li>
+
+          <li>
+            <a
+              href="#confirmDelete"
+              class="modal-trigger waves-effect waves-light red white-text"
+              ><i class="material-icons">delete_forever</i>End Room</a
+            >
+          </li>
+        </ul>
+
+        <div id="confirmNewGame" class="modal">
+          <div class="modal-content">
+            <h4>New Game</h4>
+            <p>Do you want to end this round and start a new round?</p>
+          </div>
+          <div class="modal-footer">
+            <div id="roomResetButton" class="modal-close waves-effect waves-light btn orange"
+              >New Game</div
+            >
+            <div class="modal-close waves-effect waves-green btn-flat">
+              Cancel
+            </div>
+          </div>
+        </div>
+
+        <div id="confirmDelete" class="modal">
+          <div class="modal-content">
+            <h4>Delete Game</h4>
+            <p>Do you want to delete the entire room? This will delete all players and send everyone back to the home screen!</p>
+          </div>
+          <div class="modal-footer">
+            <div id="roomDeleteButton" class="modal-close waves-effect waves-light btn red"
+              >Delete Room</div
+            >
+            <div class="modal-close waves-effect waves-green btn-flat">
+              Cancel
+            </div>
+          </div>
         </div>
         <div
           id="revealSecrets"
-          class="waves-effect waves-light btn-small green"
+          class="waves-effect waves-light btn-large green"
         >
-          START
+          <i class="material-icons left">play_arrow</i>Start
         </div>
       </div>
 

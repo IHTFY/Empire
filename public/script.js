@@ -45,15 +45,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // const db = firebase.firestore();
   const db = firebase.database();
 
+
+  M.AutoInit();
+
   // trigger sidenav on mobile
-  const navbar = M.Sidenav.init(document.querySelectorAll('.sidenav'));
+  // const navbar = M.Sidenav.init(document.querySelectorAll('.sidenav'));
 
   // trigger floating action button
-  const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
+  // const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
   const volumeIcon = document.getElementById('volumeIcon');
   volumeIcon.addEventListener('click', () => {
     volumeIcon.textContent = volumeIcon.textContent === 'volume_off' ? 'volume_up' : 'volume_off';
   });
+
+  // trigger modals
+  // const modals = M.Modal.init(document.querySelectorAll('.modal'));
+
+  // trigger modals
+  // const modals = M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'));
+
+
 
   // show screen to choose: join game, or create game
   const userGameCode = document.getElementById('userGameCode');
@@ -216,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           // update the user profile with their fake name
           db.ref(`games/${gameID}/users/${uid}`).update({ fake: userFakeName });
 
-          document.getElementsByClassName('setup')[0].remove();
+          document.getElementsByClassName('setup')[0].classList.add('hide');
           lobby();
         }
       } else {
@@ -272,6 +283,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateUserList(snapshot.val());
       if (volumeIcon.textContent === 'volume_up') {
         document.getElementById('boop').play();
+      }
+    });
+
+
+    const resetButton = document.getElementById('roomResetButton');
+    resetButton.addEventListener('click', () => {
+      db.ref(`games/${gameID}`).update({ state: 'resetting' });
+
+    });
+
+    const deleteButton = document.getElementById('roomDeleteButton');
+    deleteButton.addEventListener('click', () => {
+      db.ref(`games/${gameID}`).update({ state: 'deleting' });
+
+    });
+
+    db.ref(`games/${gameID}/state`).on('value', snapshot => {
+      if (snapshot.val() === 'deleting') {
+        db.ref(`games/${gameID}`).remove();
+        window.location.replace('/');
+      }
+      if (snapshot.val() === 'resetting') {
+        db.ref(`games/${gameID}/users/${uid}`).remove();
+        document.getElementsByClassName('reveal')[0].classList.add('hide');
+        document.getElementsByClassName('play')[0].classList.add('hide');
+        secretName.value = '';
+        document.getElementsByClassName('setup')[0].classList.remove('hide');
+        db.ref(`games/${gameID}/users`).remove();
+        setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1000);
       }
     });
 
