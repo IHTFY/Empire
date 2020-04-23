@@ -46,9 +46,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const db = firebase.database();
 
   // trigger sidenav on mobile
-  M.Sidenav.init(document.querySelectorAll('.sidenav'));
-  // can try autoinit too, if no options are used
-  // M.AutoInit();
+  const navbar = M.Sidenav.init(document.querySelectorAll('.sidenav'));
+
+  // trigger floating action button
+  const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
+  const volumeIcon = document.getElementById('volumeIcon');
+  volumeIcon.addEventListener('click', () => {
+    volumeIcon.textContent = volumeIcon.textContent === 'volume_off' ? 'volume_up' : 'volume_off';
+    console.log('clicked', volumeIcon.textContent);
+  });
 
   // show screen to choose: join game, or create game
   const userGameCode = document.getElementById('userGameCode');
@@ -263,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // update user list whenever data changes in /users
     db.ref(`games/${gameID}/users`).on('value', snapshot => {
       updateUserList(snapshot.val());
-      document.getElementById('boop').play();
+      if (volumeIcon.textContent === 'volume_up') document.getElementById('boop').play();
     });
 
 
@@ -321,8 +327,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       let fakes = Object.values(usersObject).map(user => user.fake);
       bar.style.setProperty('width', `0%`);
 
+      const v = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
+      let u = new SpeechSynthesisUtterance();
+      u.voice = v;
+
       shuffle(fakes).forEach((n, i) => setTimeout(() => {
-        speechSynthesis.speak(new SpeechSynthesisUtterance(n));
+        if (volumeIcon.textContent === 'volume_up') {
+          u.text = n;
+          speechSynthesis.speak(u);
+        }
         panel.textContent = n;
         bar.style.setProperty('width', `${100 * i / (fakes.length - 1)}%`);
       }, i * 2000))
