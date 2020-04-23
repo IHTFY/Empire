@@ -286,13 +286,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // });
 
     const nameList = document.getElementById('nameList');
-    nameList.innerHTML = '<li class="collection-header"><h5>Users</h5></li>';
+    nameList.innerHTML = `<li class="collection-header center-align"><h5>${gameID} Lobby</h5></li>`;
     // console.log(usersObject);
     for (let user of Object.values(usersObject)) {
       // console.log(user);
       let item = document.createElement('li');
       item.classList.add('collection-item');
-      item.textContent = user.real;
+      let txt = document.createElement('h6');
+      txt.textContent = user.real;
+      item.appendChild(txt);
       nameList.appendChild(item);
     }
   }
