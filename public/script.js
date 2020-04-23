@@ -270,7 +270,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // update user list whenever data changes in /users
     db.ref(`games/${gameID}/users`).on('value', snapshot => {
       updateUserList(snapshot.val());
-      if (volumeIcon.textContent === 'volume_up') document.getElementById('boop').play();
+      if (volumeIcon.textContent === 'volume_up') {
+        document.getElementById('boop').play();
+      }
     });
 
 
@@ -310,8 +312,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       txt.textContent = user.real
       if (user.fakeBadge) {
         const b = document.createElement('span');
-        b.textContent = 'FAKE';
-        b.classList.add('badge');
+        b.classList.add('new', 'badge', 'pink', 'darken-3');
+        b.setAttribute('data-badge-caption', 'FAKE');
         txt.appendChild(b);
       }
       item.appendChild(txt);
