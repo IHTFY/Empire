@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const generateName = document.getElementById('generateName');
-    generateName.addEventListener('click', generateFake, { once: true });
+    generateName.addEventListener('click', generateFake);
     document.getElementsByClassName('play')[0].classList.remove('hide');
     // update user list whenever data changes in /users
     db.ref(`games/${gameID}/users`).on('value', snapshot => {
@@ -317,7 +317,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         panel.textContent = '';
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
-        lobby();
       }, delay + 2000);
     }
   }
