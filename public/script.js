@@ -246,7 +246,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // add the fake user to their game
       // gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(fakeID) });
-      db.ref(`games/${gameID}/users/${fakeID}`).set({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret });
+      db.ref(`games/${gameID}/users/${fakeID}`).set(
+        {
+          game: gameID,
+          real: fakeName,
+          clan: fakeName,
+          fake: fakeSecret
+        });
 
       fakes++;
     }

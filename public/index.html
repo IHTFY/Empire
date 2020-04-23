@@ -1,97 +1,157 @@
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Empire</title>
+    <link rel="stylesheet" href="style.scss" />
+    <link rel="icon" href="favicon.ico" />
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Empire</title>
-  <link rel="stylesheet" href="style.scss">
-  <link rel="icon" href="favicon.ico" />
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/7.14.1/firebase-app.js"></script>
+    <script defer src="/__/firebase/7.14.1/firebase-auth.js"></script>
+    <script
+      defer
+      src="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.js"
+    ></script>
+    <link
+      type="text/css"
+      rel="stylesheet"
+      href="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.css"
+    />
+    <script defer src="/__/firebase/7.14.1/firebase-firestore.js"></script>
+    <!-- trying to convert to realtime database -->
+    <script defer src="/__/firebase/7.14.1/firebase-database.js"></script>
+    <script defer src="/__/firebase/7.14.1/firebase-functions.js"></script>
 
-  <!-- update the version number as needed -->
-  <script defer src="/__/firebase/7.14.1/firebase-app.js"></script>
-  <script defer src="/__/firebase/7.14.1/firebase-auth.js"></script>
-  <script defer src="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.js"></script>
-  <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.css" />
-  <script defer src="/__/firebase/7.14.1/firebase-firestore.js"></script>
-  <!-- trying to convert to realtime database -->
-  <script defer src="/__/firebase/7.14.1/firebase-database.js"></script>
-  <script defer src="/__/firebase/7.14.1/firebase-functions.js"></script>
+    <!-- initialize the SDK after all desired features are loaded -->
+    <script defer src="/__/firebase/init.js"></script>
 
-  <!-- initialize the SDK after all desired features are loaded -->
-  <script defer src="/__/firebase/init.js"></script>
+    <!--Import Google Icon Font-->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <!-- Compiled and minified CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 
-  <!--Import Google Icon Font-->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <!-- Compiled and minified CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-  <!-- Compiled and minified JavaScript -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <!-- Initialize Empire Game -->
+    <script type="module" src="script.js"></script>
+  </head>
 
-  <!-- Initialize Empire Game -->
-  <script type="module" src="script.js"></script>
-</head>
+  <body>
+    <nav>
+      <div class="nav-wrapper indigo">
+        <a href="/" class="brand-logo">Empire</a>
+        <a href="/" data-target="mobile-nav" class="sidenav-trigger"
+          ><i class="material-icons">menu</i></a
+        >
+        <ul class="right hide-on-med-and-down">
+          <li>
+            <a href="http://www.bestpartygames.co.uk/games/empire-game"
+              >Rules<i class="material-icons left">info_outline</i></a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/IHTFY/Empire"
+              >Code<i class="material-icons left">code</i></a
+            >
+          </li>
+          <li>
+            <a href="https://frankiemercado.com"
+              >IHTFY<i class="material-icons left">home</i></a
+            >
+          </li>
+        </ul>
+      </div>
+    </nav>
 
-<body>
-  <nav>
-    <div class="nav-wrapper indigo">
-      <a href="/" class="brand-logo">Empire</a>
-      <a href="/" data-target="mobile-nav" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-      <ul class="right hide-on-med-and-down">
-        <li><a href="http://www.bestpartygames.co.uk/games/empire-game">Rules<i
-              class="material-icons left">info_outline</i></a></li>
-        <li><a href="https://github.com/IHTFY/Empire">Code<i class="material-icons left">code</i></a></li>
-        <li><a href="https://frankiemercado.com">IHTFY<i class="material-icons left">home</i></a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <ul class="sidenav" id="mobile-nav">
-    <li><a href="https://frankiemercado.com">IHTFY<i class="material-icons left">home</i></a></li>
-    <li><a href="https://github.com/IHTFY/Empire">Code<i class="material-icons left">code</i></a></li>
-    <li><a href="http://www.bestpartygames.co.uk/games/empire-game">Rules<i
-          class="material-icons left">info_outline</i></a></li>
-  </ul>
-
-  <div id="gameLink" class="container center-align"></div>
-
-  <div class="create container">
-    <div class="input-field">
-      <input id="userGameCode" type="text" class="validate">
-      <label id="userGameCodeLabel" for="userGameCode">Game Code</label>
-      <span id="userGameCodeHelper" class="helper-text"></span>
-    </div>
-    <button id="createButton" class="btn waves-effect waves-light blue" type="button">Create</button>
-    <button id="joinButton" class="btn waves-effect waves-light blue" type="button">Join</button>
-  </div>
-
-  <div class="setup container hide">
-    <div class="input-field">
-      <input id="realName" type="text" class="validate">
-      <label for="realName">Your Real Name</label>
-      <span id="realNameHelper" class="helper-text"></span>
-    </div>
-    <div class="input-field">
-      <input id="secretName" type="password" class="validate">
-      <label for="secretName">Secret Nickname</label>
-      <span id="secretNameHelper" class="helper-text"></span>
-    </div>
-    <button id="submitNames" class="btn waves-effect waves-light blue" type="button">Submit</button>
-  </div>
-
-  <div class="play container hide">
-    <div class="section">
-      <div id="generateName" class="waves-effect waves-light btn-small blue">Create Fake User</div>
-      <div id="revealSecrets" class="waves-effect waves-light btn-small green">START</div>
-    </div>
-
-    <ul class="collection with-header" id="nameList">
+    <ul class="sidenav" id="mobile-nav">
+      <li>
+        <a href="https://frankiemercado.com"
+          >IHTFY<i class="material-icons left">home</i></a
+        >
+      </li>
+      <li>
+        <a href="https://github.com/IHTFY/Empire"
+          >Code<i class="material-icons left">code</i></a
+        >
+      </li>
+      <li>
+        <a href="http://www.bestpartygames.co.uk/games/empire-game"
+          >Rules<i class="material-icons left">info_outline</i></a
+        >
+      </li>
     </ul>
-  </div>
 
-  <div class="reveal hide">
-    <div class="center-align" id="revealPanel"></div>
-  </div>
+    <div id="gameLink" class="container center-align"></div>
 
-</body>
+    <div class="create container">
+      <div class="input-field">
+        <input id="userGameCode" type="text" class="validate" />
+        <label id="userGameCodeLabel" for="userGameCode">Game Code</label>
+        <span id="userGameCodeHelper" class="helper-text"></span>
+      </div>
+      <button
+        id="createButton"
+        class="btn waves-effect waves-light blue"
+        type="button"
+      >
+        Create
+      </button>
+      <button
+        id="joinButton"
+        class="btn waves-effect waves-light blue"
+        type="button"
+      >
+        Join
+      </button>
+    </div>
 
+    <div class="setup container hide">
+      <div class="input-field">
+        <input id="realName" type="text" class="validate" />
+        <label for="realName">Your Real Name</label>
+        <span id="realNameHelper" class="helper-text"></span>
+      </div>
+      <div class="input-field">
+        <input id="secretName" type="password" class="validate" />
+        <label for="secretName">Secret Nickname</label>
+        <span id="secretNameHelper" class="helper-text"></span>
+      </div>
+      <button
+        id="submitNames"
+        class="btn waves-effect waves-light blue"
+        type="button"
+      >
+        Submit
+      </button>
+    </div>
+
+    <div class="play container hide">
+      <div class="section">
+        <div id="generateName" class="waves-effect waves-light btn-small blue">
+          Create Fake User
+        </div>
+        <div
+          id="revealSecrets"
+          class="waves-effect waves-light btn-small green"
+        >
+          START
+        </div>
+      </div>
+
+      <ul class="collection with-header" id="nameList"></ul>
+    </div>
+
+    <div class="reveal container hide">
+      <div class="card-panel z-depth-5 blue">
+        <div class="white-text center-align" id="revealPanel"></div>
+      </div>
+    </div>
+  </body>
 </html>
