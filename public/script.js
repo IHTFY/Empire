@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     startButton.addEventListener('click', () => {
       db.ref(`games/${gameID}`).update({ state: 'playing' });
       displaySecrets();
-    });
+    }, { once: true });
   }
 
   async function updateUserList(usersObject) {
