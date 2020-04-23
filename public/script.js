@@ -252,8 +252,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function generateFake() {
       if (fakes === 0) {
-        fakeNameList = await populateList('https://raw.githubusercontent.com/dominictarr/random-name/master/first-names.txt');
-        fakeSecretList = await populateList('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt');
+        fakeNameList = await populateList('names.txt');
+        fakeSecretList = await populateList('words.txt');
+        // fakeNameList = await populateList('https://raw.githubusercontent.com/dominictarr/random-name/master/first-names.txt');
+        // fakeSecretList = await populateList('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt');
       }
       let fakeName = pickRandom(fakeNameList).trim();
       let fakeSecret = pickRandom(fakeSecretList);
@@ -339,7 +341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           secretName.value = '';
           document.getElementsByClassName('setup')[0].classList.remove('hide');
           db.ref(`games/${gameID}/users`).remove();
-          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1000);
+          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 500);
         }
       });
     }
