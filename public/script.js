@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const generateName = document.getElementById('generateName');
-    generateName.addEventListener('click', generateFake);
+    generateName.addEventListener('click', generateFake, { once: true });
     document.getElementsByClassName('play')[0].classList.remove('hide');
     // update user list whenever data changes in /users
     db.ref(`games/${gameID}/users`).on('value', snapshot => {
@@ -286,15 +286,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // });
 
     const nameList = document.getElementById('nameList');
-    nameList.innerHTML = '';
+    nameList.innerHTML = '<li class="collection-header"><h5>Users</h5></li>';
     // console.log(usersObject);
     for (let user of Object.values(usersObject)) {
       // console.log(user);
-      let row = document.createElement('tr');
-      let cell = document.createElement('td');
-      cell.textContent = user.real;
-      row.appendChild(cell);
-      nameList.appendChild(row);
+      let item = document.createElement('li');
+      item.classList.add('collection-item');
+      item.textContent = user.real;
+      nameList.appendChild(item);
     }
   }
 
