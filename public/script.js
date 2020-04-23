@@ -311,21 +311,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const panel = document.getElementById('revealPanel');
 
     // TODO might be a cleaner way
-    db.ref(`games/${gameID}/users`).on('value', snapshot => {
+    db.ref(`games/${gameID}/users`).once('value', snapshot => {
       show(snapshot.val());
     });
 
     function show(usersObject) {
-      let delay = 0;
-      shuffle(Object.values(usersObject)
-        .map(user => user.fake))
-        .forEach(n => setTimeout(() => panel.textContent = n, delay += 2000))
+      const bar = document.getElementById('progressBar');
+      let fakes = Object.values(usersObject).map(user => user.fake);
+      bar.style.setProperty('width', `0%`);
+
+      shuffle(fakes).forEach((n,i) => setTimeout(() => {
+        panel.textContent = n;
+        bar.style.setProperty('width', `${100*i/(fakes.length-1)}%`);
+      }, i*2000))
 
       setTimeout(() => {
         panel.textContent = '';
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
-      }, delay + 2000);
+      }, fakes.length*2000);
     }
   }
 
