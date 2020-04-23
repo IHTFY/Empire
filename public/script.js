@@ -240,10 +240,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function generateFake() {
       if (fakes === 0) {
-        fakeSecretList = await populateList('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt');
         fakeNameList = await populateList('https://raw.githubusercontent.com/dominictarr/random-name/master/first-names.txt');
+        fakeSecretList = await populateList('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt');
       }
-      let fakeName = pickRandom(fakeNameList);
+      let fakeName = pickRandom(fakeNameList).trim();
       let fakeSecret = pickRandom(fakeSecretList);
 
       // add the fake user to users
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       txt.textContent = user.real
       if (user.fakeBadge) {
         const b = document.createElement('span');
-        b.classList.add('new', 'badge', 'pink', 'darken-3');
+        b.classList.add('new', 'badge', 'purple', 'darken-3');
         b.setAttribute('data-badge-caption', 'FAKE');
         txt.appendChild(b);
       }
