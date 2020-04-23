@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // fakeSecretList = await populateList('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-usa-no-swears.txt');
       }
       let fakeName = pickRandom(fakeNameList).trim();
-      let fakeSecret = pickRandom(fakeSecretList);
+      let fakeSecret = pickRandom(fakeSecretList).trim();
 
       // add the fake user to users
       // let fakeID = (await db.collection('users').add(({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret }))).id;
