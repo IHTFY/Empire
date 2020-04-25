@@ -12,4 +12,4 @@ Demo [here](http://empire.ihtfy.com).
    * Or simply have them go to [empire.ihtfy.com](empire.ihtfy.com) and type in the game code
 3. Enter your name and secret name, then "SUBMIT"
 4. You will see who has entered the lobby
-5. Once everybody is ready to play, everybody can press "START" to reveal the secret names
+5. Once everybody is ready to play, have someone press "START" to reveal the secret names
