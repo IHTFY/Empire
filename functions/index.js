@@ -14,6 +14,8 @@ admin.initializeApp({
 // const db = admin.firestore();
 const db = admin.database();
 
+// gcloud alpha functions add-iam-policy-binding flashNames --member=allUsers --role=roles/cloudfunctions.invoker
+// https://github.com/firebase/functions-samples/issues/395#issuecomment-605025572
 exports.flashNames = functions.https.onCall(async (data, context) => {
   function shuffle(a) {
     for (let i = 0; i < a.length - 1; i++) {
@@ -24,19 +26,14 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
   }
 
   // get fakes, shuffle, store in names
-  await db.ref(`games/${data.text}/users`).once('value').then(async snapshot => {
+  let gameRef = db.ref(`games/${data.text}`);
+  await gameRef.child('users').once('value').then(async snapshot => {
     let fakes = Object.values(snapshot.val()).map(user => user.fake);
-    await db.ref(`games/${data.text}/names`).set(shuffle(fakes));
-    await db.ref(`games/${data.text}/state`).set('playing');
+    await gameRef.child('names').set(shuffle(fakes));
+    await gameRef.child('state').set('playing');
     setTimeout(async () => {
-      await db.ref(`games/${data.text}/state`).set('initializing')
+      await gameRef.child('state').set('waiting')
     }, 1500);
     return true;
   });
 });
-
-exports
-
-// exports.getGameUsers = functions.https.onCall((data, context) => {
-//   return db.collection('users').where('game', '==', data).get();
-// });

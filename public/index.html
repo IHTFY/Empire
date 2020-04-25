@@ -9,7 +9,7 @@
     <!-- update the version number as needed -->
     <script defer src="/__/firebase/7.14.1/firebase-app.js"></script>
     <script defer src="/__/firebase/7.14.1/firebase-auth.js"></script>
-    <script
+    <!-- <script
       defer
       src="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.js"
     ></script>
@@ -17,9 +17,8 @@
       type="text/css"
       rel="stylesheet"
       href="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.css"
-    />
-    <script defer src="/__/firebase/7.14.1/firebase-firestore.js"></script>
-    <!-- trying to convert to realtime database -->
+    /> -->
+    <!-- <script defer src="/__/firebase/7.14.1/firebase-firestore.js"></script> -->
     <script defer src="/__/firebase/7.14.1/firebase-database.js"></script>
     <script defer src="/__/firebase/7.14.1/firebase-functions.js"></script>
 
@@ -204,9 +203,12 @@
             <p>Do you want to end this round and start a new round?</p>
           </div>
           <div class="modal-footer">
-            <div id="roomResetButton" class="modal-close waves-effect waves-light btn orange"
-              >New Game</div
+            <div
+              id="roomResetButton"
+              class="modal-close waves-effect waves-light btn orange"
             >
+              New Game
+            </div>
             <div class="modal-close waves-effect waves-green btn-flat">
               Cancel
             </div>
@@ -216,12 +218,18 @@
         <div id="confirmDelete" class="modal">
           <div class="modal-content">
             <h4>Delete Game</h4>
-            <p>Do you want to delete the entire room? This will delete all players and send everyone back to the home screen!</p>
+            <p>
+              Do you want to delete the entire room? This will delete all
+              players and send everyone back to the home screen!
+            </p>
           </div>
           <div class="modal-footer">
-            <div id="roomDeleteButton" class="modal-close waves-effect waves-light btn red"
-              >Delete Room</div
+            <div
+              id="roomDeleteButton"
+              class="modal-close waves-effect waves-light btn red"
             >
+              Delete Room
+            </div>
             <div class="modal-close waves-effect waves-green btn-flat">
               Cancel
             </div>

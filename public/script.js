@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  firebase.functions().useFunctionsEmulator('http://localhost:5001');
-  const functions = firebase.functions();
+  // NOTE ON for development. OFF for deployment.
+  // firebase.functions().useFunctionsEmulator('http://localhost:5001');
 
   let uid = null;
   let userRef = null;
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
       if (false) {
-        // TODO ask to sign in
+        // NODO ask to sign in
         // // Initialize the FirebaseUI Widget using Firebase.
         // const ui = new firebaseui.auth.AuthUI(firebase.auth());
         // else, Anonymously login the user
@@ -26,19 +26,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       uid = user.uid;
       // userRef = db.collection('users').doc(uid);
 
-      // Don't want to have a separate users at root, only inside game
-      //userRef = db.ref(`users/${uid}`);
-
       if (isAnonymous) {
-        console.log('User is anonymous.');
-        // TODO prompt to connect account
+        // console.log('User is anonymous.');
+        // NODO prompt to connect account
       }
       console.log('User ID: ' + uid);
       if (user.displayName) {
         document.getElementById('realName').value = user.displayName;
         document.getElementById('realName').classList.add('disabled');
       }
-      // TODO create signout button
+      // NODO create signout button
     }
   });
 
@@ -48,23 +45,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
   M.AutoInit();
-
-  // trigger sidenav on mobile
   // const navbar = M.Sidenav.init(document.querySelectorAll('.sidenav'));
-
-  // trigger floating action button
+  // const modals = M.Modal.init(document.querySelectorAll('.modal'));
+  // const dropdowns = M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'));
   // const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
   const volumeIcon = document.getElementById('volumeIcon');
   volumeIcon.addEventListener('click', () => {
     volumeIcon.textContent = volumeIcon.textContent === 'volume_off' ? 'volume_up' : 'volume_off';
   });
-
-  // trigger modals
-  // const modals = M.Modal.init(document.querySelectorAll('.modal'));
-
-  // trigger modals
-  // const modals = M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'));
-
 
 
   // show screen to choose: join game, or create game
@@ -83,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // add the game and save the ID, make sure we check above that the gameCode doesn't exist
   async function createGame(code) {
     const game = {
-      "state": "initializing",
+      "state": "waiting",
       // "turn": null,
       "users": {},
       "clans": {}
@@ -319,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       //   // once names is updated, change game state
       //   db.ref(`games/${gameID}/names`).on('value', () => {
       //     db.ref(`games/${gameID}`).update({ state: 'playing' });
-      //     setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 1500);
+      //     setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'waiting' }), 1500);
       //   });
       // }
 
@@ -346,7 +334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           secretName.value = '';
           document.getElementsByClassName('setup')[0].classList.remove('hide');
           db.ref(`games/${gameID}/users`).remove();
-          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'initializing' }), 500);
+          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'waiting' }), 500);
         }
       });
     }
@@ -354,21 +342,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function updateUserList(usersObject) {
     // let currentUsers = await db.collection('users').where('game', '==', gameID).get();
-
-    // FIXME cloud function returns empty data
-    // let currentUsersCloud = await functions.httpsCallable('getGameUsers')(gameID);
-    // console.log(currentUsersCloud);
-
-    // currentUsers.forEach(snap => console.log(snap.data()));
-    // const nameList = document.getElementById('nameList');
-    // nameList.innerHTML = '';
-    // currentUsers.forEach(snap => {
-    //   let row = document.createElement('tr');
-    //   let cell = document.createElement('td');
-    //   cell.textContent = snap.data()['real'];
-    //   row.appendChild(cell);
-    //   nameList.appendChild(row);
-    // });
 
     const nameList = document.getElementById('nameList');
     nameList.innerHTML = `<li class="collection-header center-align"><h5>${gameID} Lobby</h5></li>`;
@@ -420,7 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       setTimeout(() => {
         panel.textContent = '';
-        db.ref(`games/${gameID}`).update({ state: 'initializing' });
+        db.ref(`games/${gameID}`).update({ state: 'waiting' });
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
       }, fakes.length * 2000);
