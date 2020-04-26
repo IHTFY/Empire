@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // console.log('User is anonymous.');
         // NODO prompt to connect account
       }
-      console.log('User ID: ' + uid);
+      // console.log('User ID: ' + uid);
       if (user.displayName) {
         document.getElementById('realName').value = user.displayName;
         document.getElementById('realName').classList.add('disabled');
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('gameLink').appendChild(shareLink);
 
-    console.log(`Game ID: ${gameID}`);
+    // console.log(`Game ID: ${gameID}`);
 
     // change view from game code to user creation
     document.getElementsByClassName('create')[0].classList.add('hide');
@@ -314,12 +314,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const startButton = document.getElementById('revealSecrets');
       startButton.addEventListener('click', async () => {
         const flashNames = firebase.functions().httpsCallable('flashNames');
-        let out = await flashNames({text: gameID});
-        console.log(out);
+        // let out = await flashNames({ text: gameID });
+        await flashNames({ text: gameID });
+        // console.log(out);
       });
 
       db.ref(`games/${gameID}/state`).on('value', snapshot => {
-        console.log(snapshot.val());
+        // console.log(snapshot.val());
         if (snapshot.val() === 'playing') {
           displaySecrets();
         }
@@ -364,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function displaySecrets() {
-    console.log('displaying');
+    // console.log('displaying');
     document.getElementsByClassName('play')[0].classList.add('hide');
     document.getElementsByClassName('reveal')[0].classList.remove('hide');
     const panel = document.getElementById('revealPanel');
