@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           updateUserList(snapshot.val());
         }
         if (volumeIcon.textContent === 'volume_up') {
+          document.getElementById('boop').load();
           document.getElementById('boop').play();
         }
       });
