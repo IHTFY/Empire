@@ -14,17 +14,18 @@ admin.initializeApp({
 // const db = admin.firestore();
 const db = admin.database();
 
+
+function shuffle(a) {
+  for (let i = 0; i < a.length - 1; i++) {
+    let j = i + Math.floor(Math.random() * (a.length - i));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 // gcloud alpha functions add-iam-policy-binding flashNames --member=allUsers --role=roles/cloudfunctions.invoker
 // https://github.com/firebase/functions-samples/issues/395#issuecomment-605025572
 exports.flashNames = functions.https.onCall(async (data, context) => {
-  function shuffle(a) {
-    for (let i = 0; i < a.length - 1; i++) {
-      let j = i + Math.floor(Math.random() * (a.length - i));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
   // get fakes, shuffle, store in names
   let gameRef = db.ref(`games/${data.text}`);
   await gameRef.child('users').once('value').then(async snapshot => {
