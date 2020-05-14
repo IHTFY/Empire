@@ -321,10 +321,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const startButton = document.getElementById('revealSecrets');
       startButton.addEventListener('click', async () => {
+        const playIcon = document.getElementById('playIcon');
+        const revealSpinner = document.getElementById('revealSpinner');
+        const revealSecrets = document.getElementById('revealSecrets');
+
+        playIcon.classList.add('hide');
+        revealSpinner.classList.remove('hide');
+        revealSecrets.classList.add('disabled');
+
         const flashNames = firebase.functions().httpsCallable('flashNames');
-        // let out = await flashNames({ text: gameID });
         await flashNames({ text: gameID });
-        // console.log(out);
+
+        playIcon.classList.remove('hide');
+        revealSpinner.classList.add('hide');
+        revealSecrets.classList.remove('disabled');
       });
 
       db.ref(`games/${gameID}/state`).on('value', snapshot => {
