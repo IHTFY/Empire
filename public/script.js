@@ -50,9 +50,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // const dropdowns = M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'));
   // const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
   const volumeIcon = document.getElementById('volumeIcon');
+  if (!localStorage.getItem('mute')) {
+    localStorage.mute = 'volume_off';
+  }
+  volumeIcon.textContent = localStorage.getItem('mute');
+
   volumeIcon.addEventListener('click', () => {
-    volumeIcon.textContent = volumeIcon.textContent === 'volume_off' ? 'volume_up' : 'volume_off';
+    localStorage.setItem('mute', localStorage.getItem('mute') === 'volume_off' ? 'volume_up' : 'volume_off');
+    volumeIcon.textContent = localStorage.getItem('mute');
   });
+
 
 
   // show screen to choose: join game, or create game
@@ -280,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (snapshot.val()) {
           updateUserList(snapshot.val());
         }
-        if (volumeIcon.textContent === 'volume_up') {
+        if (localStorage.getItem('mute') === 'volume_up') {
           document.getElementById('boop').load();
           document.getElementById('boop').play();
         }
@@ -385,7 +392,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // u.voice = v;
 
       fakes.forEach((n, i) => setTimeout(() => {
-        if (volumeIcon.textContent === 'volume_up') {
+        if (localStorage.getItem('mute') === 'volume_up') {
           u.text = n;
           speechSynthesis.speak(u);
         }
