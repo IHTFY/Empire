@@ -49,6 +49,7 @@
         </li>
       </ul>
     </div>
+
     <nav>
       <div class="nav-wrapper indigo">
         <a href="/" class="brand-logo">Empire</a>
@@ -57,10 +58,7 @@
         >
         <ul class="right hide-on-med-and-down">
           <li>
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="http://www.bestpartygames.co.uk/games/empire-game"
+            <a class="modal-trigger" href="#rules"
               >Rules<i class="material-icons left">info_outline</i></a
             >
           </li>
@@ -113,14 +111,131 @@
         >
       </li>
       <li>
-        <a
-          target="_blank"
-          rel="noopener noreferrer"
-          href="http://www.bestpartygames.co.uk/games/empire-game"
+        <a class="modal-trigger" href="#rules"
           >Rules<i class="material-icons left">info_outline</i></a
         >
       </li>
     </ul>
+
+    <div id="rules" class="modal">
+      <div class="modal-content">
+        <ul class="collapsible">
+          <li>
+            <div class="collapsible-header">Setup</div>
+            <div class="collapsible-body">
+              <ol>
+                <li>
+                  Create a new room
+                  <ul>
+                    <li>
+                      Name the room or leave it blank to generate a random name
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Click <code>GET GAME LINK</code> and share with your friends
+                  <ul>
+                    <li>
+                      Or simply have them go to
+                      <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>
+                      and type in the game code
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Enter your display name and secret name, then
+                  <code>SUBMIT</code>
+                </li>
+                <li>You will see who has entered the lobby</li>
+                <li>
+                  If you have a small party, you can add fake names under the
+                  <code>OPTIONS</code> menu
+                </li>
+                <li>
+                  Once everybody is ready to play, have someone press `START`;
+                  to reveal the secret names
+                </li>
+              </ol>
+            </div>
+          </li>
+          <li class="active">
+            <div class="collapsible-header">Rules</div>
+            <div class="collapsible-body">
+              <p>
+                <strong>Objective</strong>: Be the leader of the final empire.
+              </p>
+              <ol>
+                <li>
+                  Each player picks a secret name (any word that they hope won't
+                  be associated with them)
+                </li>
+                <li>
+                  The list of secret names is read twice in random order, and
+                  players are meant to memorize as many names as they can
+                  <ul>
+                    <li>No recording of any information is allowed</li>
+                    <li>
+                      The name list can be read again at any point if
+                      unanimously agreed by all the remaining leaders
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Turns are taken clockwise around the circle of players
+                  <ul>
+                    <li>Only leaders of empires take turns</li>
+                  </ul>
+                </li>
+                <li>
+                  The first leader chooses another leader and guesses their
+                  secret word
+                  <ul>
+                    <li>
+                      If they are wrong, their turn is over, and the next leader
+                      can guess
+                    </li>
+                    <li>
+                      If they are right, the other player is now part of their
+                      empire and the leader gets to guess again
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  The winner is the last leader standing; the one whose secret
+                  name is never guessed
+                </li>
+              </ol>
+            </div>
+          </li>
+          <li>
+            <div class="collapsible-header">Notes</div>
+            <div class="collapsible-body">
+              <ol>
+                <li>
+                  When a leader is conquered by another leader, their whole
+                  empire goes along with them
+                </li>
+                <li>
+                  All member of each empire should cooperate to guess the
+                  remaining leaders' secret names and protect the secret
+                  name of their leader
+                </li>
+                <li>
+                  Only the leader of an empire can make official guesses; other
+                  members can talk, but any guesses don't count as a turn
+                  for their empire
+                </li>
+              </ol>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-close waves-effect waves-green btn-flat">
+          Close
+        </div>
+      </div>
+    </div>
 
     <div id="gameLink" class="container center-align"></div>
 
@@ -247,8 +362,8 @@
           id="revealSecrets"
           class="waves-effect waves-light btn-large green"
         >
-        <div class="valign-wrapper">
-          <i id="playIcon" class="material-icons left">play_arrow</i>
+          <div class="valign-wrapper">
+            <i id="playIcon" class="material-icons left">play_arrow</i>
             <div id="revealSpinner" class="preloader-wrapper small active hide">
               <div class="spinner-layer spinner-blue">
                 <div class="circle-clipper left">
