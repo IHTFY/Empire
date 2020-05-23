@@ -9,33 +9,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Handle login
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
-      if (false) {
-        // NODO ask to sign in
-        // // Initialize the FirebaseUI Widget using Firebase.
-        // const ui = new firebaseui.auth.AuthUI(firebase.auth());
-        // else, Anonymously login the user
-      } else {
-        // Sign in anonymously
-        firebase.auth().signInAnonymously().catch(err => {
-          console.error(`Error code ${err.code}: ${err.message}`);
-        });
-      }
+      // Sign in anonymously
+      firebase.auth().signInAnonymously().catch(err => {
+        console.error(`Error code ${err.code}: ${err.message}`);
+      });
     } else {
       // User is signed in.
-      let isAnonymous = user.isAnonymous;
       uid = user.uid;
-      // userRef = db.collection('users').doc(uid);
 
-      if (isAnonymous) {
-        // console.log('User is anonymous.');
-        // NODO prompt to connect account
+      if (localStorage.getItem('realName')) {
+        document.getElementById('realName').value = localStorage.getItem('realName');
       }
-      // console.log('User ID: ' + uid);
-      if (user.displayName) {
-        document.getElementById('realName').value = user.displayName;
-        document.getElementById('realName').classList.add('disabled');
-      }
-      // NODO create signout button
     }
   });
 
@@ -49,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // const modals = M.Modal.init(document.querySelectorAll('.modal'));
   // const dropdowns = M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'));
   // const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
+
   const volumeIcon = document.getElementById('volumeIcon');
   if (!localStorage.getItem('mute')) {
     localStorage.mute = 'volume_off';
@@ -177,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       realName.className = 'validate';
       secretName.className = 'validate';
 
-      // ask the user for their real name
+      // get the user's real name
       const userRealName = realName.value;
 
       function isValidName(n) {
@@ -187,6 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (isValidName(userRealName)) {
+        localStorage.setItem('realName', userRealName);
         realName.classList.add('valid');
 
         // create user
@@ -250,6 +236,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       return text.split('\n');
     }
 
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
     async function generateFake() {
       if (fakes === 0) {
         fakeNameList = await populateList('names.txt');
@@ -308,21 +298,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       deleteButton.addEventListener('click', () => {
         db.ref(`games/${gameID}`).update({ state: 'deleting' });
       });
-
-      // Use cloud function flashNames
-      // function setNames() {
-      //   // get fakes, shuffle, store in names
-      //   db.ref(`games/${gameID}/users`).once('value', snapshot => {
-      //     let fakes = Object.values(snapshot.val()).map(user => user.fake);
-      //     db.ref(`games/${gameID}/names`).set(shuffle(fakes));
-      //   });
-
-      //   // once names is updated, change game state
-      //   db.ref(`games/${gameID}/names`).on('value', () => {
-      //     db.ref(`games/${gameID}`).update({ state: 'playing' });
-      //     setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'waiting' }), 1500);
-      //   });
-      // }
 
       const startButton = document.getElementById('revealSecrets');
       startButton.addEventListener('click', async () => {
@@ -412,8 +387,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           speechSynthesis.speak(u);
         }
         panel.textContent = n;
-        bar.style.setProperty('width', `${100 * i / (fakes.length - 1)}%`);
-      }, i * 2000))
+        bar.style.setProperty('width', `${100 * (i + 1) / fakes.length}%`);
+      }, i * 2500))
 
       setTimeout(() => {
         panel.textContent = '';
@@ -422,22 +397,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementsByClassName('reveal')[0].classList.add('hide');
       }, fakes.length * 2000);
     }
-  }
-
-
-  // Old functions, might use later
-  //
-
-  function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-
-  function shuffle(a) {
-    for (let i = 0; i < a.length - 1; i++) {
-      let j = i + Math.floor(Math.random() * (a.length - i));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
   }
 
 });
