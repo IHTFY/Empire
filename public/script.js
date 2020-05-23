@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (localStorage.getItem('realName')) {
         document.getElementById('realName').value = localStorage.getItem('realName');
+        document.getElementById('realNameLabel').classList.add('active');
       }
     }
   });
@@ -51,6 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const createButton = document.getElementById('createButton');
   const joinButton = document.getElementById('joinButton');
 
+  // doesn't run if I do back/forward in browser
+  if (userGameCode.value) {
+    document.getElementById('userGameCodeLabel').classList.add('active');
+  }
+
   async function doesGameExist(code) {
     if (code === '') return false;
     let snapshot = await db.ref(`games/${code}`).once('value');
@@ -76,11 +82,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   let gameID = null;
-  let gameRef = null;
 
   async function initGame(gameID) {
     document.title = `Empire: ${gameID}`
-    gameRef = db.ref(`games/${gameID}`);
 
     let url = new URL(document.location);
     url.searchParams.set('code', gameID);
@@ -216,6 +220,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   async function lobby() {
+    db.ref(`games/${gameID}`).update({ state: 'waiting' });
+
     let fakeSecretList = [];
     let fakeNameList = [];
     let fakes = 0;
@@ -258,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementsByClassName('play')[0].classList.remove('hide');
 
-    // dont' want to double up listeners.
+    // don't want to double up listeners. Maybe use .once and destruct somehow? .removeEventListener
     if (fresh) {
       fresh = false;
 
@@ -266,13 +272,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       generateName.addEventListener('click', generateFake);
 
       // update user list whenever data changes in /users
+      // should probably have separate realname list to watch; I'm grabbing full user obj list here.
       db.ref(`games/${gameID}/users`).on('value', snapshot => {
         if (snapshot.val()) {
           updateUserList(snapshot.val());
-        }
-        if (localStorage.getItem('mute') === 'volume_up') {
-          document.getElementById('boop').load();
-          document.getElementById('boop').play();
+
+          if (localStorage.getItem('mute') === 'volume_up') {
+            document.getElementById('boop').load();
+            document.getElementById('boop').play();
+          }
         }
       });
 
@@ -288,6 +296,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       const startButton = document.getElementById('revealSecrets');
+      const flashNames = firebase.functions().httpsCallable('flashNames');
+
       startButton.addEventListener('click', async () => {
         const playIcon = document.getElementById('playIcon');
         const revealSpinner = document.getElementById('revealSpinner');
@@ -297,7 +307,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         revealSpinner.classList.remove('hide');
         revealSecrets.classList.add('disabled');
 
-        const flashNames = firebase.functions().httpsCallable('flashNames');
         await flashNames({ text: gameID });
 
         playIcon.classList.remove('hide');
@@ -306,7 +315,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       db.ref(`games/${gameID}/state`).on('value', snapshot => {
-        // console.log(snapshot.val());
         if (snapshot.val() === 'playing') {
           displaySecrets();
         }
@@ -321,7 +329,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           secretName.value = '';
           document.getElementsByClassName('setup')[0].classList.remove('hide');
           db.ref(`games/${gameID}/users`).remove();
-          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'waiting' }), 2000);
         }
       });
     }
@@ -364,16 +371,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const bar = document.getElementById('progressBar');
       bar.style.setProperty('width', `0%`);
 
-      // const v = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
-      let u = new SpeechSynthesisUtterance();
-      // u.voice = v;
+      // const voice = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
+      let utterance = new SpeechSynthesisUtterance();
+      // utterance.voice = voice;
 
-      fakes.forEach((n, i) => setTimeout(() => {
+      fakes.forEach((name, i) => setTimeout(() => {
         if (localStorage.getItem('mute') === 'volume_up') {
-          u.text = n;
-          speechSynthesis.speak(u);
+          utterance.text = name;
+          speechSynthesis.speak(utterance);
         }
-        panel.textContent = n;
+        panel.textContent = name;
         bar.style.setProperty('width', `${100 * (i + 1) / fakes.length}%`);
       }, i * 2500))
 
@@ -382,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         db.ref(`games/${gameID}`).update({ state: 'waiting' });
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
-      }, fakes.length * 2000);
+      }, fakes.length * 2500);
     }
   }
 

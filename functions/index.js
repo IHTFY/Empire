@@ -26,15 +26,24 @@ function shuffle(a) {
 // gcloud alpha functions add-iam-policy-binding flashNames --member=allUsers --role=roles/cloudfunctions.invoker
 // https://github.com/firebase/functions-samples/issues/395#issuecomment-605025572
 exports.flashNames = functions.https.onCall(async (data, context) => {
-  // get fakes, shuffle, store in names
   let gameRef = db.ref(`games/${data.text}`);
-  await gameRef.child('users').once('value').then(async snapshot => {
-    let fakes = Object.values(snapshot.val()).map(user => user.fake);
-    await gameRef.child('names').set(shuffle(fakes));
-    await gameRef.child('state').set('playing');
-    setTimeout(async () => {
-      await gameRef.child('state').set('waiting')
-    }, 1500);
-    return true;
+  let state = gameRef.child('state');
+
+  state.once('value').then(async stateSnap => {
+    if (stateSnap.val() === 'waiting') {
+      state.set('shuffling');
+      // get fakes, shuffle, store in names
+      await gameRef.child('users').once('value').then(async usersSnap => {
+        let fakes = Object.values(usersSnap.val()).map(user => user.fake);
+        await gameRef.child('names').set(shuffle(fakes));
+        await state.set('playing');
+        setTimeout(async () => {
+          await state.set('waiting');
+        }, 2000);
+        return true;
+      });
+
+    }
   });
+
 });
