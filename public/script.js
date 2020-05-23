@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // firebase.functions().useFunctionsEmulator('http://localhost:5001');
 
   let uid = null;
-  let userRef = null;
   let fresh = true;
 
   // Handle login
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Start the database instance
-  // const db = firebase.firestore();
   const db = firebase.database();
 
 
@@ -55,7 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function doesGameExist(code) {
     if (code === '') return false;
-    // return (await db.collection('games').doc(code).get()).exists;
     let snapshot = await db.ref(`games/${code}`).once('value');
     return snapshot.exists();
   }
@@ -69,12 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       "clans": {}
     }
     if (code === '') {
-      // return (await db.collection('games').add(game)).id;
       let newGameCode = db.ref('games').push().key;
       db.ref(`games/${newGameCode}`).set(game);
       return newGameCode;
     } else {
-      // await db.collection('games').doc(code).set(game);
       await db.ref(`games/${code}`).set(game);
       return code;
     }
@@ -85,7 +80,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function initGame(gameID) {
     document.title = `Empire: ${gameID}`
-    // gameRef = db.collection('games').doc(gameID);
     gameRef = db.ref(`games/${gameID}`);
 
     let url = new URL(document.location);
@@ -175,11 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('realName', userRealName);
         realName.classList.add('valid');
 
-        // create user
-        // userRef.set({ game: gameID, real: userRealName, clan: userRealName });
-
-        // add the user to their game
-        // gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(uid) });
+        // (create game and) add user
         db.ref(`games/${gameID}/users/${uid}`).set(
           {
             //game: gameID,
@@ -251,11 +241,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       let fakeSecret = pickRandom(fakeSecretList).trim();
 
       // add the fake user to users
-      // let fakeID = (await db.collection('users').add(({ game: gameID, real: fakeName, clan: fakeName, fake: fakeSecret }))).id;
       let fakeID = db.ref(`games/${gameID}/users`).push().key;
 
       // add the fake user to their game
-      // gameRef.update({ "users": firebase.firestore.FieldValue.arrayUnion(fakeID) });
       db.ref(`games/${gameID}/users/${fakeID}`).set(
         {
           game: gameID,
@@ -340,7 +328,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function updateUserList(usersObject) {
-    // let currentUsers = await db.collection('users').where('game', '==', gameID).get();
 
     const nameList = document.getElementById('nameList');
     nameList.innerHTML = `<li class="collection-header center-align"><h5>${gameID} Lobby</h5></li>`;
