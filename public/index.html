@@ -7,20 +7,11 @@
     <link rel="icon" href="favicon.ico" />
 
     <!-- update the version number as needed -->
-    <script defer src="/__/firebase/7.14.1/firebase-app.js"></script>
-    <script defer src="/__/firebase/7.14.1/firebase-auth.js"></script>
-    <!-- <script
-      defer
-      src="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.js"
-    ></script>
-    <link
-      type="text/css"
-      rel="stylesheet"
-      href="https://cdn.firebase.com/libs/firebaseui/4.5.0/firebaseui.css"
-    /> -->
-    <!-- <script defer src="/__/firebase/7.14.1/firebase-firestore.js"></script> -->
-    <script defer src="/__/firebase/7.14.1/firebase-database.js"></script>
-    <script defer src="/__/firebase/7.14.1/firebase-functions.js"></script>
+    <script defer src="/__/firebase/7.14.4/firebase-app.js"></script>
+    <script defer src="/__/firebase/7.14.4/firebase-auth.js"></script>
+    <!-- <script defer src="/__/firebase/7.14.4/firebase-firestore.js"></script> -->
+    <script defer src="/__/firebase/7.14.4/firebase-database.js"></script>
+    <script defer src="/__/firebase/7.14.4/firebase-functions.js"></script>
 
     <!-- initialize the SDK after all desired features are loaded -->
     <script defer src="/__/firebase/init.js"></script>
@@ -51,13 +42,6 @@
         <i class="large material-icons">settings</i>
       </a>
       <ul>
-        <!-- <li>
-          <a
-            href="#donateModal"
-            class="modal-trigger btn-floating indigo accent-2"
-            ><i class="material-icons">sentiment_very_satisfied</i></a
-          >
-        </li> -->
         <li>
           <a class="btn-floating indigo accent-2"
             ><i class="material-icons" id="volumeIcon">volume_off</i></a
@@ -330,54 +314,5 @@
         <div id="progressBar" class="determinate" style="width: 0%;"></div>
       </div>
     </div>
-
-    <!-- <div id="donateModal" class="modal">
-      <div
-        class="modal-content center-align"
-        id="paypal-button-container"
-      ></div>
-      <script
-        src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"
-        data-sdk-integration-source="button-factory"
-      ></script>
-      <script>
-        paypal
-          .Buttons({
-            style: {
-              shape: "rect",
-              color: "blue",
-              layout: "vertical",
-              label: "paypal",
-            },
-            createOrder: function (data, actions) {
-              return actions.order.create({
-                purchase_units: [
-                  {
-                    amount: {
-                      value: "5",
-                    },
-                  },
-                ],
-              });
-            },
-            onApprove: function (data, actions) {
-              return actions.order.capture().then(function (details) {
-                alert(
-                  "Transaction completed by " +
-                    details.payer.name.given_name +
-                    "!"
-                );
-              });
-            },
-          })
-          .render("#paypal-button-container");
-      </script>
-
-      <div class="modal-footer">
-        <div class="modal-close waves-effect waves-green btn-flat">
-          Cancel
-        </div>
-      </div>
-    </div> -->
   </body>
 </html>
