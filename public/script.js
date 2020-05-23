@@ -207,8 +207,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         realNameHelper.setAttribute('data-error', 'Invalid Real Name');
       }
 
+      function sanitizeName(raw) {
+        //TODO different rules for allowed characters etc.
+        return raw.toLowerCase().replace(/[^ A-Za-z0-9]/g, '').replace(/\s+/g, ' ').trim();
+      }
+
       // get the user's fake name
-      let userFakeName = secretName.value;
+      let userFakeName = sanitizeName(secretName.value);
 
       function isValidSecretName(n) {
         if (n === '') return false;
@@ -353,7 +358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           secretName.value = '';
           document.getElementsByClassName('setup')[0].classList.remove('hide');
           db.ref(`games/${gameID}/users`).remove();
-          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'waiting' }), 500);
+          setTimeout(() => db.ref(`games/${gameID}`).update({ state: 'waiting' }), 2000);
         }
       });
     }
@@ -434,11 +439,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     return a;
   }
-
-  function sanitizeName(raw) {
-    //TODO different rules for allowed characters etc.
-    return raw.toUpperCase().replace(/[^A-Z]/g, '').trim();
-  }
-  //
 
 });
