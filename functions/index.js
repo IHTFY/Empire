@@ -29,11 +29,13 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
   let gameRef = db.ref(`games/${data.text}`);
   let state = gameRef.child('state');
 
-  state.once('value').then(async stateSnap => {
+  return state.once('value').then(async stateSnap => {
+
     if (stateSnap.val() === 'waiting') {
       state.set('shuffling');
       // get fakes, shuffle, store in names
-      await gameRef.child('users').once('value').then(async usersSnap => {
+      return await gameRef.child('users').once('value').then(async usersSnap => {
+
         let fakes = Object.values(usersSnap.val()).map(user => user.fake);
         await gameRef.child('names').set(shuffle(fakes));
         await state.set('playing');
@@ -42,8 +44,7 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
         }, 2000);
         return true;
       });
-
     }
+    return true;
   });
-
 });
