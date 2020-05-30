@@ -242,7 +242,7 @@
     <div class="create container">
       <div class="input-field">
         <input id="userGameCode" type="text" class="validate" />
-        <label id="userGameCodeLabel" for="userGameCode">Game Code</label>
+        <label class="unselectable" id="userGameCodeLabel" for="userGameCode">Game Code</label>
         <span id="userGameCodeHelper" class="helper-text"></span>
       </div>
       <button
@@ -264,13 +264,13 @@
     <div class="setup container hide">
       <div class="input-field">
         <input id="realName" type="text" class="validate" />
-        <label id="realNameLabel" for="realName">Your Real Name</label>
-        <span id="realNameHelper" class="helper-text"></span>
+        <label class="unselectable" id="realNameLabel" for="realName">Your Real Name</label>
+        <span id="realNameHelper" class="helper-text unselectable"></span>
       </div>
       <div class="input-field">
         <input id="secretName" type="password" class="validate" />
-        <label for="secretName">Secret Nickname</label>
-        <span id="secretNameHelper" class="helper-text"></span>
+        <label class="unselectable" for="secretName">Secret Nickname</label>
+        <span id="secretNameHelper" class="helper-text unselectable"></span>
       </div>
       <button
         id="submitNames"
