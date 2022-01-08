@@ -239,194 +239,222 @@
       </div>
     </div>
 
-    <div id="gameLink" class="container center-align"></div>
+    <div class="row">
+      <ul class="tabs tabs-fixed-width">
+        <li id="createTab" class="tab col s3 active">
+          <a href="#createPage">Create or Join</a>
+        </li>
+        <li id="setupTab" class="tab col s3 disabled">
+          <a href="#setupPage">Pick Name</a>
+        </li>
+        <li id="playTab" class="tab col s3 disabled">
+          <a href="#playPage">Lobby</a>
+        </li>
+      </ul>
 
-    <div class="create container">
-      <div class="input-field">
-        <input id="userGameCode" type="text" class="validate" />
-        <label class="unselectable" id="userGameCodeLabel" for="userGameCode"
-          >Game Code</label
-        >
-        <span id="userGameCodeHelper" class="helper-text"></span>
-      </div>
-      <button
-        id="createButton"
-        class="btn waves-effect waves-light blue"
-        type="button"
-      >
-        Create
-      </button>
-      <button
-        id="joinButton"
-        class="btn waves-effect waves-light blue"
-        type="button"
-      >
-        Join
-      </button>
-    </div>
+      <div id="gameLink" class="container center-align"></div>
 
-    <div class="setup container hide">
-      <div class="input-field">
-        <i class="material-icons prefix">person</i>
-        <input id="realName" type="text" class="validate" />
-        <label class="unselectable" id="realNameLabel" for="realName"
-          >Your Real Name</label
-        >
-        <span id="realNameHelper" class="helper-text unselectable"></span>
-      </div>
-      <div class="input-field">
-        <i class="material-icons prefix" id="togglePassword">visibility_off</i>
-        <input id="secretName" type="password" class="validate" />
-        <label class="unselectable" for="secretName">Secret Nickname</label>
-        <span id="secretNameHelper" class="helper-text unselectable"></span>
-      </div>
-      <button
-        id="submitNames"
-        class="btn waves-effect waves-light blue"
-        type="button"
-      >
-        Submit
-      </button>
-    </div>
-
-    <div class="play container hide">
-      <div class="section valign-wrapper">
-        <a
-          class="dropdown-trigger btn-large indigo"
-          href="#"
-          data-target="dropdown1"
-          ><i class="material-icons left">build</i>Options</a
-        >
-        <ul id="dropdown1" class="dropdown-content">
-          <li><a href="#!">Cancel</a></li>
-          <li class="divider" tabindex="-1"></li>
-          <li>
-            <a
-              id="generateName"
-              class="waves-effect waves-light indigo darken-3 white-text"
+      <div id="createPage" class="col s12">
+        <div class="create container">
+          <div class="input-field">
+            <input id="userGameCode" type="text" class="validate" />
+            <label
+              class="unselectable"
+              id="userGameCodeLabel"
+              for="userGameCode"
+              >Game Code</label
             >
-              <i class="material-icons">adb</i>Add Fake
-            </a>
-          </li>
-
-          <li class="divider" tabindex="-1"></li>
-
-          <li>
-            <a
-              href="#confirmNewGame"
-              class="modal-trigger waves-effect waves-light orange white-text"
-              ><i class="material-icons">autorenew</i>New Game</a
-            >
-          </li>
-
-          <li>
-            <a
-              href="#confirmDelete"
-              class="modal-trigger waves-effect waves-light red white-text"
-              ><i class="material-icons">delete_forever</i>End Room</a
-            >
-          </li>
-        </ul>
-
-        <div id="confirmNewGame" class="modal">
-          <div class="modal-content">
-            <h4>New Game</h4>
-            <p>Do you want to end this round and start a new round?</p>
+            <span id="userGameCodeHelper" class="helper-text"></span>
           </div>
-          <div class="modal-footer">
+          <button
+            id="createButton"
+            class="btn waves-effect waves-light blue"
+            type="button"
+          >
+            Create
+          </button>
+          <button
+            id="joinButton"
+            class="btn waves-effect waves-light blue"
+            type="button"
+          >
+            Join
+          </button>
+        </div>
+      </div>
+
+      <div id="setupPage" class="col s12 hide">
+        <div class="setup container">
+          <div class="input-field">
+            <i class="material-icons prefix">person</i>
+            <input id="realName" type="text" class="validate" />
+            <label class="unselectable" id="realNameLabel" for="realName"
+              >Your Real Name</label
+            >
+            <span id="realNameHelper" class="helper-text unselectable"></span>
+          </div>
+          <div class="input-field">
+            <i class="material-icons prefix" id="togglePassword">
+              visibility_off</i
+            >
+            <input id="secretName" type="password" class="validate" />
+            <label class="unselectable" for="secretName">Secret Nickname</label>
+            <span id="secretNameHelper" class="helper-text unselectable"></span>
+          </div>
+          <button
+            id="submitNames"
+            class="btn waves-effect waves-light blue"
+            type="button"
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+
+      <div id="playPage" class="col s12 hide">
+        <div class="play container">
+          <div class="section valign-wrapper">
+            <a
+              class="dropdown-trigger btn-large indigo"
+              href="#"
+              data-target="dropdown1"
+              ><i class="material-icons left">build</i>Options</a
+            >
+            <ul id="dropdown1" class="dropdown-content">
+              <li><a href="#!">Cancel</a></li>
+              <li class="divider" tabindex="-1"></li>
+              <li>
+                <a
+                  id="generateName"
+                  class="waves-effect waves-light indigo darken-3 white-text"
+                >
+                  <i class="material-icons">adb</i>Add Fake
+                </a>
+              </li>
+
+              <li class="divider" tabindex="-1"></li>
+
+              <li>
+                <a
+                  href="#confirmNewGame"
+                  class="modal-trigger waves-effect waves-light orange white-text"
+                  ><i class="material-icons">autorenew</i>New Game</a
+                >
+              </li>
+
+              <li>
+                <a
+                  href="#confirmDelete"
+                  class="modal-trigger waves-effect waves-light red white-text"
+                  ><i class="material-icons">delete_forever</i>End Room</a
+                >
+              </li>
+            </ul>
+
+            <div id="confirmNewGame" class="modal">
+              <div class="modal-content">
+                <h4>New Game</h4>
+                <p>Do you want to end this round and start a new round?</p>
+              </div>
+              <div class="modal-footer">
+                <div
+                  id="roomResetButton"
+                  class="modal-close waves-effect waves-light btn orange"
+                >
+                  New Game
+                </div>
+                <div class="modal-close waves-effect waves-green btn-flat">
+                  Cancel
+                </div>
+              </div>
+            </div>
+
+            <div id="confirmDelete" class="modal">
+              <div class="modal-content">
+                <h4>Delete Game</h4>
+                <p>
+                  Do you want to delete the entire room? This will delete all
+                  players and send everyone back to the home screen!
+                </p>
+              </div>
+              <div class="modal-footer">
+                <div
+                  id="roomDeleteButton"
+                  class="modal-close waves-effect waves-light btn red"
+                >
+                  Delete Room
+                </div>
+                <div class="modal-close waves-effect waves-green btn-flat">
+                  Cancel
+                </div>
+              </div>
+            </div>
             <div
-              id="roomResetButton"
-              class="modal-close waves-effect waves-light btn orange"
+              id="revealSecrets"
+              class="waves-effect waves-light btn-large green"
             >
-              New Game
-            </div>
-            <div class="modal-close waves-effect waves-green btn-flat">
-              Cancel
-            </div>
-          </div>
-        </div>
+              <div class="valign-wrapper">
+                <i id="playIcon" class="material-icons left">play_arrow</i>
+                <div
+                  id="revealSpinner"
+                  class="preloader-wrapper small active hide"
+                >
+                  <div class="spinner-layer spinner-blue">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                  </div>
 
-        <div id="confirmDelete" class="modal">
-          <div class="modal-content">
-            <h4>Delete Game</h4>
-            <p>
-              Do you want to delete the entire room? This will delete all
-              players and send everyone back to the home screen!
-            </p>
-          </div>
-          <div class="modal-footer">
-            <div
-              id="roomDeleteButton"
-              class="modal-close waves-effect waves-light btn red"
-            >
-              Delete Room
-            </div>
-            <div class="modal-close waves-effect waves-green btn-flat">
-              Cancel
-            </div>
-          </div>
-        </div>
-        <div
-          id="revealSecrets"
-          class="waves-effect waves-light btn-large green"
-        >
-          <div class="valign-wrapper">
-            <i id="playIcon" class="material-icons left">play_arrow</i>
-            <div id="revealSpinner" class="preloader-wrapper small active hide">
-              <div class="spinner-layer spinner-blue">
-                <div class="circle-clipper left">
-                  <div class="circle"></div>
-                </div>
-                <div class="gap-patch">
-                  <div class="circle"></div>
-                </div>
-                <div class="circle-clipper right">
-                  <div class="circle"></div>
-                </div>
-              </div>
+                  <div class="spinner-layer spinner-red">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                  </div>
 
-              <div class="spinner-layer spinner-red">
-                <div class="circle-clipper left">
-                  <div class="circle"></div>
-                </div>
-                <div class="gap-patch">
-                  <div class="circle"></div>
-                </div>
-                <div class="circle-clipper right">
-                  <div class="circle"></div>
-                </div>
-              </div>
+                  <div class="spinner-layer spinner-yellow">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                  </div>
 
-              <div class="spinner-layer spinner-yellow">
-                <div class="circle-clipper left">
-                  <div class="circle"></div>
+                  <div class="spinner-layer spinner-green">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                      <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                  </div>
                 </div>
-                <div class="gap-patch">
-                  <div class="circle"></div>
-                </div>
-                <div class="circle-clipper right">
-                  <div class="circle"></div>
-                </div>
-              </div>
-
-              <div class="spinner-layer spinner-green">
-                <div class="circle-clipper left">
-                  <div class="circle"></div>
-                </div>
-                <div class="gap-patch">
-                  <div class="circle"></div>
-                </div>
-                <div class="circle-clipper right">
-                  <div class="circle"></div>
-                </div>
+                Start
               </div>
             </div>
-            Start
           </div>
+
+          <ul class="collection with-header z-depth-2" id="nameList"></ul>
         </div>
       </div>
-
-      <ul class="collection with-header z-depth-2" id="nameList"></ul>
     </div>
 
     <div class="reveal container unselectable hide">

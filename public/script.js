@@ -31,7 +31,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // const navbar = M.Sidenav.init(document.querySelectorAll('.sidenav'));
   // const modals = M.Modal.init(document.querySelectorAll('.modal'));
   // const dropdowns = M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'));
-  // const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'));
+  // const fab = M.FloatingActionButton.init(document.querySelectorAll('.fixed-action-btn'), {
+  //   direction: 'top',
+  //   hoverEnabled: false
+  // });
+
+  const tabs = M.Tabs.getInstance(document.querySelector('.tabs'));
 
   const volumeIcon = document.getElementById('volumeIcon');
   if (!localStorage.getItem('mute')) {
@@ -44,7 +49,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     volumeIcon.textContent = localStorage.getItem('mute');
   });
 
-
+  // toggle password visibility
+  const togglePassword = document.getElementById('togglePassword');
+  togglePassword.addEventListener('click', () => {
+    if (secretName.type === 'password') {
+      secretName.type = 'text';
+      togglePassword.textContent = 'visibility';
+    } else {
+      secretName.type = 'password';
+      togglePassword.textContent = 'visibility_off';
+    }
+  });
 
   // show screen to choose: join game, or create game
   const userGameCode = document.getElementById('userGameCode');
@@ -95,9 +110,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     shareLink.classList.add('waves-effect', 'waves-light', 'btn-flat', 'btn-large');
     shareLink.addEventListener('click', () => {
       navigator.clipboard.writeText(gameLink).then(function () {
-        M.toast({ html: 'Copied Game Link to Clipboard' });
+        M.toast({ html: 'Link Copied' });
       }, function (err) {
-        M.toast({ html: 'Error Copying Game Link to Clipboard' });
+        M.toast({ html: 'Error' });
       });
     });
 
@@ -106,12 +121,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     shareIcon.textContent = 'person_add';
     shareLink.appendChild(shareIcon)
 
+
+    document.getElementById('gameLink').innerHTML = '';
     document.getElementById('gameLink').appendChild(shareLink);
 
     // console.log(`Game ID: ${gameID}`);
 
     // change view from game code to user creation
-    document.getElementsByClassName('create')[0].classList.add('hide');
     setupUser();
   }
 
@@ -149,24 +165,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   joinButton.addEventListener('click', tryJoining);
 
   async function setupUser() {
-    document.getElementsByClassName('setup')[0].classList.remove('hide');
+    document.getElementById('setupTab').classList.remove('disabled');
+    document.getElementById('setupPage').classList.remove('hide');
+    tabs.select('setupPage');
+
     const realName = document.getElementById('realName');
     const realNameHelper = document.getElementById('realNameHelper');
     const secretName = document.getElementById('secretName');
     const secretNameHelper = document.getElementById('secretNameHelper');
     const submitNames = document.getElementById('submitNames');
-
-    // toggle password visibility
-    const togglePassword = document.getElementById('togglePassword');
-    togglePassword.addEventListener('click', () => {
-      if (secretName.type === 'password') {
-        secretName.type = 'text';
-        togglePassword.textContent = 'visibility';
-      } else {
-        secretName.type = 'password';
-        togglePassword.textContent = 'visibility_off';
-      }
-    });
 
     submitNames.addEventListener('click', async () => {
       realName.className = 'validate';
@@ -184,15 +191,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (isValidName(userRealName)) {
         localStorage.setItem('realName', userRealName);
         realName.classList.add('valid');
-
-        // (create game and) add user
-        db.ref(`games/${gameID}/users/${uid}`).set(
-          {
-            //game: gameID,
-            real: userRealName,
-            clan: userRealName
-          }
-        );
 
       } else {
         realName.classList.add('invalid');
@@ -217,10 +215,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         secretName.classList.add('valid');
 
         if (isValidName(userRealName)) {
-          // update the user profile with their fake name
-          db.ref(`games/${gameID}/users/${uid}`).update({ fake: userFakeName });
 
-          document.getElementsByClassName('setup')[0].classList.add('hide');
+          // (create game and) add user
+          db.ref(`games/${gameID}/users/${uid}`).set(
+            {
+              real: userRealName,
+              clan: userRealName,
+              fake: userFakeName
+            }
+          );
+
           lobby();
         }
       } else {
@@ -274,7 +278,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       fakes++;
     }
 
-    document.getElementsByClassName('play')[0].classList.remove('hide');
+    document.getElementById('playTab').classList.remove('disabled');
+    document.getElementById('playPage').classList.remove('hide');
+    tabs.select('playPage');
 
     // don't want to double up listeners. Maybe use .once and destruct somehow? .removeEventListener
     if (fresh) {
@@ -337,9 +343,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (snapshot.val() === 'resetting') {
           db.ref(`games/${gameID}/users/${uid}`).remove();
           document.getElementsByClassName('reveal')[0].classList.add('hide');
-          document.getElementsByClassName('play')[0].classList.add('hide');
+          document.getElementById('playTab').classList.add('disabled');
+          document.getElementById('playPage').classList.add('hide');
           secretName.value = '';
-          document.getElementsByClassName('setup')[0].classList.remove('hide');
+          document.getElementById('setupTab').classList.remove('disabled');
+          document.getElementById('setupPage').classList.remove('hide');
+          tabs.select('setupPage');
           db.ref(`games/${gameID}/users`).remove();
         }
       });
@@ -356,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       item.classList.add('collection-item', 'avatar');
 
       const colors = ['red', 'pink', 'purple', 'deep-purple', 'indigo', 'blue', 'light-blue', 'cyan', 'teal', 'green', 'light-green', 'lime', 'yellow', 'amber', 'orange', 'deep-orange', 'brown', 'grey', 'blue-grey'];
-      const hashedName = [...user.fake].reduce((a, c) => a + c.charCodeAt(0), 0);
+      const hashedName = [...user.fake, ...user.real].sort().reduce((a, c) => a + c.charCodeAt(0), 0);
       const color = colors[hashedName % colors.length];
 
       const pfp = document.createElement('i');
@@ -380,7 +389,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function displaySecrets() {
-    // console.log('displaying');
+    document.getElementById('createTab').classList.add('disabled');
+    document.getElementById('setupTab').classList.add('disabled');
     document.getElementsByClassName('play')[0].classList.add('hide');
     document.getElementsByClassName('reveal')[0].classList.remove('hide');
     const panel = document.getElementById('revealPanel');
@@ -410,6 +420,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(() => {
         panel.textContent = '';
         db.ref(`games/${gameID}`).update({ state: 'waiting' });
+        document.getElementById('createTab').classList.remove('disabled');
+        document.getElementById('setupTab').classList.remove('disabled');
         document.getElementsByClassName('play')[0].classList.remove('hide');
         document.getElementsByClassName('reveal')[0].classList.add('hide');
       }, fakes.length * 2500);
