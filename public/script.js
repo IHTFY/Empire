@@ -156,6 +156,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const secretNameHelper = document.getElementById('secretNameHelper');
     const submitNames = document.getElementById('submitNames');
 
+    // toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    togglePassword.addEventListener('click', () => {
+      if (secretName.type === 'password') {
+        secretName.type = 'text';
+        togglePassword.textContent = 'visibility';
+      } else {
+        secretName.type = 'password';
+        togglePassword.textContent = 'visibility_off';
+      }
+    });
+
     submitNames.addEventListener('click', async () => {
       realName.className = 'validate';
       secretName.className = 'validate';
