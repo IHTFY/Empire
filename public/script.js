@@ -350,19 +350,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const nameList = document.getElementById('nameList');
     nameList.innerHTML = `<li class="collection-header center-align"><h5>${gameID} Lobby</h5></li>`;
-    // console.log(usersObject);
+
     for (let user of Object.values(usersObject)) {
-      // console.log(user);
       let item = document.createElement('li');
-      item.classList.add('collection-item');
-      let txt = document.createElement('h6');
+      item.classList.add('collection-item', 'avatar');
+
+      const colors = ['red', 'pink', 'purple', 'deep-purple', 'indigo', 'blue', 'light-blue', 'cyan', 'teal', 'green', 'light-green', 'lime', 'yellow', 'amber', 'orange', 'deep-orange', 'brown', 'grey', 'blue-grey'];
+      const hashedName = [...user.fake].reduce((a, c) => a + c.charCodeAt(0), 0);
+      const color = colors[hashedName % colors.length];
+
+      const pfp = document.createElement('i');
+      pfp.classList.add('material-icons', 'circle', color);
+      pfp.textContent = 'person';
+
+      const txt = document.createElement('h6');
       txt.textContent = user.real
+
       if (user.fakeBadge) {
         const b = document.createElement('span');
         b.classList.add('new', 'badge', 'indigo', 'darken-3');
         b.setAttribute('data-badge-caption', 'FAKE');
+        pfp.textContent = 'adb';
         txt.appendChild(b);
       }
+      item.appendChild(pfp);
       item.appendChild(txt);
       nameList.appendChild(item);
     }
