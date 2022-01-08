@@ -235,9 +235,7 @@
         </ul>
       </div>
       <div class="modal-footer">
-        <div class="modal-close waves-effect waves-green btn-flat">
-          Close
-        </div>
+        <div class="modal-close waves-effect waves-green btn-flat">Close</div>
       </div>
     </div>
 
@@ -269,6 +267,7 @@
 
     <div class="setup container hide">
       <div class="input-field">
+        <i class="material-icons prefix">person</i>
         <input id="realName" type="text" class="validate" />
         <label class="unselectable" id="realNameLabel" for="realName"
           >Your Real Name</label
@@ -276,6 +275,7 @@
         <span id="realNameHelper" class="helper-text unselectable"></span>
       </div>
       <div class="input-field">
+        <i class="material-icons prefix" id="togglePassword">visibility_off</i>
         <input id="secretName" type="password" class="validate" />
         <label class="unselectable" for="secretName">Secret Nickname</label>
         <span id="secretNameHelper" class="helper-text unselectable"></span>
@@ -434,7 +434,7 @@
         <div class="white-text center-align" id="revealPanel"></div>
       </div>
       <div class="progress">
-        <div id="progressBar" class="determinate" style="width: 0%;"></div>
+        <div id="progressBar" class="determinate" style="width: 0%"></div>
       </div>
     </div>
   </body>
