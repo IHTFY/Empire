@@ -7,7 +7,7 @@
         "headers": [
           {
             "key": "Service-Worker-Allowed",
-            "value": "*"
+            "value": "./"
           },
           {
             "key": "Cache-Control",
@@ -24,7 +24,7 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "./index.html"
+        "destination": "/index.html"
       }
     ]
   },

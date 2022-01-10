@@ -10,6 +10,7 @@
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#3f51b5" />
 
+    <!-- make PWA installable -->
     <script
       type="module"
       src="https://cdn.jsdelivr.net/npm/@pwabuilder/pwainstall"
@@ -43,6 +44,24 @@
   </head>
 
   <body class="indigo lighten-5">
+    <noscript>
+      <div>Oops! Javascript required here! Allow it and try again!</div>
+    </noscript>
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("./service-worker.js")
+            .then((reg) => {
+              console.log("Service worker registered.", reg);
+            }).catch((err) => {
+              console.error("Service worker not registered.", err);
+            });
+        });
+      }
+    </script>
+
     <audio id="boop">
       <source src="boop.mp3" />
     </audio>
