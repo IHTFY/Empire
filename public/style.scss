@@ -14,3 +14,7 @@
 .input-field {
   max-width: 75%;
 }
+
+body {
+  overscroll-behavior: contain;
+}
