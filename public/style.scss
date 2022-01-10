@@ -1,3 +1,8 @@
+html,
+body {
+  overscroll-behavior: contain;
+}
+
 .unselectable {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -13,8 +18,4 @@
 
 .input-field {
   max-width: 75%;
-}
-
-html {
-  overscroll-behavior: none;
 }
