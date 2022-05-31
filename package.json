@@ -4,12 +4,12 @@
   "description": "1. Create a new room at [empire.ihtfy.com](https://empire.ihtfy.com)\r    * Name the room or leave it blank to generate a random name\r 2. Click `GET GAME LINK` and share with your friends\r    * Or simply have them go to [empire.ihtfy.com](https://empire.ihtfy.com) and type in the game code\r 3. Enter your display name and secret name, then `SUBMIT`\r 4. You will see who has entered the lobby\r 5. If you have a small party, you can add fake names under the `OPTIONS` menu\r 6. Once everybody is ready to play, have someone press \"START\" to reveal the secret names",
   "main": "index.html",
   "dependencies": {
-    "firebase-admin": "^8.11.0"
+    "firebase-admin": "^8.13.0"
   },
   "devDependencies": {
-    "json-bigint": ">=1.0.0",
+    "@firebase/util": ">=0.3.4",
     "@grpc/grpc-js": ">=1.1.8",
-    "@firebase/util": ">=0.3.4"
+    "json-bigint": ">=1.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
