@@ -6,13 +6,6 @@
     <link rel="stylesheet" href="style.scss" />
     <link rel="icon" href="favicon.png" />
 
-    <!-- Google Auto Ads -->
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7816252471679024"
-      crossorigin="anonymous"
-    ></script>
-
     <!-- PWA -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#3f51b5" />
@@ -52,6 +45,13 @@
 
     <!-- Initialize Empire Game -->
     <script type="module" src="script.js"></script>
+
+    <!-- Google Auto Ads -->
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7816252471679024"
+      crossorigin="anonymous"
+    ></script>
   </head>
 
   <body class="indigo lighten-5">
@@ -77,433 +77,443 @@
     <audio id="boop">
       <source src="boop.mp3" />
     </audio>
-    <div class="fixed-action-btn click-to-toggle">
-      <a class="btn-floating btn-large blue-grey">
-        <i class="large material-icons">settings</i>
-      </a>
-      <ul>
-        <li>
-          <a class="btn-floating indigo accent-2"
-            ><i class="material-icons" id="volumeIcon">volume_off</i></a
-          >
-        </li>
-      </ul>
-    </div>
 
-    <nav>
-      <div class="nav-wrapper indigo">
-        <div class="row">
-          <div class="col s12">
-            <a href="/" class="brand-logo">Empire</a>
-            <a href="/" data-target="mobile-nav" class="sidenav-trigger"
-              ><i class="material-icons">menu</i></a
+    <main>
+      <div class="fixed-action-btn click-to-toggle">
+        <a class="btn-floating btn-large blue-grey">
+          <i class="large material-icons">settings</i>
+        </a>
+        <ul>
+          <li>
+            <a class="btn-floating indigo accent-2"
+              ><i class="material-icons" id="volumeIcon">volume_off</i></a
             >
-            <ul class="right hide-on-med-and-down">
-              <li>
-                <a class="modal-trigger" href="#rules"
-                  >Rules<i class="material-icons left">info_outline</i></a
-                >
-              </li>
-              <li>
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href="https://github.com/IHTFY/Empire"
-                  >Code<i class="material-icons left">code</i></a
-                >
-              </li>
-              <li>
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href="https://www.patreon.com/IHTFY"
-                  ><i class="material-icons left">sentiment_very_satisfied</i
-                  >Donate</a
-                >
-              </li>
-              <li>
-                <a href="https://frankiemercado.com"
-                  >IHTFY<i class="material-icons left">home</i></a
-                >
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <ul class="sidenav" id="mobile-nav">
-      <li>
-        <a href="https://frankiemercado.com"
-          >IHTFY<i class="material-icons left">home</i></a
-        >
-      </li>
-      <li>
-        <a
-          target="_blank"
-          rel="noopener noreferrer"
-          href="https://www.patreon.com/IHTFY"
-          ><i class="material-icons left">sentiment_very_satisfied</i>Donate</a
-        >
-      </li>
-      <li>
-        <a
-          target="_blank"
-          rel="noopener noreferrer"
-          href="https://github.com/IHTFY/Empire"
-          >Code<i class="material-icons left">code</i></a
-        >
-      </li>
-      <li>
-        <a class="modal-trigger" href="#rules"
-          >Rules<i class="material-icons left">info_outline</i></a
-        >
-      </li>
-    </ul>
-
-    <div id="rules" class="modal">
-      <div class="modal-content">
-        <ul class="collapsible">
-          <li>
-            <div class="collapsible-header">Setup</div>
-            <div class="collapsible-body">
-              <ol>
-                <li>
-                  Create a new room
-                  <ul>
-                    <li>
-                      Name the room or leave it blank to generate a random name
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  Click <code>GET GAME LINK</code> and share with your friends
-                  <ul>
-                    <li>
-                      Or simply have them go to
-                      <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>
-                      and type in the game code
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  Enter your display name and secret name, then
-                  <code>SUBMIT</code>
-                </li>
-                <li>You will see who has entered the lobby</li>
-                <li>
-                  If you have a small party, you can add fake names under the
-                  <code>OPTIONS</code> menu
-                </li>
-                <li>
-                  Once everybody is ready to play, have someone press `START` to
-                  reveal the secret names
-                </li>
-              </ol>
-            </div>
-          </li>
-          <li class="active">
-            <div class="collapsible-header">Rules</div>
-            <div class="collapsible-body">
-              <p>
-                <strong>Objective</strong>: Be the leader of the final empire.
-              </p>
-              <ol>
-                <li>
-                  Each player picks a secret name (any word that they hope won't
-                  be associated with them)
-                </li>
-                <li>
-                  The list of secret names is read twice in random order, and
-                  players are meant to memorize as many names as they can
-                  <ul>
-                    <li>No recording of any information is allowed</li>
-                    <li>
-                      The name list can be read again at any point if
-                      unanimously agreed by all the remaining leaders
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  Turns are taken clockwise around the circle of players
-                  <ul>
-                    <li>Only leaders of empires take turns</li>
-                  </ul>
-                </li>
-                <li>
-                  The first leader chooses another leader and guesses their
-                  secret word
-                  <ul>
-                    <li>
-                      If they are wrong, their turn is over, and the next leader
-                      can guess
-                    </li>
-                    <li>
-                      If they are right, the other player is now part of their
-                      empire and the leader gets to guess again
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  The winner is the last leader standing; the one whose secret
-                  name is never guessed
-                </li>
-              </ol>
-            </div>
-          </li>
-          <li>
-            <div class="collapsible-header">Notes</div>
-            <div class="collapsible-body">
-              <ol>
-                <li>
-                  When a leader is conquered by another leader, their whole
-                  empire goes along with them
-                </li>
-                <li>
-                  All members of each empire should cooperate to guess the
-                  remaining leaders' secret names and protect the secret name of
-                  their leader
-                </li>
-                <li>
-                  Only the leader of an empire can make official guesses; other
-                  members can talk, but their guesses don't count as a turn for
-                  their empire
-                </li>
-              </ol>
-            </div>
           </li>
         </ul>
       </div>
-      <div class="modal-footer">
-        <div class="modal-close waves-effect waves-green btn-flat">Close</div>
-      </div>
-    </div>
 
-    <div class="row">
-      <ul class="tabs tabs-fixed-width">
-        <li id="createTab" class="tab col s3 active">
-          <a href="#createPage">Create or Join</a>
+      <nav>
+        <div class="nav-wrapper indigo">
+          <div class="row">
+            <div class="col s12">
+              <a href="/" class="brand-logo">Empire</a>
+              <a href="/" data-target="mobile-nav" class="sidenav-trigger"
+                ><i class="material-icons">menu</i></a
+              >
+              <ul class="right hide-on-med-and-down">
+                <li>
+                  <a class="modal-trigger" href="#rules"
+                    >Rules<i class="material-icons left">info_outline</i></a
+                  >
+                </li>
+                <li>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://github.com/IHTFY/Empire"
+                    >Code<i class="material-icons left">code</i></a
+                  >
+                </li>
+                <li>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://www.patreon.com/IHTFY"
+                    ><i class="material-icons left">sentiment_very_satisfied</i
+                    >Donate</a
+                  >
+                </li>
+                <li>
+                  <a href="https://frankiemercado.com"
+                    >IHTFY<i class="material-icons left">home</i></a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <ul class="sidenav" id="mobile-nav">
+        <li>
+          <a href="https://frankiemercado.com"
+            >IHTFY<i class="material-icons left">home</i></a
+          >
         </li>
-        <li id="setupTab" class="tab col s3 disabled">
-          <a href="#setupPage">Pick Name</a>
+        <li>
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://www.patreon.com/IHTFY"
+            ><i class="material-icons left">sentiment_very_satisfied</i
+            >Donate</a
+          >
         </li>
-        <li id="playTab" class="tab col s3 disabled">
-          <a href="#playPage">Lobby</a>
+        <li>
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://github.com/IHTFY/Empire"
+            >Code<i class="material-icons left">code</i></a
+          >
+        </li>
+        <li>
+          <a class="modal-trigger" href="#rules"
+            >Rules<i class="material-icons left">info_outline</i></a
+          >
         </li>
       </ul>
 
-      <div id="gameLink" class="container center-align"></div>
-
-      <div id="createPage" class="col s12">
-        <div class="create container">
-          <div class="input-field">
-            <input id="userGameCode" type="text" class="validate" />
-            <label
-              class="unselectable"
-              id="userGameCodeLabel"
-              for="userGameCode"
-              >Game Code</label
-            >
-            <span id="userGameCodeHelper" class="helper-text"></span>
-          </div>
-          <button
-            id="createButton"
-            class="btn waves-effect waves-light blue"
-            type="button"
-          >
-            Create
-          </button>
-          <button
-            id="joinButton"
-            class="btn waves-effect waves-light blue"
-            type="button"
-          >
-            Join
-          </button>
-        </div>
-      </div>
-
-      <div id="setupPage" class="col s12 hide">
-        <div class="setup container">
-          <div class="input-field">
-            <i class="material-icons prefix">person</i>
-            <input id="realName" type="text" class="validate" />
-            <label class="unselectable" id="realNameLabel" for="realName"
-              >Your Real Name</label
-            >
-            <span id="realNameHelper" class="helper-text unselectable"></span>
-          </div>
-          <div class="input-field">
-            <i class="material-icons prefix" id="togglePassword">
-              visibility_off</i
-            >
-            <input id="secretName" type="password" class="validate" />
-            <label class="unselectable" for="secretName">Secret Nickname</label>
-            <span id="secretNameHelper" class="helper-text unselectable"></span>
-          </div>
-          <button
-            id="submitNames"
-            class="btn waves-effect waves-light blue"
-            type="button"
-          >
-            Submit
-          </button>
-        </div>
-      </div>
-
-      <div id="playPage" class="col s12 hide">
-        <div class="play container">
-          <div class="section valign-wrapper">
-            <a
-              class="dropdown-trigger btn-large indigo"
-              href="#"
-              data-target="dropdown1"
-              ><i class="material-icons left">build</i>Options</a
-            >
-            <ul id="dropdown1" class="dropdown-content">
-              <li><a href="#!">Cancel</a></li>
-              <li class="divider" tabindex="-1"></li>
-              <li>
-                <a
-                  id="generateName"
-                  class="waves-effect waves-light indigo darken-3 white-text"
-                >
-                  <i class="material-icons">adb</i>Add Fake
-                </a>
-              </li>
-
-              <li class="divider" tabindex="-1"></li>
-
-              <li>
-                <a
-                  href="#confirmNewGame"
-                  class="modal-trigger waves-effect waves-light orange white-text"
-                  ><i class="material-icons">autorenew</i>New Game</a
-                >
-              </li>
-
-              <li>
-                <a
-                  href="#confirmDelete"
-                  class="modal-trigger waves-effect waves-light red white-text"
-                  ><i class="material-icons">delete_forever</i>End Room</a
-                >
-              </li>
-            </ul>
-
-            <div id="confirmNewGame" class="modal">
-              <div class="modal-content">
-                <h4>New Game</h4>
-                <p>Do you want to end this round and start a new round?</p>
+      <div id="rules" class="modal">
+        <div class="modal-content">
+          <ul class="collapsible">
+            <li>
+              <div class="collapsible-header">Setup</div>
+              <div class="collapsible-body">
+                <ol>
+                  <li>
+                    Create a new room
+                    <ul>
+                      <li>
+                        Name the room or leave it blank to generate a random
+                        name
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    Click <code>GET GAME LINK</code> and share with your friends
+                    <ul>
+                      <li>
+                        Or simply have them go to
+                        <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>
+                        and type in the game code
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    Enter your display name and secret name, then
+                    <code>SUBMIT</code>
+                  </li>
+                  <li>You will see who has entered the lobby</li>
+                  <li>
+                    If you have a small party, you can add fake names under the
+                    <code>OPTIONS</code> menu
+                  </li>
+                  <li>
+                    Once everybody is ready to play, have someone press `START`
+                    to reveal the secret names
+                  </li>
+                </ol>
               </div>
-              <div class="modal-footer">
-                <div
-                  id="roomResetButton"
-                  class="modal-close waves-effect waves-light btn orange"
-                >
-                  New Game
-                </div>
-                <div class="modal-close waves-effect waves-green btn-flat">
-                  Cancel
-                </div>
-              </div>
-            </div>
-
-            <div id="confirmDelete" class="modal">
-              <div class="modal-content">
-                <h4>Delete Game</h4>
+            </li>
+            <li class="active">
+              <div class="collapsible-header">Rules</div>
+              <div class="collapsible-body">
                 <p>
-                  Do you want to delete the entire room? This will delete all
-                  players and send everyone back to the home screen!
+                  <strong>Objective</strong>: Be the leader of the final empire.
                 </p>
+                <ol>
+                  <li>
+                    Each player picks a secret name (any word that they hope
+                    won't be associated with them)
+                  </li>
+                  <li>
+                    The list of secret names is read twice in random order, and
+                    players are meant to memorize as many names as they can
+                    <ul>
+                      <li>No recording of any information is allowed</li>
+                      <li>
+                        The name list can be read again at any point if
+                        unanimously agreed by all the remaining leaders
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    Turns are taken clockwise around the circle of players
+                    <ul>
+                      <li>Only leaders of empires take turns</li>
+                    </ul>
+                  </li>
+                  <li>
+                    The first leader chooses another leader and guesses their
+                    secret word
+                    <ul>
+                      <li>
+                        If they are wrong, their turn is over, and the next
+                        leader can guess
+                      </li>
+                      <li>
+                        If they are right, the other player is now part of their
+                        empire and the leader gets to guess again
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    The winner is the last leader standing; the one whose secret
+                    name is never guessed
+                  </li>
+                </ol>
               </div>
-              <div class="modal-footer">
-                <div
-                  id="roomDeleteButton"
-                  class="modal-close waves-effect waves-light btn red"
-                >
-                  Delete Room
-                </div>
-                <div class="modal-close waves-effect waves-green btn-flat">
-                  Cancel
-                </div>
+            </li>
+            <li>
+              <div class="collapsible-header">Notes</div>
+              <div class="collapsible-body">
+                <ol>
+                  <li>
+                    When a leader is conquered by another leader, their whole
+                    empire goes along with them
+                  </li>
+                  <li>
+                    All members of each empire should cooperate to guess the
+                    remaining leaders' secret names and protect the secret name
+                    of their leader
+                  </li>
+                  <li>
+                    Only the leader of an empire can make official guesses;
+                    other members can talk, but their guesses don't count as a
+                    turn for their empire
+                  </li>
+                </ol>
               </div>
-            </div>
-            <div
-              id="revealSecrets"
-              class="waves-effect waves-light btn-large green"
-            >
-              <div class="valign-wrapper">
-                <i id="playIcon" class="material-icons left">play_arrow</i>
-                <div
-                  id="revealSpinner"
-                  class="preloader-wrapper small active hide"
-                >
-                  <div class="spinner-layer spinner-blue">
-                    <div class="circle-clipper left">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="gap-patch">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="circle-clipper right">
-                      <div class="circle"></div>
-                    </div>
-                  </div>
-
-                  <div class="spinner-layer spinner-red">
-                    <div class="circle-clipper left">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="gap-patch">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="circle-clipper right">
-                      <div class="circle"></div>
-                    </div>
-                  </div>
-
-                  <div class="spinner-layer spinner-yellow">
-                    <div class="circle-clipper left">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="gap-patch">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="circle-clipper right">
-                      <div class="circle"></div>
-                    </div>
-                  </div>
-
-                  <div class="spinner-layer spinner-green">
-                    <div class="circle-clipper left">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="gap-patch">
-                      <div class="circle"></div>
-                    </div>
-                    <div class="circle-clipper right">
-                      <div class="circle"></div>
-                    </div>
-                  </div>
-                </div>
-                Start
-              </div>
-            </div>
-          </div>
-
-          <ul class="collection with-header z-depth-2" id="nameList"></ul>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-close waves-effect waves-green btn-flat">Close</div>
         </div>
       </div>
-    </div>
 
-    <div class="reveal container unselectable hide">
-      <div class="card-panel z-depth-5 blue">
-        <div class="white-text center-align" id="revealPanel"></div>
+      <div class="row">
+        <ul class="tabs tabs-fixed-width">
+          <li id="createTab" class="tab col s3 active">
+            <a href="#createPage">Create or Join</a>
+          </li>
+          <li id="setupTab" class="tab col s3 disabled">
+            <a href="#setupPage">Pick Name</a>
+          </li>
+          <li id="playTab" class="tab col s3 disabled">
+            <a href="#playPage">Lobby</a>
+          </li>
+        </ul>
+
+        <div id="gameLink" class="container center-align"></div>
+
+        <div id="createPage" class="col s12">
+          <div class="create container">
+            <div class="input-field">
+              <input id="userGameCode" type="text" class="validate" />
+              <label
+                class="unselectable"
+                id="userGameCodeLabel"
+                for="userGameCode"
+                >Game Code</label
+              >
+              <span id="userGameCodeHelper" class="helper-text"></span>
+            </div>
+            <button
+              id="createButton"
+              class="btn waves-effect waves-light blue"
+              type="button"
+            >
+              Create
+            </button>
+            <button
+              id="joinButton"
+              class="btn waves-effect waves-light blue"
+              type="button"
+            >
+              Join
+            </button>
+          </div>
+        </div>
+
+        <div id="setupPage" class="col s12 hide">
+          <div class="setup container">
+            <div class="input-field">
+              <i class="material-icons prefix">person</i>
+              <input id="realName" type="text" class="validate" />
+              <label class="unselectable" id="realNameLabel" for="realName"
+                >Your Real Name</label
+              >
+              <span id="realNameHelper" class="helper-text unselectable"></span>
+            </div>
+            <div class="input-field">
+              <i class="material-icons prefix" id="togglePassword">
+                visibility_off</i
+              >
+              <input id="secretName" type="password" class="validate" />
+              <label class="unselectable" for="secretName"
+                >Secret Nickname</label
+              >
+              <span
+                id="secretNameHelper"
+                class="helper-text unselectable"
+              ></span>
+            </div>
+            <button
+              id="submitNames"
+              class="btn waves-effect waves-light blue"
+              type="button"
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+
+        <div id="playPage" class="col s12 hide">
+          <div class="play container">
+            <div class="section valign-wrapper">
+              <a
+                class="dropdown-trigger btn-large indigo"
+                href="#"
+                data-target="dropdown1"
+                ><i class="material-icons left">build</i>Options</a
+              >
+              <ul id="dropdown1" class="dropdown-content">
+                <li><a href="#!">Cancel</a></li>
+                <li class="divider" tabindex="-1"></li>
+                <li>
+                  <a
+                    id="generateName"
+                    class="waves-effect waves-light indigo darken-3 white-text"
+                  >
+                    <i class="material-icons">adb</i>Add Fake
+                  </a>
+                </li>
+
+                <li class="divider" tabindex="-1"></li>
+
+                <li>
+                  <a
+                    href="#confirmNewGame"
+                    class="modal-trigger waves-effect waves-light orange white-text"
+                    ><i class="material-icons">autorenew</i>New Game</a
+                  >
+                </li>
+
+                <li>
+                  <a
+                    href="#confirmDelete"
+                    class="modal-trigger waves-effect waves-light red white-text"
+                    ><i class="material-icons">delete_forever</i>End Room</a
+                  >
+                </li>
+              </ul>
+
+              <div id="confirmNewGame" class="modal">
+                <div class="modal-content">
+                  <h4>New Game</h4>
+                  <p>Do you want to end this round and start a new round?</p>
+                </div>
+                <div class="modal-footer">
+                  <div
+                    id="roomResetButton"
+                    class="modal-close waves-effect waves-light btn orange"
+                  >
+                    New Game
+                  </div>
+                  <div class="modal-close waves-effect waves-green btn-flat">
+                    Cancel
+                  </div>
+                </div>
+              </div>
+
+              <div id="confirmDelete" class="modal">
+                <div class="modal-content">
+                  <h4>Delete Game</h4>
+                  <p>
+                    Do you want to delete the entire room? This will delete all
+                    players and send everyone back to the home screen!
+                  </p>
+                </div>
+                <div class="modal-footer">
+                  <div
+                    id="roomDeleteButton"
+                    class="modal-close waves-effect waves-light btn red"
+                  >
+                    Delete Room
+                  </div>
+                  <div class="modal-close waves-effect waves-green btn-flat">
+                    Cancel
+                  </div>
+                </div>
+              </div>
+              <div
+                id="revealSecrets"
+                class="waves-effect waves-light btn-large green"
+              >
+                <div class="valign-wrapper">
+                  <i id="playIcon" class="material-icons left">play_arrow</i>
+                  <div
+                    id="revealSpinner"
+                    class="preloader-wrapper small active hide"
+                  >
+                    <div class="spinner-layer spinner-blue">
+                      <div class="circle-clipper left">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="gap-patch">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="circle-clipper right">
+                        <div class="circle"></div>
+                      </div>
+                    </div>
+
+                    <div class="spinner-layer spinner-red">
+                      <div class="circle-clipper left">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="gap-patch">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="circle-clipper right">
+                        <div class="circle"></div>
+                      </div>
+                    </div>
+
+                    <div class="spinner-layer spinner-yellow">
+                      <div class="circle-clipper left">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="gap-patch">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="circle-clipper right">
+                        <div class="circle"></div>
+                      </div>
+                    </div>
+
+                    <div class="spinner-layer spinner-green">
+                      <div class="circle-clipper left">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="gap-patch">
+                        <div class="circle"></div>
+                      </div>
+                      <div class="circle-clipper right">
+                        <div class="circle"></div>
+                      </div>
+                    </div>
+                  </div>
+                  Start
+                </div>
+              </div>
+            </div>
+
+            <ul class="collection with-header z-depth-2" id="nameList"></ul>
+          </div>
+        </div>
       </div>
-      <div class="progress">
-        <div id="progressBar" class="determinate" style="width: 0%"></div>
+
+      <div class="reveal container unselectable hide">
+        <div class="card-panel z-depth-5 blue">
+          <div class="white-text center-align" id="revealPanel"></div>
+        </div>
+        <div class="progress">
+          <div id="progressBar" class="determinate" style="width: 0%"></div>
+        </div>
       </div>
-    </div>
+    </main>
   </body>
 </html>
