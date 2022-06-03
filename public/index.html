@@ -50,43 +50,30 @@
   </head>
 
   <body class="indigo lighten-5">
-    <main>
-      <noscript>
-        <div>Oops! Javascript required here! Allow it and try again!</div>
-      </noscript>
+    <noscript>
+      <div>Oops! Javascript required here! Allow it and try again!</div>
+    </noscript>
 
-      <script>
-        if ("serviceWorker" in navigator) {
-          window.addEventListener("load", () => {
-            navigator.serviceWorker
-              .register("./service-worker.js")
-              .then((reg) => {
-                console.log("Service worker registered.", reg);
-              })
-              .catch((err) => {
-                console.error("Service worker not registered.", err);
-              });
-          });
-        }
-      </script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("./service-worker.js")
+            .then((reg) => {
+              console.log("Service worker registered.", reg);
+            })
+            .catch((err) => {
+              console.error("Service worker not registered.", err);
+            });
+        });
+      }
+    </script>
 
-      <audio id="boop">
-        <source src="boop.mp3" />
-      </audio>
+    <audio id="boop">
+      <source src="boop.mp3" />
+    </audio>
 
-      <div class="fixed-action-btn click-to-toggle">
-        <a class="btn-floating btn-large blue-grey">
-          <i class="large material-icons">settings</i>
-        </a>
-        <ul>
-          <li>
-            <a class="btn-floating indigo accent-2"
-              ><i class="material-icons" id="volumeIcon">volume_off</i></a
-            >
-          </li>
-        </ul>
-      </div>
-
+    <header>
       <nav>
         <div class="nav-wrapper indigo">
           <div class="row">
@@ -276,6 +263,20 @@
         <div class="modal-footer">
           <div class="modal-close waves-effect waves-green btn-flat">Close</div>
         </div>
+      </div>
+    </header>
+    <main>
+      <div class="fixed-action-btn click-to-toggle">
+        <a class="btn-floating btn-large blue-grey">
+          <i class="large material-icons">settings</i>
+        </a>
+        <ul>
+          <li>
+            <a class="btn-floating indigo accent-2"
+              ><i class="material-icons" id="volumeIcon">volume_off</i></a
+            >
+          </li>
+        </ul>
       </div>
 
       <div class="row">
