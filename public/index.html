@@ -9,10 +9,6 @@
     <!-- PWA -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#3f51b5" />
-    <meta
-      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
-      name="viewport"
-    />
 
     <!-- make PWA installable -->
     <script
@@ -23,7 +19,6 @@
     <!-- update the version number as needed -->
     <script defer src="/__/firebase/8.10.0/firebase-app.js"></script>
     <script defer src="/__/firebase/8.10.0/firebase-auth.js"></script>
-    <!-- <script defer src="/__/firebase/8.10.0/firebase-firestore.js"></script> -->
     <script defer src="/__/firebase/8.10.0/firebase-database.js"></script>
     <script defer src="/__/firebase/8.10.0/firebase-functions.js"></script>
 
@@ -49,37 +44,36 @@
     <!-- Google Auto Ads -->
     <script
       async
-      defer
       src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7816252471679024"
       crossorigin="anonymous"
     ></script>
   </head>
 
   <body class="indigo lighten-5">
-    <noscript>
-      <div>Oops! Javascript required here! Allow it and try again!</div>
-    </noscript>
-
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("./service-worker.js")
-            .then((reg) => {
-              console.log("Service worker registered.", reg);
-            })
-            .catch((err) => {
-              console.error("Service worker not registered.", err);
-            });
-        });
-      }
-    </script>
-
-    <audio id="boop">
-      <source src="boop.mp3" />
-    </audio>
-
     <main>
+      <noscript>
+        <div>Oops! Javascript required here! Allow it and try again!</div>
+      </noscript>
+
+      <script>
+        if ("serviceWorker" in navigator) {
+          window.addEventListener("load", () => {
+            navigator.serviceWorker
+              .register("./service-worker.js")
+              .then((reg) => {
+                console.log("Service worker registered.", reg);
+              })
+              .catch((err) => {
+                console.error("Service worker not registered.", err);
+              });
+          });
+        }
+      </script>
+
+      <audio id="boop">
+        <source src="boop.mp3" />
+      </audio>
+
       <div class="fixed-action-btn click-to-toggle">
         <a class="btn-floating btn-large blue-grey">
           <i class="large material-icons">settings</i>
