@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@firebase/util": "^1.15.0",
-    "@grpc/grpc-js": "^1.1.8",
+    "@grpc/grpc-js": "^1.14.3",
     "json-bigint": "^1.0.0"
   },
   "scripts": {
