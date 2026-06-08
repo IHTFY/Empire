@@ -4,7 +4,7 @@
   "description": "1. Create a new room at [empire.ihtfy.com](https://empire.ihtfy.com)\r    * Name the room or leave it blank to generate a random name\r 2. Click `GET GAME LINK` and share with you[...]",
   "main": "index.html",
   "dependencies": {
-    "firebase-admin": "^13.8.0"
+    "firebase-admin": "^13.10.0"
   },
   "devDependencies": {
     "@firebase/util": "^1.15.0",
