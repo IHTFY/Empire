@@ -25,7 +25,22 @@ function shuffle(a) {
 // gcloud alpha functions add-iam-policy-binding flashNames --member=allUsers --role=roles/cloudfunctions.invoker
 // https://github.com/firebase/functions-samples/issues/395#issuecomment-605025572
 exports.flashNames = functions.https.onCall(async (data, context) => {
-  let gameRef = db.ref(`games/${data.text}`);
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in to start a game.');
+  }
+
+  const gameID = data && data.text;
+  if (typeof gameID !== 'string' || !/^[^./#$[\]]{1,128}$/.test(gameID)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid game code.');
+  }
+
+  // Only players in the room can start it.
+  const member = await db.ref(`games/${gameID}/users/${context.auth.uid}`).once('value');
+  if (!member.exists()) {
+    throw new functions.https.HttpsError('permission-denied', 'You are not in this game.');
+  }
+
+  let gameRef = db.ref(`games/${gameID}`);
   let state = gameRef.child('state');
 
   return state.once('value').then(async stateSnap => {
