@@ -33,7 +33,7 @@
             "game": { ".validate": "newData.isString() && newData.val() === $gameId" },
             "fakeBadge": { ".validate": "newData.isBoolean()" },
             // Legacy: pages loaded before secrets moved to /secrets still send this.
-            "fake": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
+            "fake": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24" },
             "$other": { ".validate": false }
           }
         },
@@ -44,7 +44,7 @@
             // Your own secret, a new fake player's secret (written together with the fake),
             // or cleanup of a secret whose player is being removed in the same update.
             ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').exists() && data.parent().parent().child('locked').val() !== true))) || (newData.exists() && !data.exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() === true && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && !newData.parent().parent().child('users').child($userId).exists()))",
-            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100"
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24"
           }
         },
         "presence": {
