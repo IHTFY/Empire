@@ -3,7 +3,7 @@ const functions = require('firebase-functions/v1');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const { initializeApp } = require('firebase-admin/app');
-const { getDatabase } = require('firebase-admin/database');
+const { getDatabase, ServerValue } = require('firebase-admin/database');
 
 // Uses the Cloud Functions runtime's default service account credentials.
 initializeApp({
@@ -40,25 +40,44 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('permission-denied', 'You are not in this game.');
   }
 
-  let gameRef = db.ref(`games/${gameID}`);
-  let state = gameRef.child('state');
+  const gameRef = db.ref(`games/${gameID}`);
+  const game = (await gameRef.once('value')).val() || {};
+  const users = game.users || {};
+  const secrets = game.secrets || {};
 
-  return state.once('value').then(async stateSnap => {
+  // Secret names live in /secrets; rooms from before that change kept them on the player.
+  const names = Object.keys(users)
+    .map(key => secrets[key] || users[key].fake)
+    .filter(name => typeof name === 'string' && name.length > 0);
+  if (names.length < 2) {
+    throw new functions.https.HttpsError('failed-precondition', 'You need at least 2 players to start.');
+  }
 
-    if (stateSnap.val() === 'waiting') {
-      state.set('shuffling');
-      // get fakes, shuffle, store in names
-      return await gameRef.child('users').once('value').then(async usersSnap => {
+  // A reveal takes 2.5s per name; if nobody finished it (everyone left mid-reveal),
+  // let the room be started again instead of staying stuck.
+  const previousNames = Array.isArray(game.names) ? game.names.length : 0;
+  const stale = ['shuffling', 'playing'].includes(game.state) &&
+    !(Date.now() - (game.startedAt || 0) < previousNames * 2500 + 30000);
 
-        let fakes = Object.values(usersSnap.val()).map(user => user.fake);
-        await gameRef.child('names').set(shuffle(fakes));
-        await state.set('playing');
-        setTimeout(async () => {
-          await state.set('waiting');
-        }, 2000);
-        return true;
-      });
+  // Claim the start atomically so two players pressing Start at once only start one reveal.
+  const claim = await gameRef.child('state').transaction(current => {
+    // The first pass can run on an empty local cache; the server then retries with the real value.
+    if (current === null) {
+      return null;
     }
-    return true;
+    if (current === 'waiting' || (stale && current === game.state)) {
+      return 'shuffling';
+    }
+    return undefined;
   });
+  if (!claim.committed) {
+    return true;
+  }
+
+  await gameRef.update({
+    names: shuffle(names),
+    startedAt: ServerValue.TIMESTAMP,
+    state: 'playing'
+  });
+  return true;
 });

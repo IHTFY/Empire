@@ -4,34 +4,59 @@
     ".write": false,
     "games": {
       "$gameId": {
-        // Anyone with the room code can read the room (game links load before sign-in
-        // finishes); the list of all rooms stays private.
-        ".read": true,
-        // Create a new room, or delete one that is marked for deletion (or already gone).
-        ".write": "(!data.exists() && newData.child('state').val() === 'waiting') || (!newData.exists() && (!data.exists() || data.child('state').val() === 'deleting'))",
+        // Create a new room (also over a leftover presence stub), or delete one that is
+        // marked for deletion (or already gone). Nothing can list every room.
+        ".write": "(!data.child('state').exists() && newData.child('state').val() === 'waiting') || (!newData.exists() && (!data.child('state').exists() || data.child('state').val() === 'deleting'))",
         ".validate": "$gameId.length <= 128 && newData.hasChild('state')",
         "state": {
+          // Readable by anyone with the room code (game links load before sign-in finishes).
+          ".read": true,
           // shuffling/playing are set only by the flashNames function.
           ".write": "data.exists()",
           ".validate": "newData.isString() && newData.val().matches(/^(waiting|resetting|deleting)$/)"
         },
         "users": {
+          ".read": true,
           // Resetting a room clears the whole player list.
           ".write": "auth != null && !newData.exists() && data.parent().child('state').val() === 'resetting'",
           "$userId": {
-            // Players edit their own entry and add new fake players; anyone may remove themselves.
-            ".write": "auth != null && ($userId === auth.uid || (!data.exists() && newData.child('fakeBadge').val() === true)) && (!newData.exists() || data.parent().parent().child('state').exists())",
-            ".validate": "newData.hasChildren(['real', 'clan', 'fake'])",
+            // Players edit or remove themselves; anyone in the room can add or remove fake
+            // players, and remove a player who has been offline for 10 minutes.
+            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || data.parent().parent().child('state').exists())) || (!data.exists() && newData.child('fakeBadge').val() === true && data.parent().parent().child('state').exists()) || (!newData.exists() && data.child('fakeBadge').val() === true) || (!newData.exists() && data.parent().parent().child('presence').child($userId).child('online').val() === false && data.parent().parent().child('presence').child($userId).child('lastSeen').val() < now - 600000))",
+            ".validate": "newData.hasChildren(['real', 'clan'])",
             "real": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "clan": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
-            "fake": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "game": { ".validate": "newData.isString() && newData.val() === $gameId" },
             "fakeBadge": { ".validate": "newData.isBoolean()" },
+            // Legacy: pages loaded before secrets moved to /secrets still send this.
+            "fake": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "$other": { ".validate": false }
           }
         },
-        // Shuffled secret names are written only by the flashNames function.
-        "names": { ".validate": false },
+        "secrets": {
+          // Secret names are never readable by players; only the flashNames function reads them.
+          ".write": "auth != null && !newData.exists() && data.parent().child('state').val() === 'resetting'",
+          "$userId": {
+            // Your own secret, a new fake player's secret (written together with the fake),
+            // or cleanup of a secret whose player is being removed in the same update.
+            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || data.parent().parent().child('state').exists())) || (newData.exists() && !data.exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() === true) || (!newData.exists() && !newData.parent().parent().child('users').child($userId).exists()))",
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100"
+          }
+        },
+        "presence": {
+          ".read": true,
+          "$userId": {
+            ".write": "auth != null && $userId === auth.uid",
+            ".validate": "newData.hasChildren(['online', 'lastSeen'])",
+            "online": { ".validate": "newData.isBoolean()" },
+            "away": { ".validate": "newData.isBoolean()" },
+            "lastSeen": { ".validate": "newData.isNumber() && newData.val() <= now" },
+            "$other": { ".validate": false }
+          }
+        },
+        // The shuffled list shown during a reveal; written only by the flashNames function.
+        "names": { ".read": true, ".validate": false },
+        "startedAt": { ".validate": false },
         "$other": { ".validate": false }
       }
     }

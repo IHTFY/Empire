@@ -19,3 +19,12 @@ body {
 .input-field {
   max-width: 75%;
 }
+
+#nameList .collection-item.away,
+#nameList .collection-item.offline {
+  opacity: 0.55;
+}
+
+#nameList .status {
+  font-size: 0.9rem;
+}
