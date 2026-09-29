@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const AWAY_AFTER_MS = 2 * 60 * 1000;
   const COUNTDOWN_MS = 1000;
   const NAME_MS = 2500;
+  const SPEAK_DELAY_MS = 500; // voice trails each name so the last countdown beep stays clear
   const MAX_PLAYERS = 30;
   const colors = ['#4F63D9', '#0E8A74', '#B5487A', '#C0662B', '#6D4FC2', '#2E7FB8', '#8A7A12', '#A8433F'];
 
@@ -1256,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   db.ref('.info/serverTimeOffset').on('value', snap => { serverOffset = snap.val() || 0; });
   const serverNow = () => Date.now() + serverOffset;
 
-  function showStep(stage, timer, bar, step, into, names, clips) {
+  function showStep(stage, timer, bar, step, into, names) {
     if (step < 3) {
       timer.hidden = true;
       stage.innerHTML = `<div class="count"><span class="count-burst"></span><span class="count-num display">${3 - step}</span></div>`;
@@ -1275,7 +1276,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     bar.style.animationDelay = `${-into}ms`;
     bar.classList.add('run');
     if (into < 250 && step === 3) tick(990, 0.18);
-    if (into < 800) speak(name, clips[step - 3]);
   }
 
   async function displaySecrets() {
@@ -1311,6 +1311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     voiceRef.on('value', onVoice, () => {});
 
     let shown = -1;
+    let spoken = -1;
     while (stillHere()) {
       const t = serverNow() - startedAt;
       if (t >= total) break;
@@ -1322,7 +1323,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         shown = step;
         const stepStart = step < 3 ? step * COUNTDOWN_MS : countdown + (step - 3) * NAME_MS;
-        showStep(stage, timer, bar, step, t - stepStart, names, clips);
+        showStep(stage, timer, bar, step, t - stepStart, names);
+      }
+      // Each name is spoken the same fixed offset after it appears, keeping the spacing even.
+      const spokenT = t - countdown - SPEAK_DELAY_MS;
+      if (spokenT >= 0) {
+        const i = Math.floor(spokenT / NAME_MS);
+        if (i !== spoken && i < names.length) {
+          spoken = i;
+          if (spokenT - i * NAME_MS < 800) speak(names[i], clips[i]);
+        }
       }
       await sleep(60);
     }
