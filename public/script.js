@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Recorded voice: the server records each name (MP3, base64) so every device hears the
-  // same natural voice. It plays through a short hall reverb, over a soft low boom.
+  // same natural voice.
   const decoded = new Map();
   function decodeClip(base64) {
     if (!decoded.has(base64)) {
@@ -219,39 +219,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       decoded.set(base64, audio().decodeAudioData(bytes.buffer).catch(() => null));
     }
     return decoded.get(base64);
-  }
-  let hall = null;
-  function reverb(ctx) {
-    if (hall) return hall;
-    const length = Math.floor(ctx.sampleRate * 2.2);
-    const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
-    for (let ch = 0; ch < 2; ch++) {
-      const data = impulse.getChannelData(ch);
-      for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3);
-    }
-    hall = ctx.createConvolver();
-    hall.buffer = impulse;
-    const wet = ctx.createGain();
-    wet.gain.value = 0.28;
-    hall.connect(wet).connect(ctx.destination);
-    return hall;
-  }
-  function boom() {
-    if (!volume.sfx) return;
-    try {
-      const ctx = audio();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const now = ctx.currentTime;
-      osc.frequency.setValueAtTime(90, now);
-      osc.frequency.exponentialRampToValueAtTime(38, now + 0.7);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.5 * (volume.sfx / 100), now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.95);
-    } catch (err) { /* audio not available */ }
   }
   // Plays a recorded clip if there is one; otherwise the device reads the text.
   async function speak(text, base64) {
@@ -266,7 +233,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       level.gain.value = volume.voice / 100;
       source.connect(level);
       level.connect(ctx.destination);
-      level.connect(reverb(ctx));
       source.start();
     } catch (err) { say(text); }
   }
@@ -1260,7 +1226,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     bar.style.animationDelay = `${-into}ms`;
     bar.classList.add('run');
     if (into < 250 && step === 3) tick(990, 0.18);
-    if (into < 250) boom();
     if (into < 800) speak(name, clips[step - 3]);
   }
 
