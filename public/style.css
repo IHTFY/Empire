@@ -520,8 +520,10 @@ dialog.sheet::backdrop { background: rgba(4, 5, 16, .6); backdrop-filter: blur(2
   .reveal-timer span.run { animation-duration: var(--t, 2500ms) !important; }
 }
 
-/* Odometer digits: a 0-9 strip behind a one-digit window. */
-.odo-digit { display: inline-block; height: 1em; line-height: 1; vertical-align: top; clip-path: inset(0 -50%); }
-.odo-strip { display: block; width: 1ch; word-break: break-all; line-height: 1; text-align: center; transition: transform .55s cubic-bezier(.2, .9, .25, 1.08); }
+/* Odometer digits: a blank + 0-9 strip behind a one-digit window; blank slots collapse. */
+.odo-digit { display: inline-block; width: 1ch; height: 1em; line-height: 1; vertical-align: top; clip-path: inset(0 -50%); transition: width .55s cubic-bezier(.2, .9, .25, 1.08), clip-path .55s cubic-bezier(.2, .9, .25, 1.08); }
+.odo-digit.is-blank { width: 0; clip-path: inset(0 50%); }
+.odo-strip { display: block; width: 1ch; line-height: 1; text-align: center; transition: transform .55s cubic-bezier(.2, .9, .25, 1.08); }
+.odo-strip > span { display: block; height: 1em; }
 .odo-char { display: inline-block; line-height: 1; vertical-align: top; }
-@media (prefers-reduced-motion: reduce) { .odo-strip { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .odo-strip, .odo-digit { transition: none; } }
