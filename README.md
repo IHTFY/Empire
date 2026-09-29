@@ -36,7 +36,7 @@
 The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy to the `empire-ihtfy` Firebase project through GitHub Actions (`.github/workflows/firebase-deploy.yml`):
 
 - **Pull requests:** install, lint and audit `functions/` only.
-- **Push to `master`** (or **Actions → Firebase → Run workflow**): the checks run, then `firebase deploy --only hosting,functions`.
+- **Push to `master`** (or **Actions → Firebase → Run workflow**): the checks run, then `firebase deploy --only hosting,functions,database`.
 
 ### One-time setup
 1. In the [Google Cloud console](https://console.cloud.google.com/iam-admin/serviceaccounts?project=empire-ihtfy), create a service account (for example `github-deploy`).
@@ -54,9 +54,10 @@ The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy t
 npm install -g firebase-tools
 firebase login
 npm ci --prefix functions
-firebase deploy --project empire-ihtfy --only hosting,functions
+firebase deploy --project empire-ihtfy --only hosting,functions,database
 ```
 
 ### Rolling back
 - **Site:** Firebase console → Hosting → Release history → pick an earlier release → Rollback.
 - **Function:** check out an earlier commit and deploy it with `firebase deploy --only functions`.
+- **Database rules:** they live in `database.rules.json`. Firebase console → Realtime Database → Rules keeps a version history you can restore from.
