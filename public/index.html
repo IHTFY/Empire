@@ -178,11 +178,18 @@
       <section id="lobbyScreen" class="screen screen-lobby" aria-label="Lobby" hidden>
         <div class="bar">
           <img class="bar-logo" src="images/icons/128.png" alt="Empire" width="40" height="40" />
-          <div class="seg" role="group" aria-label="Lobby view">
-            <span class="seg-thumb"></span>
-            <button type="button" class="seg-btn" data-view="table" aria-pressed="true">Table</button>
-            <button type="button" class="seg-btn" data-view="list" aria-pressed="false">List</button>
-          </div>
+          <button type="button" id="viewToggle" class="view-toggle" aria-label="Table view. Show the list">
+            <svg viewBox="0 0 22 22" aria-hidden="true">
+              <circle class="vt-ring" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <rect class="vt-bar vt-b1" y="-.95" width="12" height="1.9" rx=".95" fill="currentColor" />
+              <rect class="vt-bar vt-b2" y="-.95" width="12" height="1.9" rx=".95" fill="currentColor" />
+              <rect class="vt-bar vt-b3" y="-.95" width="12" height="1.9" rx=".95" fill="currentColor" />
+              <circle class="vt-dot vt-d1" r="2" fill="currentColor" />
+              <circle class="vt-dot vt-d2" r="2" fill="currentColor" />
+              <circle class="vt-dot vt-d3" r="2" fill="currentColor" />
+            </svg>
+            <span class="vt-roll" aria-hidden="true"><span class="vt-words"><span>Table</span><span>List</span></span></span>
+          </button>
           <div class="bar-group">
             <button type="button" class="icon-btn icon-btn-gold share-btn" aria-label="Share game link">
               <svg class="icon"><use href="#i-share" /></svg>
