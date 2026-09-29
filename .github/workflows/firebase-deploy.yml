@@ -39,4 +39,4 @@ jobs:
       - uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - run: npx --yes firebase-tools@latest deploy --project empire-ihtfy --only hosting,functions --non-interactive --force
+      - run: npx --yes firebase-tools@latest deploy --project empire-ihtfy --only hosting,functions,database --non-interactive --force
