@@ -1,20 +1,27 @@
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Empire</title>
-    <link rel="stylesheet" href="style.scss" />
+    <meta name="description" content="Empire: the party game of secret names, with an automated game master." />
     <link rel="icon" href="favicon.png" />
 
     <!-- PWA -->
     <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#3f51b5" />
+    <meta name="theme-color" content="#0B0D26" />
 
     <!-- make PWA installable -->
-    <script
-      type="module"
-      src="https://cdn.jsdelivr.net/npm/@pwabuilder/pwainstall"
-    ></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@pwabuilder/pwainstall"></script>
+
+    <!-- Fonts: bold italic display (echoes the logo), clean body, monospace secret field -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=DM+Mono:wght@500&family=Manrope:wght@400;500;600;700;800&display=swap"
+    />
+    <link rel="stylesheet" href="style.css" />
 
     <!-- update the version number as needed -->
     <script defer src="/__/firebase/12.19.0/firebase-app-compat.js"></script>
@@ -24,24 +31,6 @@
 
     <!-- initialize the SDK after all desired features are loaded -->
     <script defer src="/__/firebase/init.js"></script>
-
-    <!--Import Google Icon Font-->
-    <link
-      href="https://fonts.googleapis.com/icon?family=Material+Icons"
-      rel="stylesheet"
-    />
-
-    <!-- Compiled and minified CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@materializecss/materialize@1.2.2/dist/css/materialize.min.css"
-    />
-
-    <!-- Compiled and minified JavaScript -->
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@1.2.2/dist/js/materialize.min.js"
-    ></script>
 
     <!-- Initialize Empire Game -->
     <script type="module" src="script.js"></script>
@@ -54,9 +43,9 @@
     ></script>
   </head>
 
-  <body class="indigo lighten-5">
+  <body>
     <noscript>
-      <div>Oops! Javascript required here! Allow it and try again!</div>
+      <div class="noscript">Oops! Javascript required here! Allow it and try again!</div>
     </noscript>
 
     <script>
@@ -78,456 +67,234 @@
       <source src="boop.mp3" />
     </audio>
 
-    <header>
-      <nav>
-        <div class="nav-wrapper indigo">
-          <div class="row">
-            <div class="col s12">
-              <a href="/" class="brand-logo">Empire</a>
-              <a href="/" data-target="mobile-nav" class="sidenav-trigger"
-                ><i class="material-icons">menu</i></a
-              >
-              <ul class="right hide-on-med-and-down">
-                <li>
-                  <a class="modal-trigger" href="#rules"
-                    >Rules<i class="material-icons left">info_outline</i></a
-                  >
-                </li>
-                <li>
-                  <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href="https://github.com/IHTFY/Empire"
-                    >Code<i class="material-icons left">code</i></a
-                  >
-                </li>
-                <li>
-                  <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href="https://www.patreon.com/IHTFY"
-                    ><i class="material-icons left">sentiment_very_satisfied</i
-                    >Donate</a
-                  >
-                </li>
-                <li>
-                  <a href="https://frankiemercado.com"
-                    >IHTFY<i class="material-icons left">home</i></a
-                  >
-                </li>
-              </ul>
-            </div>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-share" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></g></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="12" cy="5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="19" r="1.6" /></g></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" /></symbol>
+      <symbol id="i-bot" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="3" /><path d="M12 4v4M9 13h.01M15 13h.01" /></g></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></g></symbol>
+      <symbol id="i-eye-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></g></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></g></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></g></symbol>
+      <symbol id="i-sound-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" /><path d="m22 9-6 6M16 9l6 6" /></g></symbol>
+      <symbol id="i-sound-on" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></g></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></g></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8" /><path d="M21 3v5h-5" /></g></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" /></g></symbol>
+      <symbol id="i-exit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" /></g></symbol>
+    </svg>
+
+    <main class="app">
+      <!-- 1 · Home: create or join -->
+      <section id="homeScreen" class="screen screen-home" aria-label="Create or join a room">
+        <div class="bar">
+          <button type="button" class="link-btn" data-open="rulesDialog">
+            <svg class="icon"><use href="#i-info" /></svg>How to play
+          </button>
+          <button type="button" class="icon-btn sound-toggle" aria-label="Sound off" aria-pressed="false">
+            <svg class="icon"><use href="#i-sound-off" /></svg>
+          </button>
+        </div>
+
+        <div class="hero">
+          <div class="hero-logo">
+            <span class="halo"></span><span class="halo halo-2"></span>
+            <img src="images/icons/256.png" alt="Empire logo" width="150" height="150" />
           </div>
+          <h1 class="display hero-title rise">Empire</h1>
+          <p class="hero-tagline rise" style="animation-delay: 0.08s">The party game of secret names. Guess them all, rule them all.</p>
         </div>
-      </nav>
 
-      <ul class="sidenav" id="mobile-nav">
-        <li>
-          <a href="https://frankiemercado.com"
-            >IHTFY<i class="material-icons left">home</i></a
-          >
-        </li>
-        <li>
-          <a
-            target="_blank"
-            rel="noopener noreferrer"
-            href="https://www.patreon.com/IHTFY"
-            ><i class="material-icons left">sentiment_very_satisfied</i
-            >Donate</a
-          >
-        </li>
-        <li>
-          <a
-            target="_blank"
-            rel="noopener noreferrer"
-            href="https://github.com/IHTFY/Empire"
-            >Code<i class="material-icons left">code</i></a
-          >
-        </li>
-        <li>
-          <a class="modal-trigger" href="#rules"
-            >Rules<i class="material-icons left">info_outline</i></a
-          >
-        </li>
-      </ul>
+        <form id="roomForm" class="card rise" style="animation-delay: 0.16s" novalidate>
+          <label for="userGameCode" class="eyebrow">Room code</label>
+          <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="128" placeholder="Leave blank for a random room" />
+          <p id="userGameCodeHelper" class="field-error" role="alert"></p>
+          <div class="row-2">
+            <button id="createButton" type="submit" class="btn btn-gold"><span class="sheen"></span><span>Create</span></button>
+            <button id="joinButton" type="button" class="btn btn-ghost">Join</button>
+          </div>
+        </form>
+      </section>
 
-      <div id="rules" class="modal">
-        <div class="modal-content">
-          <ul class="collapsible">
-            <li>
-              <div class="collapsible-header">Setup</div>
-              <div class="collapsible-body">
-                <ol>
-                  <li>
-                    Create a new room
-                    <ul>
-                      <li>
-                        Name the room or leave it blank to generate a random
-                        name
-                      </li>
-                    </ul>
-                  </li>
-                  <li>
-                    Click <code>SHARE GAME LINK</code> (or <code>GET GAME LINK</code>) and share with your friends
-                    <ul>
-                      <li>
-                        Or simply have them go to
-                        <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>
-                        and type in the game code
-                      </li>
-                    </ul>
-                  </li>
-                  <li>
-                    Enter your display name and secret name, then
-                    <code>SUBMIT</code>
-                  </li>
-                  <li>You will see who has entered the lobby</li>
-                  <li>
-                    If you have a small party, you can add fake names under the
-                    <code>OPTIONS</code> menu (anyone can remove them with the
-                    &times;)
-                  </li>
-                  <li>
-                    Once everybody is ready to play, have someone press `START`
-                    to reveal the secret names
-                  </li>
-                </ol>
-              </div>
-            </li>
-            <li class="active">
-              <div class="collapsible-header">Rules</div>
-              <div class="collapsible-body">
-                <p>
-                  <strong>Objective</strong>: Be the leader of the final empire.
-                </p>
-                <ol>
-                  <li>
-                    Each player picks a secret name (any word that they hope
-                    won't be associated with them)
-                  </li>
-                  <li>
-                    The list of secret names is read twice in random order, and
-                    players are meant to memorize as many names as they can
-                    <ul>
-                      <li>No recording of any information is allowed</li>
-                      <li>
-                        The name list can be read again at any point if
-                        unanimously agreed by all the remaining leaders
-                      </li>
-                    </ul>
-                  </li>
-                  <li>
-                    Turns are taken clockwise around the circle of players
-                    <ul>
-                      <li>Only leaders of empires take turns</li>
-                    </ul>
-                  </li>
-                  <li>
-                    The first leader chooses another leader and guesses their
-                    secret word
-                    <ul>
-                      <li>
-                        If they are wrong, their turn is over, and the next
-                        leader can guess
-                      </li>
-                      <li>
-                        If they are right, the other player is now part of their
-                        empire and the leader gets to guess again
-                      </li>
-                    </ul>
-                  </li>
-                  <li>
-                    The winner is the last leader standing; the one whose secret
-                    name is never guessed
-                  </li>
-                </ol>
-              </div>
-            </li>
-            <li>
-              <div class="collapsible-header">Notes</div>
-              <div class="collapsible-body">
-                <ol>
-                  <li>
-                    When a leader is conquered by another leader, their whole
-                    empire goes along with them
-                  </li>
-                  <li>
-                    All members of each empire should cooperate to guess the
-                    remaining leaders' secret names and protect the secret name
-                    of their leader
-                  </li>
-                  <li>
-                    Only the leader of an empire can make official guesses;
-                    other members can talk, but their guesses don't count as a
-                    turn for their empire
-                  </li>
-                </ol>
-              </div>
-            </li>
-          </ul>
+      <!-- 2 · Pick names -->
+      <section id="setupScreen" class="screen screen-setup" aria-label="Pick your names" hidden>
+        <div class="bar">
+          <button type="button" id="setupBack" class="icon-btn" aria-label="Back">
+            <svg class="icon"><use href="#i-back" /></svg>
+          </button>
+          <button type="button" class="chip share-btn">
+            <svg class="icon"><use href="#i-share" /></svg><span class="room-name"></span>
+          </button>
         </div>
-        <div class="modal-footer">
-          <div class="modal-close waves-effect waves-green btn-flat">Close</div>
+
+        <div class="stack rise">
+          <h1 class="display setup-title">Claim your<br />place</h1>
+          <p class="muted">Your real name shows in the lobby. Your secret name is read aloud with everyone else's.</p>
         </div>
-      </div>
-    </header>
-    <main>
-      <div class="fixed-action-btn click-to-toggle">
-        <a class="btn-floating btn-large blue-grey">
-          <i class="large material-icons">settings</i>
-        </a>
-        <ul>
-          <li>
-            <a class="btn-floating indigo accent-2"
-              ><i class="material-icons" id="volumeIcon">volume_off</i></a
-            >
-          </li>
-        </ul>
-      </div>
 
-      <div class="row">
-        <ul class="tabs tabs-fixed-width">
-          <li id="createTab" class="tab col s3 active">
-            <a href="#createPage">Create or Join</a>
-          </li>
-          <li id="setupTab" class="tab col s3 disabled">
-            <a href="#setupPage">Pick Name</a>
-          </li>
-          <li id="playTab" class="tab col s3 disabled">
-            <a href="#playPage">Lobby</a>
-          </li>
-        </ul>
+        <form id="namesForm" class="stack names-form rise" style="animation-delay: 0.08s" novalidate>
+          <div class="stack-sm">
+            <label for="realName" class="eyebrow">Your name</label>
+            <input id="realName" class="field field-lg" type="text" autocomplete="nickname" maxlength="100" />
+            <p id="realNameHelper" class="field-error" role="alert"></p>
+          </div>
 
-        <div id="gameLink" class="container center-align"></div>
-
-        <div id="createPage" class="col s12">
-          <div class="create container">
-            <div class="input-field">
-              <input id="userGameCode" type="text" class="validate" />
-              <label
-                class="unselectable"
-                id="userGameCodeLabel"
-                for="userGameCode"
-                >Game Code</label
-              >
-              <span id="userGameCodeHelper" class="helper-text"></span>
+          <div class="stack-sm">
+            <label for="secretName" class="eyebrow eyebrow-gold">Secret name</label>
+            <div class="secret" id="secretBox">
+              <div class="secret-input">
+                <input id="secretName" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="24" aria-describedby="secretHint" />
+                <div class="secret-glyphs" id="secretGlyphs" aria-hidden="true"></div>
+              </div>
+              <button type="button" id="togglePassword" class="secret-toggle" aria-label="Show secret name" aria-pressed="false">
+                <svg class="icon eye-on"><use href="#i-eye" /></svg>
+                <svg class="icon eye-off"><use href="#i-eye-off" /></svg>
+              </button>
             </div>
-            <button
-              id="createButton"
-              class="btn waves-effect waves-light blue"
-              type="button"
-            >
-              Create
+            <p id="secretNameHelper" class="field-error" role="alert"></p>
+            <p id="secretHint" class="hint"><svg class="icon icon-gold"><use href="#i-lock" /></svg>Only the game sees it. Pick a word nobody would link to you.</p>
+          </div>
+
+          <div class="grow"></div>
+          <button id="submitNames" type="submit" class="btn btn-gold btn-xl">
+            <span id="submitLabel">Enter the lobby</span><svg class="icon"><use href="#i-arrow" /></svg>
+          </button>
+        </form>
+      </section>
+
+      <!-- 3 · Lobby -->
+      <section id="lobbyScreen" class="screen screen-lobby" aria-label="Lobby" hidden>
+        <div class="bar">
+          <img class="bar-logo" src="images/icons/128.png" alt="Empire" width="40" height="40" />
+          <div class="seg" role="group" aria-label="Lobby view">
+            <span class="seg-thumb"></span>
+            <button type="button" class="seg-btn" data-view="table" aria-pressed="true">Table</button>
+            <button type="button" class="seg-btn" data-view="list" aria-pressed="false">List</button>
+          </div>
+          <div class="bar-group">
+            <button type="button" class="icon-btn icon-btn-gold share-btn" aria-label="Share game link">
+              <svg class="icon"><use href="#i-share" /></svg>
             </button>
-            <button
-              id="joinButton"
-              class="btn waves-effect waves-light blue"
-              type="button"
-            >
-              Join
+            <button type="button" class="icon-btn" data-open="optionsDialog" aria-label="Room options">
+              <svg class="icon"><use href="#i-more" /></svg>
             </button>
           </div>
         </div>
 
-        <div id="setupPage" class="col s12 hide">
-          <div class="setup container">
-            <div class="input-field">
-              <i class="material-icons prefix">person</i>
-              <input id="realName" type="text" class="validate" />
-              <label class="unselectable" id="realNameLabel" for="realName"
-                >Your Real Name</label
-              >
-              <span id="realNameHelper" class="helper-text unselectable"></span>
+        <div class="lobby-body">
+          <div id="tableView" class="table" aria-label="Players at the table">
+            <div class="table-inner" id="tableInner">
+              <div id="ringGuides"></div>
+              <div class="table-center" id="tableCenter">
+                <span class="tc-room room-name"></span>
+                <span class="tc-count display" id="playerCount">0</span>
+                <span class="tc-unit">players</span>
+                <span class="tc-wait" id="waitingText"></span>
+              </div>
+              <div id="seats"></div>
             </div>
-            <div class="input-field">
-              <i class="material-icons prefix" id="togglePassword">
-                visibility_off</i
-              >
-              <input id="secretName" type="password" class="validate" />
-              <label class="unselectable" for="secretName"
-                >Secret Nickname</label
-              >
-              <span
-                id="secretNameHelper"
-                class="helper-text unselectable"
-              ></span>
+          </div>
+
+          <div id="listView" class="list-view" hidden>
+            <div class="list-head">
+              <span class="display list-room room-name"></span>
+              <span class="muted small" id="listSummary"></span>
             </div>
-            <button
-              id="submitNames"
-              class="btn waves-effect waves-light blue"
-              type="button"
-            >
-              Submit
-            </button>
+            <ul id="nameList" class="player-list"></ul>
           </div>
         </div>
 
-        <div id="playPage" class="col s12 hide">
-          <div class="play container">
-            <div class="section valign-wrapper">
-              <a
-                class="dropdown-trigger btn-large indigo"
-                href="#"
-                data-target="dropdown1"
-                ><i class="material-icons left">build</i>Options</a
-              >
-              <ul id="dropdown1" class="dropdown-content">
-                <li><a href="#!">Cancel</a></li>
-                <li class="divider" tabindex="-1"></li>
-                <li>
-                  <a
-                    id="generateName"
-                    class="waves-effect waves-light indigo darken-3 white-text"
-                  >
-                    <i class="material-icons">adb</i>Add Fake
-                  </a>
-                </li>
+        <button id="generateName" type="button" class="btn btn-dashed">
+          <svg class="icon"><use href="#i-plus" /></svg>Add a bot player
+        </button>
+        <button id="revealSecrets" type="button" class="btn btn-gold btn-xl">
+          <svg class="icon"><use href="#i-play" /></svg><span>Reveal the names</span><span class="spinner" hidden></span>
+        </button>
+      </section>
 
-                <li>
-                  <a id="editNames" class="waves-effect waves-light"
-                    ><i class="material-icons">edit</i>Change My Names</a
-                  >
-                </li>
-
-                <li class="divider" tabindex="-1"></li>
-
-                <li>
-                  <a
-                    href="#confirmNewGame"
-                    class="modal-trigger waves-effect waves-light orange white-text"
-                    ><i class="material-icons">autorenew</i>New Game</a
-                  >
-                </li>
-
-                <li>
-                  <a
-                    href="#confirmDelete"
-                    class="modal-trigger waves-effect waves-light red white-text"
-                    ><i class="material-icons">delete_forever</i>End Room</a
-                  >
-                </li>
-
-                <li>
-                  <a id="leaveRoom" class="waves-effect waves-light"
-                    ><i class="material-icons">exit_to_app</i>Leave Room</a
-                  >
-                </li>
-              </ul>
-
-              <div id="confirmNewGame" class="modal">
-                <div class="modal-content">
-                  <h4>New Game</h4>
-                  <p>Do you want to end this round and start a new round?</p>
-                </div>
-                <div class="modal-footer">
-                  <div
-                    id="roomResetButton"
-                    class="modal-close waves-effect waves-light btn orange"
-                  >
-                    New Game
-                  </div>
-                  <div class="modal-close waves-effect waves-green btn-flat">
-                    Cancel
-                  </div>
-                </div>
-              </div>
-
-              <div id="confirmDelete" class="modal">
-                <div class="modal-content">
-                  <h4>Delete Game</h4>
-                  <p>
-                    Do you want to delete the entire room? This will delete all
-                    players and send everyone back to the home screen!
-                  </p>
-                </div>
-                <div class="modal-footer">
-                  <div
-                    id="roomDeleteButton"
-                    class="modal-close waves-effect waves-light btn red"
-                  >
-                    Delete Room
-                  </div>
-                  <div class="modal-close waves-effect waves-green btn-flat">
-                    Cancel
-                  </div>
-                </div>
-              </div>
-              <div
-                id="revealSecrets"
-                class="waves-effect waves-light btn-large green"
-              >
-                <div class="valign-wrapper">
-                  <i id="playIcon" class="material-icons left">play_arrow</i>
-                  <div
-                    id="revealSpinner"
-                    class="preloader-wrapper small active hide"
-                  >
-                    <div class="spinner-layer spinner-blue">
-                      <div class="circle-clipper left">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="gap-patch">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="circle-clipper right">
-                        <div class="circle"></div>
-                      </div>
-                    </div>
-
-                    <div class="spinner-layer spinner-red">
-                      <div class="circle-clipper left">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="gap-patch">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="circle-clipper right">
-                        <div class="circle"></div>
-                      </div>
-                    </div>
-
-                    <div class="spinner-layer spinner-yellow">
-                      <div class="circle-clipper left">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="gap-patch">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="circle-clipper right">
-                        <div class="circle"></div>
-                      </div>
-                    </div>
-
-                    <div class="spinner-layer spinner-green">
-                      <div class="circle-clipper left">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="gap-patch">
-                        <div class="circle"></div>
-                      </div>
-                      <div class="circle-clipper right">
-                        <div class="circle"></div>
-                      </div>
-                    </div>
-                  </div>
-                  Start
-                </div>
-              </div>
-            </div>
-
-            <ul class="collection with-header z-depth-2" id="nameList"></ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="reveal container unselectable hide">
-        <div class="card-panel z-depth-5 blue">
-          <div class="white-text center-align" id="revealPanel"></div>
-        </div>
-        <div class="progress">
-          <div id="progressBar" class="determinate" style="width: 0%"></div>
-        </div>
-      </div>
+      <!-- 4 · Countdown + reveal -->
+      <section id="revealScreen" class="reveal" aria-live="assertive" hidden>
+        <div id="revealStage" class="reveal-stage"></div>
+        <div class="reveal-timer" id="revealTimer" hidden><span id="revealBar"></span></div>
+      </section>
     </main>
+
+    <!-- Room options -->
+    <dialog id="optionsDialog" class="sheet" aria-label="Room options">
+      <div class="sheet-grip"></div>
+      <button type="button" class="sheet-item" id="editNames"><svg class="icon"><use href="#i-edit" /></svg>Change my names</button>
+      <button type="button" class="sheet-item sound-toggle" aria-pressed="false"><svg class="icon"><use href="#i-sound-off" /></svg><span class="sound-label">Read names aloud: off</span></button>
+      <button type="button" class="sheet-item" data-open="rulesDialog"><svg class="icon"><use href="#i-info" /></svg>How to play</button>
+      <hr />
+      <button type="button" class="sheet-item warn" data-open="confirmNewGame"><svg class="icon"><use href="#i-refresh" /></svg>New round</button>
+      <button type="button" class="sheet-item danger" data-open="confirmDelete"><svg class="icon"><use href="#i-trash" /></svg>End room</button>
+      <button type="button" class="sheet-item" id="leaveRoom"><svg class="icon"><use href="#i-exit" /></svg>Leave room</button>
+      <button type="button" class="btn btn-ghost sheet-close" data-close>Close</button>
+    </dialog>
+
+    <dialog id="confirmNewGame" class="sheet" aria-labelledby="newGameTitle">
+      <h2 id="newGameTitle" class="display sheet-title">New round?</h2>
+      <p class="muted">Everyone goes back to pick new names. The room and its link stay the same.</p>
+      <div class="row-2">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" id="roomResetButton" class="btn btn-gold" data-close>New round</button>
+      </div>
+    </dialog>
+
+    <dialog id="confirmDelete" class="sheet" aria-labelledby="deleteTitle">
+      <h2 id="deleteTitle" class="display sheet-title">End this room?</h2>
+      <p class="muted">This removes every player and sends everyone back to the home screen.</p>
+      <div class="row-2">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" id="roomDeleteButton" class="btn btn-danger" data-close>End room</button>
+      </div>
+    </dialog>
+
+    <dialog id="rulesDialog" class="sheet sheet-tall" aria-labelledby="rulesTitle">
+      <div class="sheet-grip"></div>
+      <h2 id="rulesTitle" class="display sheet-title">How to play</h2>
+      <div class="rules">
+        <h3>Setup</h3>
+        <ol>
+          <li>Create a room (name it, or leave it blank for a random name).</li>
+          <li>Tap <strong>Share</strong> and send the link to your friends, or have them enter the room code at <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>.</li>
+          <li>Enter your real name and a secret name.</li>
+          <li>Small party? Add bot players from the room menu.</li>
+          <li>When everyone is in, press <strong>Reveal the names</strong>.</li>
+        </ol>
+        <h3>Rules</h3>
+        <p><strong>Objective:</strong> be the leader of the final empire.</p>
+        <ol>
+          <li>Each player picks a secret name: any word they hope won't be linked to them.</li>
+          <li>The secret names are read twice in random order. Memorize as many as you can.
+            <ul>
+              <li>No recording of any information is allowed.</li>
+              <li>The list can be read again if all remaining leaders agree.</li>
+            </ul>
+          </li>
+          <li>Turns go clockwise around the circle. Only leaders of empires take turns.</li>
+          <li>A leader picks another leader and guesses their secret name.
+            <ul>
+              <li>Wrong: their turn is over and the next leader guesses.</li>
+              <li>Right: that player joins their empire and they guess again.</li>
+            </ul>
+          </li>
+          <li>The winner is the last leader standing, whose secret name is never guessed.</li>
+        </ol>
+        <h3>Notes</h3>
+        <ol>
+          <li>A conquered leader brings their whole empire with them.</li>
+          <li>Empire members work together to guess the other leaders' names and protect their own leader's.</li>
+          <li>Only leaders make official guesses; members can talk, but their guesses don't count as a turn.</li>
+        </ol>
+      </div>
+      <button type="button" class="btn btn-ghost sheet-close" data-close>Close</button>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </body>
 </html>
