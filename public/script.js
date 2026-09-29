@@ -819,11 +819,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  function removePlayer(key) {
+  function removePlayer(key, onFail) {
     db.ref(`games/${gameID}`).update({
       [`users/${key}`]: null,
       [`secrets/${key}`]: null
-    }).catch(() => toast('Could not remove that player'));
+    }).catch(() => {
+      toast('Could not remove that player');
+      if (onFail) onFail();
+    });
   }
 
   function avatarHtml() {
@@ -852,7 +855,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.type = 'button';
     btn.className = cls;
     btn.innerHTML = '<svg class="icon"><use href="#i-x" /></svg>';
-    btn.addEventListener('click', () => removePlayer(btn.dataset.key));
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      removePlayer(btn.dataset.key, () => { btn.disabled = false; });
+    });
     return btn;
   }
 
