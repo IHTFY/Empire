@@ -80,19 +80,18 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
   if (!claim.committed) {
     return true;
   }
+  // Marks when this start began, so a second press while the voices load isn't taken as stale.
+  await gameRef.child('startedAt').set(ServerValue.TIMESTAMP);
 
-  await gameRef.update({
-    names: names,
-    startedAt: ServerValue.TIMESTAMP,
-    locked: true,
-    state: 'playing'
-  });
-
-  // Record each name in a natural voice while the 3-2-1 countdown runs. Every device plays
-  // the same clip; players fall back to their device's voice for any clip that isn't there.
-  if (!(game.locked && game.voice)) {
-    await recordNames(gameRef, names);
-  }
+  // Record every name before the countdown so each one plays in the recorded voice. Players
+  // wait (the Start button shows "Getting voices ready") until the clips are in, up to
+  // VOICE_WAIT_MS; a name still missing then falls back to the device's voice.
+  const voice = game.locked && game.voice ? null : recordNames(gameRef, names);
+  const ready = voice ? await voice.ready : {};
+  const start = { names: names, startedAt: ServerValue.TIMESTAMP, locked: true, state: 'playing' };
+  Object.entries(ready).forEach(([i, audio]) => { start[`voice/${i}`] = audio; });
+  await gameRef.update(start);
+  if (voice) await voice.done;
   return true;
 });
 
@@ -102,7 +101,9 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
 // It must stay free: Google's free tier covers 1M characters a month, so recording stops
 // at FREE_CHARS a month (players then hear their device's voice), and every recorded word
 // is cached so the same word is never paid for twice.
-const VOICE = { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Charon' };
+const VOICE = { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Enceladus' };
+const VOICE_WAIT_MS = 12000;
+const VOICE_JOBS = 4; // recordings made at once, so a big room doesn't hit Google's rate limit
 const FREE_CHARS = 900000;
 
 async function synthesize(text) {
@@ -145,25 +146,74 @@ async function recording(text) {
   return audio;
 }
 
-async function recordNames(gameRef, names) {
-  const once = new Map(); // a word used twice in one game is recorded once
-  const jobs = names.map(async (name, i) => {
-    if (!once.has(name)) once.set(name, recording(name));
-    const audio = await once.get(name);
-    if (audio) await gameRef.child(`voice/${i}`).set(audio);
+// Records the names in reveal order, a few at a time. `ready` resolves with the clips made
+// within VOICE_WAIT_MS (by reveal index); any clip made later goes straight to the room, and
+// `done` resolves once every recording has finished.
+function recordNames(gameRef, names) {
+  const clips = {};
+  let late = false;
+  // At most VOICE_JOBS recordings at once; slots are handed out in reveal order.
+  let running = 0;
+  const waiting = [];
+  const slot = () => new Promise(resolve => {
+    if (running < VOICE_JOBS) {
+      running++;
+      resolve();
+    } else {
+      waiting.push(resolve);
+    }
   });
-  jobs.push((async () => {
-    const sample = db.ref('voiceSample');
-    if ((await sample.once('value')).exists()) return;
-    const audio = await recording('Empire');
-    if (audio) await sample.set(audio);
-  })());
-  const results = await Promise.allSettled(jobs);
-  const failed = results.filter(r => r.status === 'rejected');
-  if (failed.length > 0) {
-    functions.logger.warn(`Voice: ${failed.length} of ${results.length} clips failed`, failed[0].reason && failed[0].reason.message);
-  }
+  const release = () => {
+    const next = waiting.shift();
+    if (next) next();
+    else running--;
+  };
+  const made = new Map(); // a word used twice in one game is recorded once
+  const jobs = names.map(async (name, i) => {
+    if (!made.has(name)) made.set(name, slot().then(() => recording(name)).finally(release));
+    const audio = await made.get(name);
+    if (!audio) return;
+    if (late) await gameRef.child(`voice/${i}`).set(audio);
+    else clips[i] = audio;
+  });
+  jobs.push(recordSample());
+  const done = Promise.allSettled(jobs).then(results => {
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      functions.logger.warn(`Voice: ${failed.length} of ${results.length} clips failed`, failed[0].reason && failed[0].reason.message);
+    }
+    return failed.length;
+  });
+  const ready = Promise.race([done, new Promise(resolve => setTimeout(resolve, VOICE_WAIT_MS))]).then(() => {
+    late = true;
+    return { ...clips };
+  });
+  return { ready, done };
 }
+
+// "Empire" in the current voice, for the voice volume slider. Kept at /voiceSample for good
+// (the 60-day cleanup only touches the name cache) and made once per voice.
+async function recordSample() {
+  const marker = db.ref('meta/voiceSampleVoice');
+  if ((await marker.once('value')).val() === VOICE.name) return;
+  const audio = await recording('Empire');
+  if (audio) await Promise.all([db.ref('voiceSample').set(audio), marker.set(VOICE.name)]);
+}
+
+// Record a secret name as soon as a player sets it, while the room is still waiting, so the
+// recording is usually ready (cached) by the time someone presses Start.
+exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onWrite(async change => {
+  const name = change.after.val();
+  if (typeof name !== 'string' || name.length === 0 || name === change.before.val()) {
+    return null;
+  }
+  const results = await Promise.allSettled([recording(name), recordSample()]);
+  const failed = results.find(r => r.status === 'rejected');
+  if (failed) {
+    functions.logger.warn('Voice: could not record in advance', failed.reason && failed.reason.message);
+  }
+  return null;
+});
 
 const IDLE_MS = 12 * 60 * 60 * 1000;
 const VOICE_KEEP_MS = 60 * 24 * 60 * 60 * 1000;
