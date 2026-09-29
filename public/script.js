@@ -80,21 +80,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (event.target.tagName === 'DIALOG') event.target.close();
   });
 
-  const soundOn = () => localStorage.getItem('mute') === 'volume_up';
+  // Sound: two volumes (0-100) kept per device. Effects are the join chime and countdown
+  // ticks; voice reads the names aloud during the reveal.
+  function readVolume(key, fallback) {
+    const value = Number(localStorage.getItem(key));
+    return localStorage.getItem(key) === null || Number.isNaN(value) ? fallback : Math.min(100, Math.max(0, value));
+  }
+  // Earlier versions had a single on/off switch for reading names aloud.
+  const oldVoiceOn = localStorage.getItem('mute') === 'volume_up';
+  const volume = { sfx: readVolume('sfxVolume', 60), voice: readVolume('voiceVolume', oldVoiceOn ? 80 : 0) };
+
+  let audioContext = null;
+  function tick(pitch = 660, length = 0.09) {
+    if (!volume.sfx) return;
+    try {
+      audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.frequency.value = pitch;
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.35 * (volume.sfx / 100), audioContext.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + length);
+      osc.connect(gain).connect(audioContext.destination);
+      osc.start();
+      osc.stop(audioContext.currentTime + length + 0.02);
+    } catch (err) { /* audio not available */ }
+  }
+  function chime() {
+    if (!volume.sfx) return;
+    const boop = $('boop');
+    boop.volume = volume.sfx / 100;
+    boop.currentTime = 0;
+    boop.play().catch(() => {});
+  }
+  function say(text) {
+    if (!volume.voice || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.volume = volume.voice / 100;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }
+
   function renderSound() {
-    document.querySelectorAll('.sound-toggle').forEach(btn => {
-      btn.setAttribute('aria-pressed', String(soundOn()));
-      btn.querySelector('use').setAttribute('href', soundOn() ? '#i-sound-on' : '#i-sound-off');
-      const label = btn.querySelector('.sound-label');
-      if (label) label.textContent = `Read names aloud: ${soundOn() ? 'on' : 'off'}`;
-      else btn.setAttribute('aria-label', soundOn() ? 'Sound on' : 'Sound off');
+    const muted = !volume.sfx && !volume.voice;
+    document.querySelectorAll('.sound-btn use').forEach(use => use.setAttribute('href', muted ? '#i-sound-off' : '#i-sound-on'));
+    [['sfx', 'sfxVolume', 'sfxValue'], ['voice', 'voiceVolume', 'voiceValue']].forEach(([key, input, output]) => {
+      $(input).value = volume[key];
+      $(input).style.setProperty('--fill', `${volume[key]}%`);
+      $(output).textContent = volume[key] ? `${volume[key]}%` : 'Off';
     });
   }
-  if (!localStorage.getItem('mute')) localStorage.setItem('mute', 'volume_off');
-  document.querySelectorAll('.sound-toggle').forEach(btn => btn.addEventListener('click', () => {
-    localStorage.setItem('mute', soundOn() ? 'volume_off' : 'volume_up');
+  $('sfxVolume').addEventListener('input', event => {
+    volume.sfx = Number(event.target.value);
+    localStorage.setItem('sfxVolume', volume.sfx);
     renderSound();
-  }));
+  });
+  $('sfxVolume').addEventListener('change', () => chime());
+  $('voiceVolume').addEventListener('input', event => {
+    volume.voice = Number(event.target.value);
+    localStorage.setItem('voiceVolume', volume.voice);
+    renderSound();
+  });
+  $('voiceVolume').addEventListener('change', () => say('Empire'));
   renderSound();
 
   // ---------------------------------------------------------------------------
@@ -106,6 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let users = {};
   let presence = {};
   let state = null;
+  let locked = false;
   let revealing = false;
   let presenceRef = null;
   let awayTimer = null;
@@ -127,6 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     users = {};
     presence = {};
     state = null;
+    locked = false;
     document.title = 'Empire';
     resetLobby();
   }
@@ -192,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     const newCode = code || await randomCode();
-    await db.ref(`games/${newCode}`).set({ state: 'waiting' });
+    await db.ref(`games/${newCode}`).set({ state: 'waiting', createdAt: firebase.database.ServerValue.TIMESTAMP });
     await enterRoom(newCode);
   }
 
@@ -239,10 +288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       users = snapshot.val() || {};
       renderLobby();
 
-      if (!first && soundOn()) {
-        $('boop').load();
-        $('boop').play().catch(() => {});
-      }
+      if (!first) chime();
       first = false;
 
       // Removed by someone else (for example after being offline too long).
@@ -256,8 +302,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderLobby();
     });
     listen(db.ref(`games/${gameID}/state`), onStateChange);
+    locked = (await db.ref(`games/${gameID}/locked`).once('value')).val() === true;
+    listen(db.ref(`games/${gameID}/locked`), snapshot => {
+      locked = snapshot.val() === true;
+      renderLobby();
+    });
 
-    if (users[uid]) {
+    if (!users[uid] && locked) {
+      // The names have been revealed: newcomers watch until the next round.
+      show('lobby');
+    } else if (users[uid]) {
       realName.value = users[uid].real;
       setSecret(sessionStorage.getItem(`secret:${gameID}`) || '');
       show('lobby');
@@ -307,7 +361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (snapshot.val() !== true || ref !== presenceRef) return;
       // A full set (not update): the rules require online + lastSeen together.
       await ref.onDisconnect().set({ online: false, away: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
-      await ref.set({ online: true, away: document.hidden, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+      await ref.set({ online: true, away: document.hidden, lastSeen: firebase.database.ServerValue.TIMESTAMP, name: (localStorage.getItem('realName') || 'Guest').slice(0, 100) });
     });
   }
 
@@ -438,17 +492,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       await db.ref(`games/${gameID}`).update({ state: 'waiting' });
     }
 
+    if (locked && !users[uid]) {
+      toast('This round has started. You can watch and join at the next round.');
+      show('lobby');
+      return;
+    }
+
     // The player entry is public; the secret name is stored where only the server can read it.
-    await db.ref(`games/${gameID}`).update({
-      [`users/${uid}`]: { real: userRealName, clan: userRealName },
-      [`secrets/${uid}`]: userFakeName
-    });
+    // Right after a New round the server may still be unlocking the room, so retry briefly.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await db.ref(`games/${gameID}`).update({
+          [`users/${uid}`]: { real: userRealName, clan: userRealName },
+          [`secrets/${uid}`]: userFakeName
+        });
+        break;
+      } catch (err) {
+        if (attempt >= 4) {
+          toast(locked ? 'Names are locked until the next round.' : 'Could not save your names. Try again.');
+          return;
+        }
+        await sleep(700);
+      }
+    }
 
     show('lobby');
   });
 
   $('editNames').addEventListener('click', () => {
     $('optionsDialog').close();
+    if (locked) {
+      toast('Names are locked until the next round.');
+      return;
+    }
     if (users[uid]) {
       realName.value = users[uid].real;
     }
@@ -676,6 +752,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const waitingText = waiting.length === 0 ? (count < 2 ? 'Need 2 to start' : 'Everyone is here')
       : waiting.length <= 2 && count <= 11 ? `Waiting for ${waiting.join(', ')}` : `${waiting.length} away`;
 
+    const spectator = !users[uid];
+    const watchers = Object.entries(presence)
+      .filter(([key, seen]) => seen && seen.online && !users[key])
+      .map(([key, seen]) => (key === uid ? 'You' : seen.name || 'Guest'));
+    $('watching').hidden = watchers.length === 0;
+    const chips = $('watchingNames');
+    chips.replaceChildren(...watchers.map(name => {
+      const chip = document.createElement('span');
+      chip.className = 'watch-chip';
+      chip.textContent = name;
+      return chip;
+    }));
+    $('lockNote').hidden = !spectator && !locked;
+    $('lockText').textContent = spectator
+      ? 'Names are set for this round. You can watch and join at the next round.'
+      : 'Names are set for this round. New players can watch and join next round.';
+    $('generateName').hidden = spectator;
+    startButton.hidden = spectator;
+    $('generateName').classList.toggle('is-disabled', locked);
+    $('revealLabel').textContent = locked ? 'Read the names again' : 'Reveal the names';
+    $('revealIcon').setAttribute('href', locked ? '#i-refresh' : '#i-play');
+    startButton.classList.toggle('btn-quiet', locked);
+
     $('playerCount').textContent = count;
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
@@ -825,6 +924,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   $('generateName').addEventListener('click', async () => {
     if (!gameID) return;
+    if (locked) {
+      toast('The room is locked until the next round.');
+      return;
+    }
     if (fakeNameList.length === 0) fakeNameList = await populateList('names.txt');
     await wordList();
     const fakeName = pickRandom(fakeNameList);
@@ -911,53 +1014,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (word.scrollWidth > room) word.classList.add('wrap');
   }
 
+  // Everyone follows the server's clock: startedAt is a server timestamp, so a player who
+  // reloads or arrives mid-reveal joins at the current name instead of getting a replay.
+  let serverOffset = 0;
+  db.ref('.info/serverTimeOffset').on('value', snap => { serverOffset = snap.val() || 0; });
+  const serverNow = () => Date.now() + serverOffset;
+
+  function showStep(stage, timer, bar, step, into, names) {
+    if (step < 3) {
+      timer.hidden = true;
+      stage.innerHTML = `<div class="count"><span class="count-burst"></span><span class="count-num display">${3 - step}</span></div>`;
+      if (into < 250) tick(step === 2 ? 880 : 660);
+      return;
+    }
+    const name = names[step - 3];
+    const word = document.createElement('div');
+    word.className = 'reveal-name display';
+    word.textContent = name;
+    stage.replaceChildren(word);
+    fitWord(word, stage);
+    timer.hidden = false;
+    bar.classList.remove('run');
+    void bar.offsetWidth; // restart the timer animation
+    bar.style.animationDelay = `${-into}ms`;
+    bar.classList.add('run');
+    if (into < 250 && step === 3) tick(990, 0.18);
+    if (into < 800) say(name);
+  }
+
   async function displaySecrets() {
     if (revealing) return;
     revealing = true;
     const code = gameID;
+    const [namesSnap, startSnap] = await Promise.all([
+      db.ref(`games/${code}/names`).once('value'),
+      db.ref(`games/${code}/startedAt`).once('value')
+    ]);
+    const names = namesSnap.val() || [];
+    const startedAt = startSnap.val() || serverNow();
+    const countdown = 3 * COUNTDOWN_MS;
+    const total = countdown + names.length * NAME_MS;
+    const stillHere = () => gameID === code && state === 'playing';
+
     const reveal = $('revealScreen');
     const stage = $('revealStage');
     const timer = $('revealTimer');
     const bar = $('revealBar');
-    document.querySelectorAll('dialog[open]').forEach(d => d.close());
-    reveal.hidden = false;
-    timer.hidden = true;
-    stage.innerHTML = '';
-
-    const snapshot = await db.ref(`games/${code}/names`).once('value');
-    const names = snapshot.val() || [];
-    const stillHere = () => gameID === code;
-
-    for (let n = 3; n >= 1 && stillHere(); n--) {
-      stage.innerHTML = `<div class="count"><span class="count-burst"></span><span class="count-num display">${n}</span></div>`;
-      await sleep(COUNTDOWN_MS);
-    }
-
-    let utterance = new SpeechSynthesisUtterance();
     bar.style.setProperty('--t', `${NAME_MS}ms`);
-    for (const name of names) {
-      if (!stillHere()) break;
-      const word = document.createElement('div');
-      word.className = 'reveal-name display';
-      word.textContent = name;
-      stage.replaceChildren(word);
-      fitWord(word, stage);
-      timer.hidden = false;
-      bar.classList.remove('run');
-      void bar.offsetWidth; // restart the timer animation
-      bar.classList.add('run');
-      if (soundOn()) {
-        utterance.text = name;
-        speechSynthesis.speak(utterance);
+
+    let shown = -1;
+    while (stillHere()) {
+      const t = serverNow() - startedAt;
+      if (t >= total) break;
+      const step = t < countdown ? Math.floor(t / COUNTDOWN_MS) : 3 + Math.floor((t - countdown) / NAME_MS);
+      if (step !== shown) {
+        if (shown === -1) {
+          document.querySelectorAll('dialog[open]').forEach(d => d.close());
+          reveal.hidden = false;
+        }
+        shown = step;
+        const stepStart = step < 3 ? step * COUNTDOWN_MS : countdown + (step - 3) * NAME_MS;
+        showStep(stage, timer, bar, step, t - stepStart, names);
       }
-      await sleep(NAME_MS);
+      await sleep(60);
     }
 
     revealing = false;
     reveal.hidden = true;
     stage.innerHTML = '';
     bar.classList.remove('run');
-    if (stillHere() && state === 'playing') {
+    // The reveal is over (or was already over when this player arrived).
+    if (stillHere() && serverNow() - startedAt >= total) {
       db.ref(`games/${code}`).update({ state: 'waiting' });
     }
     renderLobby();
