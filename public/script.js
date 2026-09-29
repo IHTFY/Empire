@@ -52,7 +52,59 @@ document.addEventListener('DOMContentLoaded', async () => {
   function show(name) {
     Object.entries(screens).forEach(([key, el]) => { el.hidden = key !== name; });
     window.scrollTo(0, 0);
+    requestAnimationFrame(fitMarquees);
     if (name === 'lobby') requestAnimationFrame(() => { fitTable(); renderLobby(); });
+  }
+
+  // Text too long for its box (like a long room code) glides to its end and back.
+  function fitMarquees() {
+    document.querySelectorAll('.marquee').forEach(box => {
+      const text = box.firstElementChild;
+      box.classList.remove('is-long');
+      if (!box.clientWidth || text.scrollWidth <= box.clientWidth + 1) return;
+      box.classList.add('is-long');
+      const shift = text.offsetWidth - box.clientWidth;
+      box.style.setProperty('--marquee-shift', `${-shift}px`);
+      box.style.setProperty('--marquee-time', `${(4 + shift / 30).toFixed(1)}s`);
+    });
+  }
+  window.addEventListener('resize', fitMarquees);
+  document.fonts.ready.then(fitMarquees);
+
+  // Numbers roll like an odometer: each digit is a 0-9 strip that slides to its value.
+  function rollNumber(el, value) {
+    const text = String(value);
+    if (el.dataset.value === text) return;
+    const first = el.dataset.value === undefined;
+    el.dataset.value = text;
+    el.setAttribute('aria-label', text);
+    const shape = text.replace(/\d/g, '0');
+    if (el.dataset.shape !== shape) {
+      el.dataset.shape = shape;
+      el.replaceChildren(...[...text].map(ch => {
+        const cell = document.createElement('span');
+        cell.setAttribute('aria-hidden', 'true');
+        if (!/\d/.test(ch)) {
+          cell.className = 'odo-char';
+          cell.textContent = ch;
+          return cell;
+        }
+        cell.className = 'odo-digit';
+        const strip = document.createElement('span');
+        strip.className = 'odo-strip';
+        strip.textContent = '0123456789';
+        cell.appendChild(strip);
+        return cell;
+      }));
+      void el.offsetWidth; // new digits start at 0 and roll up to their value
+    }
+    const strips = [...el.children].map(cell => cell.firstElementChild);
+    if (first) strips.forEach(strip => { if (strip) strip.style.transition = 'none'; });
+    [...text].forEach((ch, i) => { if (strips[i]) strips[i].style.transform = `translateY(${-Number(ch)}em)`; });
+    if (first) {
+      void el.offsetWidth;
+      strips.forEach(strip => { if (strip) strip.style.transition = ''; });
+    }
   }
 
   let toastTimer = null;
@@ -127,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     [['sfx', 'sfxVolume', 'sfxValue'], ['voice', 'voiceVolume', 'voiceValue']].forEach(([key, input, output]) => {
       $(input).value = volume[key];
       $(input).style.setProperty('--fill', `${volume[key]}%`);
-      $(output).textContent = volume[key] ? `${volume[key]}%` : 'Off';
+      rollNumber($(output), volume[key] ? `${volume[key]}%` : 'Off');
     });
   }
   $('sfxVolume').addEventListener('input', event => {
@@ -273,6 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.title = `Empire: ${gameID}`;
     setRoomInUrl(gameID);
     document.querySelectorAll('.room-name').forEach(el => { el.textContent = gameID; });
+    requestAnimationFrame(fitMarquees);
 
     // Reset the create form so it never points at the previous room.
     userGameCode.value = '';
@@ -780,7 +833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('revealIcon').setAttribute('href', locked ? '#i-refresh' : '#i-play');
     startButton.classList.toggle('btn-quiet', locked);
 
-    $('playerCount').textContent = count;
+    rollNumber($('playerCount'), count);
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
     startButton.classList.toggle('is-disabled', count < 2 || revealing);
@@ -790,36 +843,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderList(players);
   }
 
-  // The room code runs along the top of the round centre like an engraved seal, so long
-  // codes fit without crowding the count. Everything is in viewBox units (the disc is
-  // 100 wide), so it scales smoothly when the disc grows or shrinks.
-  function fitRoomArc(center, L) {
-    const D = 2 * L.disc, u = 100 / D;
-    const size = L.room * u;
-    const r = 50 - (7 + L.room * 0.72) * u;
-    center.querySelector('#tcArcPath').setAttribute('d', `M ${50 - r} 50 A ${r} ${r} 0 0 1 ${50 + r} 50`);
-    const text = center.querySelector('.tc-room');
-    text.style.fontSize = `${size}px`;
-    text.style.letterSpacing = `${1.4 * u}px`;
-    center.style.paddingTop = `${Math.round(L.room * 0.9)}px`; // keep the count clear of the arc
-    const path = text.firstElementChild;
-    const full = path.textContent === path.dataset.shown ? path.dataset.full : path.textContent;
-    path.textContent = full;
-    const length = text.getComputedTextLength();
-    if (!length) return; // not showing; fitTable refits when it is
-    const room = Math.PI * r * 0.72; // leave the sides of the arc clear
-    const scale = Math.max(0.6, Math.min(1, room / length));
-    text.style.fontSize = `${size * scale}px`;
-    for (let n = full.length; n > 4 && text.getComputedTextLength() > room; n--) path.textContent = `${full.slice(0, n - 1)}…`;
-    path.dataset.full = full;
-    path.dataset.shown = path.textContent;
-  }
-
   // The status line sits low in the disc, where the circle narrows: pick the largest
   // size (on an invisible copy, so the real one still animates) that stays inside.
   let centerFit = '';
   function fitCenter(center, L) {
-    fitRoomArc(center, L);
     const wait = center.querySelector('.tc-wait');
     const key = [L.disc, wait.textContent].join('|');
     if (key === centerFit || !center.offsetParent) return; // unchanged, or the table isn't showing
@@ -827,7 +854,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const probe = center.cloneNode(true);
     probe.removeAttribute('id');
-    probe.querySelector('.tc-arc').remove();
     probe.classList.add('measuring');
     Object.assign(probe.style, { width: `${2 * L.disc}px`, height: `${2 * L.disc}px`, left: '0', top: '0' });
     $('tableInner').appendChild(probe);
@@ -956,6 +982,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.seg-btn').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.view === view)));
     $('tableView').hidden = view !== 'table';
     $('listView').hidden = view !== 'list';
+    $('listSummary').hidden = view !== 'list';
     if (view === 'table') requestAnimationFrame(fitTable);
   }
   document.querySelectorAll('.seg-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
