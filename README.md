@@ -35,7 +35,7 @@
 
 The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy to the `empire-ihtfy` Firebase project through GitHub Actions (`.github/workflows/firebase-deploy.yml`):
 
-- **Pull requests:** install, lint and audit `functions/` only.
+- **Pull requests:** install, lint and audit `functions/`, then deploy the site to a temporary preview link (posted as a comment on the PR, valid 7 days). The preview uses the live database and function, so only site changes can be tried there.
 - **Push to `master`** (or **Actions → Firebase → Run workflow**): the checks run, then `firebase deploy --only hosting,functions,database`.
 
 ### One-time setup

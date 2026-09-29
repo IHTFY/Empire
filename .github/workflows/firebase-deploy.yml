@@ -40,3 +40,23 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - run: npx --yes firebase-tools@latest deploy --project empire-ihtfy --only hosting,functions,database --non-interactive --force
+
+  # Each pull request gets its own temporary copy of the site (a Firebase Hosting preview
+  # channel) and a comment with the link. Only the site is previewed: it talks to the same
+  # database and flashNames function as the live game.
+  preview:
+    needs: check
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: empire-ihtfy
+          expires: 7d
