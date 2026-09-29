@@ -30,3 +30,33 @@
 - When a leader is conquered by another leader, their whole empire goes along with them
 - All member of each empire should cooperate to guess the remaining leaders' secret names and protect the secret name of their leader
 - Only the leader of an empire can make official guesses; other members can talk, but any guesses don't count as a turn for their empire
+
+## Deploying
+
+The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy to the `empire-ihtfy` Firebase project through GitHub Actions (`.github/workflows/firebase-deploy.yml`):
+
+- **Pull requests:** install, lint and audit `functions/` only.
+- **Push to `master`** (or **Actions → Firebase → Run workflow**): the checks run, then `firebase deploy --only hosting,functions`.
+
+### One-time setup
+1. In the [Google Cloud console](https://console.cloud.google.com/iam-admin/serviceaccounts?project=empire-ihtfy), create a service account (for example `github-deploy`).
+2. Grant it these roles:
+   - Firebase Admin
+   - Cloud Functions Admin
+   - Service Account User
+   - Artifact Registry Administrator
+   - Cloud Build Editor
+3. Create a JSON key for it: Keys → Add key → JSON.
+4. In GitHub, go to Settings → Secrets and variables → Actions → New repository secret. Name it `FIREBASE_SERVICE_ACCOUNT` and paste the whole JSON file as the value.
+
+### Manual deploy (fallback)
+```sh
+npm install -g firebase-tools
+firebase login
+npm ci --prefix functions
+firebase deploy --project empire-ihtfy --only hosting,functions
+```
+
+### Rolling back
+- **Site:** Firebase console → Hosting → Release history → pick an earlier release → Rollback.
+- **Function:** check out an earlier commit and deploy it with `firebase deploy --only functions`.
