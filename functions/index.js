@@ -2,7 +2,7 @@
 const functions = require('firebase-functions/v1');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
-const { initializeApp } = require('firebase-admin/app');
+const { initializeApp, applicationDefault } = require('firebase-admin/app');
 const { getDatabase, ServerValue } = require('firebase-admin/database');
 
 // Uses the Cloud Functions runtime's default service account credentials. A named app keeps
@@ -86,8 +86,49 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
     locked: true,
     state: 'playing'
   });
+
+  // Record each name in a natural voice while the 3-2-1 countdown runs. Every device plays
+  // the same clip; players fall back to their device's voice for any clip that isn't there.
+  if (!(game.locked && game.voice)) {
+    await recordNames(gameRef, names);
+  }
   return true;
 });
+
+// Google Cloud Text-to-Speech (Chirp 3 HD voices), called over REST with the function's
+// own service account so it needs no extra package. The free tier covers 1M characters
+// a month; a game uses a few hundred.
+const VOICE = { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Charon' };
+
+async function synthesize(text) {
+  const { access_token: token } = await applicationDefault().getAccessToken();
+  const response = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input: { text }, voice: VOICE, audioConfig: { audioEncoding: 'MP3' } }),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!response.ok) {
+    throw new Error(`Text-to-Speech ${response.status}: ${(await response.text()).slice(0, 300)}`);
+  }
+  return (await response.json()).audioContent;
+}
+
+async function recordNames(gameRef, names) {
+  const sample = db.ref('voiceSample');
+  const jobs = names.map(async (name, i) => {
+    const audio = await synthesize(name);
+    await gameRef.child(`voice/${i}`).set(audio);
+  });
+  jobs.push((async () => {
+    if (!(await sample.once('value')).exists()) await sample.set(await synthesize('Empire'));
+  })());
+  const results = await Promise.allSettled(jobs);
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length > 0) {
+    functions.logger.warn(`Voice: ${failed.length} of ${results.length} clips failed`, failed[0].reason && failed[0].reason.message);
+  }
+}
 
 const IDLE_MS = 12 * 60 * 60 * 1000;
 const SWEEP_EVERY_MS = 30 * 60 * 1000;
@@ -98,7 +139,7 @@ exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gam
   const before = change.before.val();
   const after = change.after.val();
   if (after === 'resetting' && before !== 'resetting') {
-    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null });
+    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null, voice: null });
   }
   if (!change.before.exists() && change.after.exists()) {
     await sweepAbandonedRooms(context.params.gameId);
