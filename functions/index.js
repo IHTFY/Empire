@@ -102,6 +102,8 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
 // at FREE_CHARS a month (players then hear their device's voice), and every recorded word
 // is cached so the same word is never paid for twice.
 const VOICE = { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Enceladus' };
+// Recordings are kept per voice, so changing VOICE never serves or keeps the old voice.
+const VOICE_DIR = `meta/voice/${VOICE.name}`;
 const VOICE_WAIT_MS = 12000;
 const VOICE_JOBS = 4; // recordings made at once, so a big room doesn't hit Google's rate limit
 const FREE_CHARS = 900000;
@@ -133,8 +135,8 @@ async function reserve(chars) {
 // A recording of `text`, from the cache or newly made; null when the free allowance is used up.
 async function recording(text) {
   const key = createHash('sha256').update(`${VOICE.name}|${text}`).digest('hex').slice(0, 40);
-  const cached = db.ref(`meta/voiceCache/${key}`);
-  const used = db.ref(`meta/voiceUsed/${key}`);
+  const cached = db.ref(`${VOICE_DIR}/cache/${key}`);
+  const used = db.ref(`${VOICE_DIR}/used/${key}`);
   const hit = (await cached.once('value')).val();
   if (hit) {
     await used.set(Date.now());
@@ -239,18 +241,29 @@ async function sweepAbandonedRooms(skipId) {
   if (!claim.committed) {
     return;
   }
-  const [gamesSnap, seenSnap, voiceSnap] = await Promise.all([
-    db.ref('games').once('value'), db.ref('meta/seen').once('value'), db.ref('meta/voiceUsed').once('value')
+  const [gamesSnap, seenSnap, voiceSnap, voiceNameSnap] = await Promise.all([
+    db.ref('games').once('value'), db.ref('meta/seen').once('value'),
+    db.ref(`${VOICE_DIR}/used`).once('value'), db.ref('meta/voiceName').once('value')
   ]);
   const games = gamesSnap.val() || {};
   const seen = seenSnap.val() || {};
   const updates = {};
 
+  // Only the current voice is kept: after a voice change, the previous voice's recordings
+  // are deleted, along with the shared store used before recordings were kept per voice.
+  const previousVoice = voiceNameSnap.val();
+  if (previousVoice !== VOICE.name) {
+    if (previousVoice) updates[`meta/voice/${previousVoice}`] = null;
+    updates['meta/voiceCache'] = null;
+    updates['meta/voiceUsed'] = null;
+    updates['meta/voiceName'] = VOICE.name;
+  }
+
   // Recordings nobody has needed for 60 days are dropped so the cache stays small.
   Object.entries(voiceSnap.val() || {}).forEach(([key, last]) => {
     if (now - last > VOICE_KEEP_MS) {
-      updates[`meta/voiceCache/${key}`] = null;
-      updates[`meta/voiceUsed/${key}`] = null;
+      updates[`${VOICE_DIR}/cache/${key}`] = null;
+      updates[`${VOICE_DIR}/used/${key}`] = null;
     }
   });
 
