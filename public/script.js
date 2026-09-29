@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------------------------------------------------------------------
   // Pick names
 
-  const SECRET_MAX = 28; // keep in sync with maxlength in index.html and database.rules.json
+  const SECRET_MAX = 24; // keep in sync with maxlength in index.html and database.rules.json
 
   function sanitizeName(raw) {
     //TODO different rules for allowed characters etc.
