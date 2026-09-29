@@ -217,6 +217,27 @@ exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{
   return null;
 });
 
+// A bot removed after the names were revealed: publish its secret name (and recording) so
+// every device shows and speaks it. Players flag the removal in /eliminated; only that flag
+// makes this a bot, so a player leaving the room never gives away their own secret.
+exports.revealRemoved = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onDelete(async (change, context) => {
+  const name = change.before.val();
+  const { gameId, userId } = context.params;
+  if (typeof name !== 'string' || name.length === 0) {
+    return null;
+  }
+  const gameRef = db.ref(`games/${gameId}`);
+  const game = (await gameRef.once('value')).val() || {};
+  if (!game.locked || !Array.isArray(game.names) || !game.names.includes(name) || game.eliminated?.[userId] !== true) {
+    return null;
+  }
+  const audio = await recording(name).catch(() => null);
+  const entry = { name, at: ServerValue.TIMESTAMP };
+  if (audio) entry.voice = audio;
+  await gameRef.child(`eliminated/${userId}`).set(entry);
+  return null;
+});
+
 const IDLE_MS = 12 * 60 * 60 * 1000;
 const VOICE_KEEP_MS = 60 * 24 * 60 * 60 * 1000;
 const SWEEP_EVERY_MS = 30 * 60 * 1000;
@@ -227,7 +248,7 @@ exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gam
   const before = change.before.val();
   const after = change.after.val();
   if (after === 'resetting' && before !== 'resetting') {
-    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null, voice: null });
+    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null, voice: null, eliminated: null });
   }
   if (!change.before.exists() && change.after.exists()) {
     await sweepAbandonedRooms(context.params.gameId);
