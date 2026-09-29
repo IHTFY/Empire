@@ -141,7 +141,7 @@ a:hover { color: var(--gold-hi); }
 .btn-gold:active { box-shadow: var(--foil-edge), inset 0 2px 8px rgba(80, 48, 0, .45); }
 
 /* Gold lettering uses the same foil. */
-.eyebrow-gold, .link-btn, .tc-wait, .seat-label.you, .row.you .row-status, .count-num, .slider-row output, .sheet-item.warn, .rules h3 {
+.eyebrow-gold, .link-btn, .tc-wait, .seat-label.you, .row.you .row-status, .count-num, .slider-row output .odo-strip, .slider-row output .odo-char, .sheet-item.warn, .rules h3 {
   background: var(--foil-text); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .link-btn .icon, .sheet-item.warn .icon { color: var(--gold); }
@@ -319,8 +319,6 @@ a:hover { color: var(--gold-hi); }
   transition: all .7s var(--glide);
 }
 .table-center > * { transition: font-size .6s var(--glide); }
-.tc-arc { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.tc-room { font-weight: 800; text-transform: uppercase; fill: var(--muted); font-family: inherit; }
 .measuring { visibility: hidden; pointer-events: none; }
 .measuring, .measuring * { transition: none !important; animation: none !important; }
 .tc-count { line-height: 1; }
@@ -372,8 +370,16 @@ a:hover { color: var(--gold-hi); }
 .seat-x .icon { width: 10px; height: 10px; }
 
 .list-view { display: flex; flex-direction: column; gap: 10px; min-height: 0; animation: fade .35s ease both; }
-.list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.list-room { font-size: 34px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.list-room { font-size: 34px; min-width: 0; line-height: 1.1; }
+
+/* Text that doesn't fit glides to its end and back instead of being cut off. */
+.marquee { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
+.marquee-text { display: inline-block; padding-right: 2px; }
+.marquee.is-long { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%); }
+.marquee.is-long .marquee-text { padding: 0 10px; animation: marquee var(--marquee-time, 8s) ease-in-out infinite alternate; }
+@keyframes marquee { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--marquee-shift)); } }
+@media (prefers-reduced-motion: reduce) { .marquee.is-long .marquee-text { animation: none; } }
 .player-list { list-style: none; margin: 0; padding: 0 2px 0 0; flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .row {
   display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-radius: 16px; flex-shrink: 0;
@@ -434,8 +440,8 @@ a:hover { color: var(--gold-hi); }
   --fill: 50%;
 }
 .slider:focus-visible { outline: none; }
-.slider::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, transparent var(--fill), rgba(244, 241, 232, .14) var(--fill)), var(--foil); }
-.slider::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(244, 241, 232, .14); }
+.slider::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, transparent var(--fill), #2A2D55 var(--fill)), var(--foil); }
+.slider::-moz-range-track { height: 8px; border-radius: 4px; background: #2A2D55; }
 .slider::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--foil); }
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none; width: 28px; height: 28px; margin-top: -10px; border-radius: 50%; border: none;
@@ -489,3 +495,9 @@ dialog.sheet::backdrop { background: rgba(4, 5, 16, .6); backdrop-filter: blur(2
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .reveal-timer span.run { animation-duration: var(--t, 2500ms) !important; }
 }
+
+/* Odometer digits: a 0-9 strip behind a one-digit window. */
+.odo-digit { display: inline-block; height: 1em; line-height: 1; vertical-align: top; clip-path: inset(0 -50%); }
+.odo-strip { display: block; width: 1ch; word-break: break-all; line-height: 1; text-align: center; transition: transform .55s cubic-bezier(.2, .9, .25, 1.08); }
+.odo-char { display: inline-block; line-height: 1; vertical-align: top; }
+@media (prefers-reduced-motion: reduce) { .odo-strip { transition: none; } }
