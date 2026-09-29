@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     slots.forEach((slot, place) => {
       const ch = digits[digits.length - 1 - place];
       const strip = slot.firstElementChild;
+      strip.style.setProperty('--place', place);
       if (first) strip.style.transition = slot.style.transition = 'none';
       slot.classList.toggle('is-blank', ch === undefined);
       strip.style.transform = `translateY(${-(ch === undefined ? 0 : Number(ch) + 1)}em)`;
