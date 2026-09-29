@@ -2,6 +2,8 @@
   "rules": {
     ".read": false,
     ".write": false,
+    // A short recorded sample for the voice volume slider, written by flashNames only.
+    "voiceSample": { ".read": true },
     "games": {
       "$gameId": {
         // Create a new room (also over a leftover presence stub), or delete one that is
@@ -64,6 +66,8 @@
         "names": { ".read": true, ".validate": false },
         "startedAt": { ".read": true, ".validate": false },
         "locked": { ".read": true, ".validate": false },
+        // Recorded names for the reveal (MP3, base64), written by flashNames only.
+        "voice": { ".read": true, ".validate": false },
         // Set when the room is created; used to clean up abandoned rooms.
         "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
         "$other": { ".validate": false }
