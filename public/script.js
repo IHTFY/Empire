@@ -143,10 +143,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const volume = { sfx: readVolume('sfxVolume', 60), voice: readVolume('voiceVolume', oldVoiceOn ? 80 : 0) };
 
   let audioContext = null;
+  function audio() {
+    audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+    return audioContext;
+  }
+  // Browsers only allow sound after a tap, so wake the audio on the first one.
+  document.addEventListener('pointerdown', () => { try { audio(); } catch (err) { /* no audio */ } }, { once: true, capture: true });
+
   function tick(pitch = 660, length = 0.09) {
     if (!volume.sfx) return;
     try {
-      audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+      audio();
       const osc = audioContext.createOscillator();
       const gain = audioContext.createGain();
       osc.frequency.value = pitch;
@@ -173,6 +181,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     speechSynthesis.speak(utterance);
   }
 
+  // Recorded voice: the server records each name (MP3, base64) so every device hears the
+  // same natural voice. It plays through a short hall reverb, over a soft low boom.
+  const decoded = new Map();
+  function decodeClip(base64) {
+    if (!decoded.has(base64)) {
+      const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+      decoded.set(base64, audio().decodeAudioData(bytes.buffer).catch(() => null));
+    }
+    return decoded.get(base64);
+  }
+  let hall = null;
+  function reverb(ctx) {
+    if (hall) return hall;
+    const length = Math.floor(ctx.sampleRate * 2.2);
+    const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3);
+    }
+    hall = ctx.createConvolver();
+    hall.buffer = impulse;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.28;
+    hall.connect(wet).connect(ctx.destination);
+    return hall;
+  }
+  function boom() {
+    if (!volume.sfx) return;
+    try {
+      const ctx = audio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(90, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + 0.7);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.5 * (volume.sfx / 100), now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.95);
+    } catch (err) { /* audio not available */ }
+  }
+  // Plays a recorded clip if there is one; otherwise the device reads the text.
+  async function speak(text, base64) {
+    if (!volume.voice) return;
+    const buffer = base64 ? await decodeClip(base64).catch(() => null) : null;
+    if (!buffer) { say(text); return; }
+    try {
+      const ctx = audio();
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const level = ctx.createGain();
+      level.gain.value = volume.voice / 100;
+      source.connect(level);
+      level.connect(ctx.destination);
+      level.connect(reverb(ctx));
+      source.start();
+    } catch (err) { say(text); }
+  }
+  let voiceSample = null;
+  async function sayEmpire() {
+    if (voiceSample === null) {
+      voiceSample = (await db.ref('voiceSample').once('value').catch(() => null))?.val() || '';
+    }
+    speak('Empire', voiceSample);
+  }
+
   function renderSound() {
     const muted = !volume.sfx && !volume.voice;
     document.querySelectorAll('.sound-btn use').forEach(use => use.setAttribute('href', muted ? '#i-sound-off' : '#i-sound-on'));
@@ -193,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('voiceVolume', volume.voice);
     renderSound();
   });
-  $('voiceVolume').addEventListener('change', () => say('Empire'));
+  $('voiceVolume').addEventListener('change', () => sayEmpire());
   renderSound();
 
   // ---------------------------------------------------------------------------
@@ -1122,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   db.ref('.info/serverTimeOffset').on('value', snap => { serverOffset = snap.val() || 0; });
   const serverNow = () => Date.now() + serverOffset;
 
-  function showStep(stage, timer, bar, step, into, names) {
+  function showStep(stage, timer, bar, step, into, names, clips) {
     if (step < 3) {
       timer.hidden = true;
       stage.innerHTML = `<div class="count"><span class="count-burst"></span><span class="count-num display">${3 - step}</span></div>`;
@@ -1141,7 +1217,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     bar.style.animationDelay = `${-into}ms`;
     bar.classList.add('run');
     if (into < 250 && step === 3) tick(990, 0.18);
-    if (into < 800) say(name);
+    if (into < 250) boom();
+    if (into < 800) speak(name, clips[step - 3]);
   }
 
   async function displaySecrets() {
@@ -1164,6 +1241,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bar = $('revealBar');
     bar.style.setProperty('--t', `${NAME_MS}ms`);
 
+    // Recorded names arrive during the countdown; decode each as soon as it lands.
+    const clips = [];
+    const voiceRef = db.ref(`games/${code}/voice`);
+    const onVoice = snap => {
+      const value = snap.val() || {};
+      Object.keys(value).forEach(i => {
+        clips[i] = value[i];
+        if (volume.voice) decodeClip(value[i]);
+      });
+    };
+    voiceRef.on('value', onVoice, () => {});
+
     let shown = -1;
     while (stillHere()) {
       const t = serverNow() - startedAt;
@@ -1176,11 +1265,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         shown = step;
         const stepStart = step < 3 ? step * COUNTDOWN_MS : countdown + (step - 3) * NAME_MS;
-        showStep(stage, timer, bar, step, t - stepStart, names);
+        showStep(stage, timer, bar, step, t - stepStart, names, clips);
       }
       await sleep(60);
     }
 
+    voiceRef.off('value', onVoice);
+    decoded.clear();
     revealing = false;
     reveal.hidden = true;
     stage.innerHTML = '';
