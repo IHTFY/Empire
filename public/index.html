@@ -95,7 +95,7 @@
           <button type="button" class="link-btn" data-open="rulesDialog">
             <svg class="icon"><use href="#i-info" /></svg>How to play
           </button>
-          <button type="button" class="icon-btn sound-toggle" aria-label="Sound off" aria-pressed="false">
+          <button type="button" class="icon-btn sound-btn" data-open="audioDialog" aria-label="Sound settings">
             <svg class="icon"><use href="#i-sound-off" /></svg>
           </button>
         </div>
@@ -208,11 +208,13 @@
           </div>
         </div>
 
+        <div id="watching" class="watching" hidden><span class="eyebrow">Watching</span><span id="watchingNames"></span></div>
+        <p id="lockNote" class="notice" hidden><svg class="icon"><use href="#i-lock" /></svg><span id="lockText"></span></p>
         <button id="generateName" type="button" class="btn btn-dashed">
           <svg class="icon"><use href="#i-plus" /></svg>Add a bot player
         </button>
         <button id="revealSecrets" type="button" class="btn btn-gold btn-xl">
-          <svg class="icon"><use href="#i-play" /></svg><span>Reveal the names</span><span class="spinner" hidden></span>
+          <svg class="icon"><use id="revealIcon" href="#i-play" /></svg><span id="revealLabel">Reveal the names</span><span class="spinner" hidden></span>
         </button>
       </section>
 
@@ -227,13 +229,29 @@
     <dialog id="optionsDialog" class="sheet" aria-label="Room options">
       <div class="sheet-grip"></div>
       <button type="button" class="sheet-item" id="editNames"><svg class="icon"><use href="#i-edit" /></svg>Change my names</button>
-      <button type="button" class="sheet-item sound-toggle" aria-pressed="false"><svg class="icon"><use href="#i-sound-off" /></svg><span class="sound-label">Read names aloud: off</span></button>
+      <button type="button" class="sheet-item sound-btn" data-open="audioDialog"><svg class="icon"><use href="#i-sound-off" /></svg>Sound</button>
       <button type="button" class="sheet-item" data-open="rulesDialog"><svg class="icon"><use href="#i-info" /></svg>How to play</button>
       <hr />
       <button type="button" class="sheet-item warn" data-open="confirmNewGame"><svg class="icon"><use href="#i-refresh" /></svg>New round</button>
       <button type="button" class="sheet-item danger" data-open="confirmDelete"><svg class="icon"><use href="#i-trash" /></svg>End room</button>
       <button type="button" class="sheet-item" id="leaveRoom"><svg class="icon"><use href="#i-exit" /></svg>Leave room</button>
       <button type="button" class="btn btn-ghost sheet-close" data-close>Close</button>
+    </dialog>
+
+    <dialog id="audioDialog" class="sheet" aria-labelledby="audioTitle">
+      <div class="sheet-grip"></div>
+      <h2 id="audioTitle" class="display sheet-title">Sound</h2>
+      <div class="slider-row">
+        <label for="sfxVolume">Sound effects</label>
+        <output id="sfxValue" for="sfxVolume"></output>
+        <input id="sfxVolume" class="slider" type="range" min="0" max="100" step="5" />
+      </div>
+      <div class="slider-row">
+        <label for="voiceVolume">Read names aloud</label>
+        <output id="voiceValue" for="voiceVolume"></output>
+        <input id="voiceVolume" class="slider" type="range" min="0" max="100" step="5" />
+      </div>
+      <button type="button" class="btn btn-ghost sheet-close" data-close>Done</button>
     </dialog>
 
     <dialog id="confirmNewGame" class="sheet" aria-labelledby="newGameTitle">
