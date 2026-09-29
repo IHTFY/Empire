@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // Earlier versions had a single on/off switch for reading names aloud.
   const oldVoiceOn = localStorage.getItem('mute') === 'volume_up';
-  const volume = { sfx: readVolume('sfxVolume', 60), voice: readVolume('voiceVolume', oldVoiceOn ? 80 : 0) };
+  const volume = { sfx: readVolume('sfxVolume', 60), voice: readVolume('voiceVolume', oldVoiceOn ? 80 : 0), reverb: localStorage.getItem('reverb') === 'on' };
 
   let audioContext = null;
   function audio() {
@@ -220,6 +220,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     return decoded.get(base64);
   }
+  // Optional hall echo for recorded names (Sound settings). The echo is noise that is smoothed
+  // and dies away quickly, then darkened again, so it adds room without the hiss of raw noise.
+  let hall = null;
+  function reverb(ctx) {
+    if (hall) return hall;
+    const rate = ctx.sampleRate;
+    const length = Math.floor(rate * 1.8);
+    const impulse = ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      let smooth = 0;
+      for (let i = 0; i < length; i++) {
+        smooth += 0.2 * (Math.random() * 2 - 1 - smooth);
+        data[i] = smooth * Math.exp(-5.5 * i / rate);
+      }
+    }
+    const convolver = ctx.createConvolver();
+    convolver.buffer = impulse;
+    const tone = ctx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 3200;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.35;
+    tone.connect(convolver).connect(wet).connect(ctx.destination);
+    hall = tone;
+    return hall;
+  }
   // Plays a recorded clip if there is one; otherwise the device reads the text.
   async function speak(text, base64) {
     if (!volume.voice) return;
@@ -233,6 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       level.gain.value = volume.voice / 100;
       source.connect(level);
       level.connect(ctx.destination);
+      if (volume.reverb) level.connect(reverb(ctx));
       source.start();
     } catch (err) { say(text); }
   }
@@ -252,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       $(input).style.setProperty('--fill', `${volume[key]}%`);
       rollNumber($(output), volume[key] ? `${volume[key]}%` : 'Off');
     });
+    $('reverbToggle').setAttribute('aria-checked', String(volume.reverb));
   }
   $('sfxVolume').addEventListener('input', event => {
     volume.sfx = Number(event.target.value);
@@ -265,6 +294,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSound();
   });
   $('voiceVolume').addEventListener('change', () => sayEmpire());
+  $('reverbToggle').addEventListener('click', () => {
+    volume.reverb = !volume.reverb;
+    try { localStorage.setItem('reverb', volume.reverb ? 'on' : 'off'); } catch (err) { /* private mode */ }
+    renderSound();
+    sayEmpire();
+  });
   renderSound();
 
   // ---------------------------------------------------------------------------
