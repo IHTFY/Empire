@@ -52,7 +52,8 @@
         "presence": {
           ".read": true,
           "$userId": {
-            ".write": "auth != null && $userId === auth.uid",
+            // Players in the room can also remove a watcher (someone present but not a player).
+            ".write": "auth != null && ($userId === auth.uid || (!newData.exists() && !data.parent().parent().child('users').child($userId).exists() && data.parent().parent().child('users').child(auth.uid).exists()))",
             ".validate": "newData.hasChildren(['online', 'lastSeen'])",
             "online": { ".validate": "newData.isBoolean()" },
             "away": { ".validate": "newData.isBoolean()" },
