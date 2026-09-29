@@ -17,6 +17,15 @@
             "value": "no-cache"
           }
         ]
+      },
+      {
+        "source": "**/*.@(html|js|scss|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ],
     "ignore": [
