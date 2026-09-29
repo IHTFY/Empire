@@ -1016,6 +1016,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const rowGap = list => parseFloat(getComputedStyle(list).rowGap) || 0;
+
   function renderList(players) {
     const list = $('nameList');
     const live = new Set(players.map(p => p.key));
@@ -1026,13 +1028,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     rowEls.forEach((entry, key) => {
       if (live.has(key) || entry.leaving) return;
       entry.leaving = true;
-      // Lift the row out of the flow where it is, then let it fade away.
-      const { offsetTop: top, offsetLeft: left, offsetWidth: width } = entry.el;
-      Object.assign(entry.el.style, { position: 'absolute', top: `${top}px`, left: `${left}px`, width: `${width}px` });
-      list.appendChild(entry.el);
-      entry.el.classList.add('gone');
-      setTimeout(() => { entry.el.remove(); if (rowEls.get(key) === entry) rowEls.delete(key); }, 420);
+      // The row burns away in place, so nothing slides under it; only once it's
+      // gone does its space close up, carrying the rows below with it.
+      const el = entry.el;
+      let done = false;
+      const close = () => {
+        if (done) return;
+        done = true;
+        const collapse = el.animate([
+          { height: `${el.offsetHeight}px` },
+          { height: '0px', minHeight: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px', marginBottom: `${-rowGap(list)}px` }
+        ], { duration: 260, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+        collapse.onfinish = () => { el.remove(); if (rowEls.get(key) === entry) rowEls.delete(key); };
+      };
+      el.addEventListener('animationend', e => { if (e.animationName === 'ember') close(); });
+      setTimeout(close, 600);
+      el.classList.add('gone');
     });
+    const liveRows = () => [...list.children].filter(row => !row.classList.contains('gone'));
     players.forEach((p, i) => {
       let entry = rowEls.get(p.key);
       if (entry && entry.leaving) { entry.el.remove(); rowEls.delete(p.key); entry = null; }
@@ -1046,7 +1059,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         entry = { el, avatar: el.querySelector('.avatar'), x };
         rowEls.set(p.key, entry);
       }
-      if (list.children[i] !== entry.el) list.insertBefore(entry.el, list.children[i] || null);
+      const here = liveRows()[i];
+      if (here !== entry.el) list.insertBefore(entry.el, here || null);
       entry.el.classList.toggle('you', p.you);
       entry.el.classList.toggle('offline', p.offline);
       entry.el.classList.toggle('dim', p.away || p.offline);
