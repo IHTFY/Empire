@@ -1,18 +1,17 @@
 // The Cloud Functions for Firebase SDK to create Cloud Functions and setup triggers.
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
-const admin = require('firebase-admin');
-const serviceAccount = require('./ADMINCRED.json');
+const { initializeApp } = require('firebase-admin/app');
+const { getDatabase } = require('firebase-admin/database');
 
-//https://stackoverflow.com/questions/58127896/error-could-not-load-the-default-credentials-firebase-function-to-firestore
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+// Uses the Cloud Functions runtime's default service account credentials.
+initializeApp({
   databaseURL: 'https://empire-ihtfy.firebaseio.com'
 });
 
 // const db = admin.firestore();
-const db = admin.database();
+const db = getDatabase();
 
 
 function shuffle(a) {
