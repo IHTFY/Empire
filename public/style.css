@@ -482,6 +482,18 @@ dialog.sheet::backdrop { background: rgba(4, 5, 16, .6); backdrop-filter: blur(2
 .rules strong { color: var(--ink); }
 .rules ol, .rules ul { margin: 0; padding-left: 20px; }
 .rules li { margin: 4px 0; }
+.rules .goal { margin: 0 0 4px; padding: 12px 14px; border: 1px solid var(--lava-edge); border-radius: 12px; background: rgba(255, 122, 26, .08); color: var(--ink); font-size: 16px; font-weight: 600; }
+.rules .goal span { display: block; margin-bottom: 2px; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold); }
+.rules .steps { list-style: none; counter-reset: step; padding: 0; }
+.rules .steps > li { counter-increment: step; position: relative; margin: 8px 0; padding-left: 34px; min-height: 24px; }
+.rules .steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--field); border: 1px solid var(--line); color: var(--gold-hi); font-size: 12px; font-weight: 700; }
+.rules .steps ul { list-style: none; padding: 0; margin: 6px 0 0; }
+.rules .steps ul li { margin: 3px 0; }
+.rules .steps b { display: inline-block; min-width: 46px; margin-right: 6px; font-size: 12px; }
+.rules .steps b.no { color: var(--danger); }
+.rules .steps b.yes { color: var(--online); }
+.rules .tips { list-style: none; padding: 0; }
+.rules .tips li { padding: 8px 12px; margin: 6px 0; border-radius: 10px; background: var(--field); }
 
 .toast {
   position: fixed; left: 50%; bottom: max(104px, calc(env(safe-area-inset-bottom) + 88px)); z-index: 50;
