@@ -21,8 +21,10 @@
           ".write": "auth != null && !newData.exists() && data.parent().child('state').val() === 'resetting'",
           "$userId": {
             // Players edit or remove themselves; anyone in the room can add or remove fake
-            // players, and remove a player who has been offline for 10 minutes.
-            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || data.parent().parent().child('state').exists())) || (!data.exists() && newData.child('fakeBadge').val() === true && data.parent().parent().child('state').exists()) || (!newData.exists() && data.child('fakeBadge').val() === true) || (!newData.exists() && data.parent().parent().child('presence').child($userId).child('online').val() === false && data.parent().parent().child('presence').child($userId).child('lastSeen').val() < now - 600000))",
+            // players, and remove a player who has been offline for 10 minutes. Once the names
+            // have been revealed the room is locked: no joining, renaming or new bots until the
+            // next round (removals still work).
+            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').exists() && data.parent().parent().child('locked').val() !== true))) || (!data.exists() && newData.child('fakeBadge').val() === true && data.parent().parent().child('state').exists() && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && data.child('fakeBadge').val() === true) || (!newData.exists() && data.parent().parent().child('presence').child($userId).child('online').val() === false && data.parent().parent().child('presence').child($userId).child('lastSeen').val() < now - 600000))",
             ".validate": "newData.hasChildren(['real', 'clan'])",
             "real": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "clan": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
@@ -39,7 +41,7 @@
           "$userId": {
             // Your own secret, a new fake player's secret (written together with the fake),
             // or cleanup of a secret whose player is being removed in the same update.
-            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || data.parent().parent().child('state').exists())) || (newData.exists() && !data.exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() === true) || (!newData.exists() && !newData.parent().parent().child('users').child($userId).exists()))",
+            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').exists() && data.parent().parent().child('locked').val() !== true))) || (newData.exists() && !data.exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() === true && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && !newData.parent().parent().child('users').child($userId).exists()))",
             ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100"
           }
         },
@@ -51,12 +53,19 @@
             "online": { ".validate": "newData.isBoolean()" },
             "away": { ".validate": "newData.isBoolean()" },
             "lastSeen": { ".validate": "newData.isNumber() && newData.val() <= now" },
+            // Display name for spectators (people watching a locked room).
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "$other": { ".validate": false }
           }
         },
-        // The shuffled list shown during a reveal; written only by the flashNames function.
+        // The shuffled list shown during a reveal and when it started (so a player who reloads
+        // mid-reveal rejoins at the right moment instead of getting a replay). Written only by
+        // the flashNames function; the first reveal also locks the room until the next round.
         "names": { ".read": true, ".validate": false },
-        "startedAt": { ".validate": false },
+        "startedAt": { ".read": true, ".validate": false },
+        "locked": { ".read": true, ".validate": false },
+        // Set when the room is created; used to clean up abandoned rooms.
+        "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
         "$other": { ".validate": false }
       }
     }
