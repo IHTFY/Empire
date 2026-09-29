@@ -446,10 +446,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     let first = true;
     listen(db.ref(`games/${gameID}/users`), snapshot => {
       const hadMe = Boolean(users[uid]);
+      const previous = users;
       users = snapshot.val() || {};
       renderLobby();
 
-      if (!first) chime();
+      // Only a new player entering beeps; leaving or editing a name stays silent.
+      if (!first && Object.keys(users).some(id => !previous[id])) chime();
       first = false;
 
       // Removed by someone else (for example after being offline too long).
