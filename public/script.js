@@ -472,6 +472,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderLobby();
     });
     listen(db.ref(`games/${gameID}/state`), onStateChange);
+    announced = new Set();
+    let firstEliminated = true;
+    listen(db.ref(`games/${gameID}/eliminated`), snapshot => {
+      const all = snapshot.val() || {};
+      Object.keys(all).forEach(key => {
+        const entry = all[key];
+        if (!entry || typeof entry !== 'object' || announced.has(key)) return;
+        announced.add(key);
+        // Only announce fresh removals, not ones that happened before this device joined.
+        if (!firstEliminated || serverNow() - entry.at < 15000) announceRemoved(entry);
+      });
+      firstEliminated = false;
+    });
     locked = (await db.ref(`games/${gameID}/locked`).once('value')).val() === true;
     listen(db.ref(`games/${gameID}/locked`), snapshot => {
       locked = snapshot.val() === true;
@@ -976,10 +989,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function removePlayer(key, onFail) {
-    db.ref(`games/${gameID}`).update({
+    const update = {
       [`users/${key}`]: null,
       [`secrets/${key}`]: null
-    }).catch(() => {
+    };
+    // A bot that took part in the round has its secret name announced when it is removed.
+    if (locked && users[key] && users[key].fakeBadge) update[`eliminated/${key}`] = true;
+    db.ref(`games/${gameID}`).update(update).catch(() => {
       toast('Could not remove that player');
       if (onFail) onFail();
     });
@@ -1417,6 +1433,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     void bar.offsetWidth; // restart the timer animation
     bar.style.animationDelay = `${-into}ms`;
     bar.classList.add('run');
+  }
+
+  // A removed bot's secret name, shown full screen and spoken. Announcements queue up.
+  let announced = new Set();
+  let announceQueue = Promise.resolve();
+  function announceRemoved(entry) {
+    const code = gameID;
+    announceQueue = announceQueue.then(async () => {
+      if (gameID !== code) return;
+      while (revealing) await sleep(300);
+      const screen = $('eliminatedScreen');
+      const word = $('eliminatedName');
+      $('eliminatedLabel').textContent = 'Removed bot’s secret name';
+      word.textContent = entry.name;
+      word.style.fontSize = '';
+      word.classList.remove('wrap');
+      screen.hidden = false;
+      fitWord(word, screen);
+      speak(entry.name, entry.voice);
+      await sleep(3200);
+      screen.hidden = true;
+    }).catch(() => { $('eliminatedScreen').hidden = true; });
   }
 
   async function displaySecrets() {

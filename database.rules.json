@@ -71,6 +71,15 @@
         "locked": { ".read": true, ".validate": false },
         // Recorded names for the reveal (MP3, base64), written by flashNames only.
         "voice": { ".read": true, ".validate": false },
+        // A bot removed after the names were revealed. A player flags it (true) in the same
+        // update that removes the bot; the flashNames-side trigger then fills in its secret name
+        // and recording so every device can announce it.
+        "eliminated": {
+          ".read": true,
+          "$userId": {
+            ".write": "auth != null && !data.exists() && newData.val() === true && data.parent().parent().child('locked').val() === true && data.parent().parent().child('users').child($userId).child('fakeBadge').val() === true"
+          }
+        },
         // Set when the room is created; used to clean up abandoned rooms.
         "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
         "$other": { ".validate": false }
