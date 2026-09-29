@@ -127,7 +127,7 @@
             <svg class="icon"><use href="#i-back" /></svg>
           </button>
           <button type="button" class="chip share-btn">
-            <svg class="icon"><use href="#i-share" /></svg><span class="room-name"></span>
+            <svg class="icon"><use href="#i-share" /></svg><span class="marquee"><span class="marquee-text room-name"></span></span>
           </button>
         </div>
 
@@ -185,12 +185,16 @@
           </div>
         </div>
 
+        <div class="list-head">
+          <span class="display list-room marquee"><span class="marquee-text room-name"></span></span>
+          <span class="muted small" id="listSummary" hidden></span>
+        </div>
+
         <div class="lobby-body">
           <div id="tableView" class="table" aria-label="Players at the table">
             <div class="table-inner" id="tableInner">
               <div id="ringGuides"></div>
               <div class="table-center" id="tableCenter">
-                <span class="tc-room room-name"></span>
                 <span class="tc-count display" id="playerCount">0</span>
                 <span class="tc-unit">players</span>
                 <span class="tc-wait" id="waitingText"></span>
@@ -200,10 +204,6 @@
           </div>
 
           <div id="listView" class="list-view" hidden>
-            <div class="list-head">
-              <span class="display list-room room-name"></span>
-              <span class="muted small" id="listSummary"></span>
-            </div>
             <ul id="nameList" class="player-list"></ul>
           </div>
         </div>

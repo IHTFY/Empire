@@ -52,7 +52,59 @@ document.addEventListener('DOMContentLoaded', async () => {
   function show(name) {
     Object.entries(screens).forEach(([key, el]) => { el.hidden = key !== name; });
     window.scrollTo(0, 0);
+    requestAnimationFrame(fitMarquees);
     if (name === 'lobby') requestAnimationFrame(() => { fitTable(); renderLobby(); });
+  }
+
+  // Text too long for its box (like a long room code) glides to its end and back.
+  function fitMarquees() {
+    document.querySelectorAll('.marquee').forEach(box => {
+      const text = box.firstElementChild;
+      box.classList.remove('is-long');
+      if (!box.clientWidth || text.scrollWidth <= box.clientWidth + 1) return;
+      box.classList.add('is-long');
+      const shift = text.offsetWidth - box.clientWidth;
+      box.style.setProperty('--marquee-shift', `${-shift}px`);
+      box.style.setProperty('--marquee-time', `${(4 + shift / 30).toFixed(1)}s`);
+    });
+  }
+  window.addEventListener('resize', fitMarquees);
+  document.fonts.ready.then(fitMarquees);
+
+  // Numbers roll like an odometer: each digit is a 0-9 strip that slides to its value.
+  function rollNumber(el, value) {
+    const text = String(value);
+    if (el.dataset.value === text) return;
+    const first = el.dataset.value === undefined;
+    el.dataset.value = text;
+    el.setAttribute('aria-label', text);
+    const shape = text.replace(/\d/g, '0');
+    if (el.dataset.shape !== shape) {
+      el.dataset.shape = shape;
+      el.replaceChildren(...[...text].map(ch => {
+        const cell = document.createElement('span');
+        cell.setAttribute('aria-hidden', 'true');
+        if (!/\d/.test(ch)) {
+          cell.className = 'odo-char';
+          cell.textContent = ch;
+          return cell;
+        }
+        cell.className = 'odo-digit';
+        const strip = document.createElement('span');
+        strip.className = 'odo-strip';
+        strip.textContent = '0123456789';
+        cell.appendChild(strip);
+        return cell;
+      }));
+      void el.offsetWidth; // new digits start at 0 and roll up to their value
+    }
+    const strips = [...el.children].map(cell => cell.firstElementChild);
+    if (first) strips.forEach(strip => { if (strip) strip.style.transition = 'none'; });
+    [...text].forEach((ch, i) => { if (strips[i]) strips[i].style.transform = `translateY(${-Number(ch)}em)`; });
+    if (first) {
+      void el.offsetWidth;
+      strips.forEach(strip => { if (strip) strip.style.transition = ''; });
+    }
   }
 
   let toastTimer = null;
@@ -91,10 +143,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const volume = { sfx: readVolume('sfxVolume', 60), voice: readVolume('voiceVolume', oldVoiceOn ? 80 : 0) };
 
   let audioContext = null;
+  function audio() {
+    audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+    return audioContext;
+  }
+  // Browsers only allow sound after a tap, so wake the audio on the first one.
+  document.addEventListener('pointerdown', () => { try { audio(); } catch (err) { /* no audio */ } }, { once: true, capture: true });
+
   function tick(pitch = 660, length = 0.09) {
     if (!volume.sfx) return;
     try {
-      audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+      audio();
       const osc = audioContext.createOscillator();
       const gain = audioContext.createGain();
       osc.frequency.value = pitch;
@@ -121,13 +181,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     speechSynthesis.speak(utterance);
   }
 
+  // Recorded voice: the server records each name (MP3, base64) so every device hears the
+  // same natural voice. It plays through a short hall reverb, over a soft low boom.
+  const decoded = new Map();
+  function decodeClip(base64) {
+    if (!decoded.has(base64)) {
+      const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+      decoded.set(base64, audio().decodeAudioData(bytes.buffer).catch(() => null));
+    }
+    return decoded.get(base64);
+  }
+  let hall = null;
+  function reverb(ctx) {
+    if (hall) return hall;
+    const length = Math.floor(ctx.sampleRate * 2.2);
+    const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3);
+    }
+    hall = ctx.createConvolver();
+    hall.buffer = impulse;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.28;
+    hall.connect(wet).connect(ctx.destination);
+    return hall;
+  }
+  function boom() {
+    if (!volume.sfx) return;
+    try {
+      const ctx = audio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(90, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + 0.7);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.5 * (volume.sfx / 100), now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.95);
+    } catch (err) { /* audio not available */ }
+  }
+  // Plays a recorded clip if there is one; otherwise the device reads the text.
+  async function speak(text, base64) {
+    if (!volume.voice) return;
+    const buffer = base64 ? await decodeClip(base64).catch(() => null) : null;
+    if (!buffer) { say(text); return; }
+    try {
+      const ctx = audio();
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const level = ctx.createGain();
+      level.gain.value = volume.voice / 100;
+      source.connect(level);
+      level.connect(ctx.destination);
+      level.connect(reverb(ctx));
+      source.start();
+    } catch (err) { say(text); }
+  }
+  let voiceSample = null;
+  async function sayEmpire() {
+    if (voiceSample === null) {
+      voiceSample = (await db.ref('voiceSample').once('value').catch(() => null))?.val() || '';
+    }
+    speak('Empire', voiceSample);
+  }
+
   function renderSound() {
     const muted = !volume.sfx && !volume.voice;
     document.querySelectorAll('.sound-btn use').forEach(use => use.setAttribute('href', muted ? '#i-sound-off' : '#i-sound-on'));
     [['sfx', 'sfxVolume', 'sfxValue'], ['voice', 'voiceVolume', 'voiceValue']].forEach(([key, input, output]) => {
       $(input).value = volume[key];
       $(input).style.setProperty('--fill', `${volume[key]}%`);
-      $(output).textContent = volume[key] ? `${volume[key]}%` : 'Off';
+      rollNumber($(output), volume[key] ? `${volume[key]}%` : 'Off');
     });
   }
   $('sfxVolume').addEventListener('input', event => {
@@ -141,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('voiceVolume', volume.voice);
     renderSound();
   });
-  $('voiceVolume').addEventListener('change', () => say('Empire'));
+  $('voiceVolume').addEventListener('change', () => sayEmpire());
   renderSound();
 
   // ---------------------------------------------------------------------------
@@ -220,11 +348,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return snapshot.exists();
   }
 
-  // A readable random room code, e.g. velvet-comet-42.
+  // A readable random room code, e.g. amber-comet-42.
   async function randomCode() {
-    const words = await wordList();
+    // Short words keep the code easy to read out and small enough for the table centre.
+    const short = (await wordList()).filter(w => w.length >= 3 && w.length <= 6);
     for (let i = 0; i < 5; i++) {
-      const code = `${pickRandom(words)}-${pickRandom(words)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      const code = `${pickRandom(short)}-${pickRandom(short)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
       if (!await doesGameExist(code)) return code;
     }
     return db.ref('games').push().key;
@@ -272,6 +401,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.title = `Empire: ${gameID}`;
     setRoomInUrl(gameID);
     document.querySelectorAll('.room-name').forEach(el => { el.textContent = gameID; });
+    requestAnimationFrame(fitMarquees);
 
     // Reset the create form so it never points at the previous room.
     userGameCode.value = '';
@@ -731,9 +861,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return btn;
   }
 
+  let lastCenter = null;
+  document.fonts.ready.then(() => { centerFit = ''; if (lastCenter) fitCenter(...lastCenter); });
+
   function fitTable() {
     const width = $('tableView').clientWidth;
     if (width > 0) $('tableInner').style.transform = `scale(${Math.min(1, width / 390)})`;
+    if (width > 0 && lastCenter) fitCenter(...lastCenter);
   }
   window.addEventListener('resize', fitTable);
 
@@ -775,7 +909,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('revealIcon').setAttribute('href', locked ? '#i-refresh' : '#i-play');
     startButton.classList.toggle('btn-quiet', locked);
 
-    $('playerCount').textContent = count;
+    rollNumber($('playerCount'), count);
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
     startButton.classList.toggle('is-disabled', count < 2 || revealing);
@@ -783,6 +917,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderTable(players);
     renderList(players);
+  }
+
+  // The status line sits low in the disc, where the circle narrows: pick the largest
+  // size (on an invisible copy, so the real one still animates) that stays inside.
+  let centerFit = '';
+  function fitCenter(center, L) {
+    const wait = center.querySelector('.tc-wait');
+    const key = [L.disc, wait.textContent].join('|');
+    if (key === centerFit || !center.offsetParent) return; // unchanged, or the table isn't showing
+    centerFit = key;
+
+    const probe = center.cloneNode(true);
+    probe.removeAttribute('id');
+    probe.classList.add('measuring');
+    Object.assign(probe.style, { width: `${2 * L.disc}px`, height: `${2 * L.disc}px`, left: '0', top: '0' });
+    $('tableInner').appendChild(probe);
+    const pWait = probe.querySelector('.tc-wait');
+
+    const r = L.disc - 7;
+    const inside = el => {
+      const x = el.offsetLeft - L.disc, y = el.offsetTop - L.disc, w = el.offsetWidth, h = el.offsetHeight;
+      return [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].every(([a, b]) => a * a + b * b <= r * r);
+    };
+    const apply = (el, o) => Object.assign(el.style, { fontSize: `${o.size}px`, maxWidth: `${o.width}px` });
+    const options = [];
+    [1.5, 1.35, 1.2].forEach(width => {
+      for (let size = L.wait; size >= L.wait * 0.8; size -= 0.5) options.push({ size, width: Math.round(L.disc * width) });
+    });
+    let chosen = options[options.length - 1];
+    for (const o of options) { apply(pWait, o); if (inside(pWait)) { chosen = o; break; } }
+    probe.remove();
+    apply(wait, chosen);
   }
 
   function renderTable(players) {
@@ -799,12 +965,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const center = $('tableCenter');
     Object.assign(center.style, { left: `${cx - L.disc}px`, top: `${cy - L.disc}px`, width: `${2 * L.disc}px`, height: `${2 * L.disc}px` });
-    center.querySelector('.tc-room').style.fontSize = `${L.room}px`;
     center.querySelector('.tc-count').style.fontSize = `${L.num}px`;
     center.querySelector('.tc-unit').style.fontSize = `${L.unit}px`;
-    const wait = center.querySelector('.tc-wait');
-    wait.style.fontSize = `${L.wait}px`;
-    wait.style.maxWidth = `${Math.round(L.disc * 1.55)}px`;
+    lastCenter = [center, L];
+    fitCenter(center, L);
 
     const container = $('seats');
     const live = new Set(players.map(p => p.key));
@@ -855,11 +1019,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderList(players) {
     const list = $('nameList');
     const live = new Set(players.map(p => p.key));
+    // Remember where every row is, so rows that shift (when a player leaves or joins)
+    // glide to their new place instead of jumping.
+    const before = new Map();
+    rowEls.forEach(entry => { if (!entry.leaving) before.set(entry.el, entry.el.getBoundingClientRect().top); });
     rowEls.forEach((entry, key) => {
       if (live.has(key) || entry.leaving) return;
       entry.leaving = true;
+      // Lift the row out of the flow where it is, then let it fade away.
+      const { offsetTop: top, offsetLeft: left, offsetWidth: width } = entry.el;
+      Object.assign(entry.el.style, { position: 'absolute', top: `${top}px`, left: `${left}px`, width: `${width}px` });
+      list.appendChild(entry.el);
       entry.el.classList.add('gone');
-      setTimeout(() => { entry.el.remove(); rowEls.delete(key); }, 420);
+      setTimeout(() => { entry.el.remove(); if (rowEls.get(key) === entry) rowEls.delete(key); }, 420);
     });
     players.forEach((p, i) => {
       let entry = rowEls.get(p.key);
@@ -885,6 +1057,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       entry.x.dataset.key = p.key;
       entry.x.setAttribute('aria-label', `Remove ${p.name}`);
     });
+    before.forEach((top, el) => {
+      if (!el.isConnected) return;
+      const dy = top - el.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 450, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    });
   }
 
   function setView(next) {
@@ -894,6 +1071,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.seg-btn').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.view === view)));
     $('tableView').hidden = view !== 'table';
     $('listView').hidden = view !== 'list';
+    $('listSummary').hidden = view !== 'list';
     if (view === 'table') requestAnimationFrame(fitTable);
   }
   document.querySelectorAll('.seg-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
@@ -1020,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   db.ref('.info/serverTimeOffset').on('value', snap => { serverOffset = snap.val() || 0; });
   const serverNow = () => Date.now() + serverOffset;
 
-  function showStep(stage, timer, bar, step, into, names) {
+  function showStep(stage, timer, bar, step, into, names, clips) {
     if (step < 3) {
       timer.hidden = true;
       stage.innerHTML = `<div class="count"><span class="count-burst"></span><span class="count-num display">${3 - step}</span></div>`;
@@ -1039,7 +1217,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     bar.style.animationDelay = `${-into}ms`;
     bar.classList.add('run');
     if (into < 250 && step === 3) tick(990, 0.18);
-    if (into < 800) say(name);
+    if (into < 250) boom();
+    if (into < 800) speak(name, clips[step - 3]);
   }
 
   async function displaySecrets() {
@@ -1062,6 +1241,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bar = $('revealBar');
     bar.style.setProperty('--t', `${NAME_MS}ms`);
 
+    // Recorded names arrive during the countdown; decode each as soon as it lands.
+    const clips = [];
+    const voiceRef = db.ref(`games/${code}/voice`);
+    const onVoice = snap => {
+      const value = snap.val() || {};
+      Object.keys(value).forEach(i => {
+        clips[i] = value[i];
+        if (volume.voice) decodeClip(value[i]);
+      });
+    };
+    voiceRef.on('value', onVoice, () => {});
+
     let shown = -1;
     while (stillHere()) {
       const t = serverNow() - startedAt;
@@ -1074,11 +1265,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         shown = step;
         const stepStart = step < 3 ? step * COUNTDOWN_MS : countdown + (step - 3) * NAME_MS;
-        showStep(stage, timer, bar, step, t - stepStart, names);
+        showStep(stage, timer, bar, step, t - stepStart, names, clips);
       }
       await sleep(60);
     }
 
+    voiceRef.off('value', onVoice);
+    decoded.clear();
     revealing = false;
     reveal.hidden = true;
     stage.innerHTML = '';
