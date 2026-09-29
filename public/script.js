@@ -900,14 +900,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('generateName').hidden = spectator;
     startButton.hidden = spectator;
     $('generateName').classList.toggle('is-disabled', locked);
-    $('revealLabel').textContent = locked ? 'Read the names again' : 'Reveal the names';
+    const preparing = state === 'shuffling';
+    $('revealLabel').textContent = preparing ? 'Getting voices ready' : locked ? 'Read the names again' : 'Reveal the names';
+    if (preparing) startButton.querySelector('.spinner').hidden = false;
     $('revealIcon').setAttribute('href', locked ? '#i-refresh' : '#i-play');
     startButton.classList.toggle('btn-quiet', locked);
 
     rollNumber($('playerCount'), count);
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
-    startButton.classList.toggle('is-disabled', count < 2 || revealing);
+    startButton.classList.toggle('is-disabled', count < 2 || revealing || preparing);
     $('generateName').disabled = count >= MAX_PLAYERS;
 
     renderTable(players);
@@ -1162,6 +1164,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (state === 'playing' && previous !== 'playing') {
       displaySecrets();
+    }
+    // While the server records the names, everyone sees the Start button waiting.
+    if (state === 'shuffling' || previous === 'shuffling') {
+      if (previous === 'shuffling') startButton.querySelector('.spinner').hidden = true;
+      renderLobby();
     }
     if (state === 'deleting' || (state === null && previous !== null)) {
       // Stop listening first so the room disappearing doesn't trigger this twice.
