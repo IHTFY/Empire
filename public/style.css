@@ -381,7 +381,7 @@ a:hover { color: var(--gold-hi); }
 .marquee.is-long .marquee-text { padding: 0 10px; animation: marquee var(--marquee-time, 8s) ease-in-out infinite alternate; }
 @keyframes marquee { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--marquee-shift)); } }
 @media (prefers-reduced-motion: reduce) { .marquee.is-long .marquee-text { animation: none; } }
-.player-list { position: relative; list-style: none; margin: 0; padding: 0 2px 0 0; flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.player-list { position: relative; overflow-x: hidden; list-style: none; margin: 0; padding: 0 2px 0 0; flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .row {
   display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-radius: 16px; flex-shrink: 0;
   background: var(--surface); border: 1px solid rgba(244, 241, 232, .08);
