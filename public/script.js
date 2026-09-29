@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const AWAY_AFTER_MS = 2 * 60 * 1000;
   const COUNTDOWN_MS = 1000;
   const NAME_MS = 2500;
-  const SPEAK_DELAY_MS = 500; // voice trails each name so the last countdown beep stays clear
   const MAX_PLAYERS = 30;
   const colors = ['#4F63D9', '#0E8A74', '#B5487A', '#C0662B', '#6D4FC2', '#2E7FB8', '#8A7A12', '#A8433F'];
 
@@ -1393,7 +1392,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     void bar.offsetWidth; // restart the timer animation
     bar.style.animationDelay = `${-into}ms`;
     bar.classList.add('run');
-    if (into < 250 && step === 3) tick(990, 0.18);
   }
 
   async function displaySecrets() {
@@ -1443,8 +1441,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stepStart = step < 3 ? step * COUNTDOWN_MS : countdown + (step - 3) * NAME_MS;
         showStep(stage, timer, bar, step, t - stepStart, names);
       }
-      // Each name is spoken the same fixed offset after it appears, keeping the spacing even.
-      const spokenT = t - countdown - SPEAK_DELAY_MS;
+      // Each name is spoken as it appears.
+      const spokenT = t - countdown;
       if (spokenT >= 0) {
         const i = Math.floor(spokenT / NAME_MS);
         if (i !== spoken && i < names.length) {
