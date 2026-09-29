@@ -4,17 +4,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const OFFLINE_KICK_MS = 10 * 60 * 1000;
   const AWAY_AFTER_MS = 2 * 60 * 1000;
-  const colors = ['red', 'pink', 'purple', 'deep-purple', 'indigo', 'blue', 'light-blue', 'cyan', 'teal', 'green', 'light-green', 'lime', 'yellow', 'amber', 'orange', 'deep-orange', 'brown', 'grey', 'blue-grey'];
+  const COUNTDOWN_MS = 1000;
+  const NAME_MS = 2500;
+  const MAX_PLAYERS = 30;
+  const colors = ['#4F63D9', '#0E8A74', '#B5487A', '#C0662B', '#6D4FC2', '#2E7FB8', '#8A7A12', '#A8433F'];
+
+  const $ = id => document.getElementById(id);
+  const screens = { home: $('homeScreen'), setup: $('setupScreen'), lobby: $('lobbyScreen') };
+  const userGameCode = $('userGameCode');
+  const userGameCodeHelper = $('userGameCodeHelper');
+  const realName = $('realName');
+  const realNameHelper = $('realNameHelper');
+  const secretName = $('secretName');
+  const secretNameHelper = $('secretNameHelper');
+  const secretBox = $('secretBox');
+  const startButton = $('revealSecrets');
 
   let uid = null;
-
-  const userGameCode = document.getElementById('userGameCode');
-  const userGameCodeHelper = document.getElementById('userGameCodeHelper');
-  const realName = document.getElementById('realName');
-  const realNameHelper = document.getElementById('realNameHelper');
-  const secretName = document.getElementById('secretName');
-  const secretNameHelper = document.getElementById('secretNameHelper');
-  const startButton = document.getElementById('revealSecrets');
 
   // Handle login
   const signedIn = new Promise(resolve => {
@@ -28,10 +34,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // User is signed in. The anonymous account persists in this browser, so a reload
         // (or coming back later) is the same player.
         uid = user.uid;
-
         if (localStorage.getItem('realName') && !realName.value) {
           realName.value = localStorage.getItem('realName');
-          document.getElementById('realNameLabel').classList.add('active');
         }
         resolve();
       }
@@ -40,35 +44,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Start the database instance
   const db = firebase.database();
-
-  M.AutoInit();
-
-  const tabs = M.Tabs.getInstance(document.querySelector('.tabs'));
-
-  const volumeIcon = document.getElementById('volumeIcon');
-  if (!localStorage.getItem('mute')) {
-    localStorage.mute = 'volume_off';
-  }
-  volumeIcon.textContent = localStorage.getItem('mute');
-
-  volumeIcon.addEventListener('click', () => {
-    localStorage.setItem('mute', localStorage.getItem('mute') === 'volume_off' ? 'volume_up' : 'volume_off');
-    volumeIcon.textContent = localStorage.getItem('mute');
-  });
-
   const flashNames = firebase.functions().httpsCallable('flashNames');
 
-  // toggle password visibility
-  const togglePassword = document.getElementById('togglePassword');
-  togglePassword.addEventListener('click', () => {
-    if (secretName.type === 'password') {
-      secretName.type = 'text';
-      togglePassword.textContent = 'visibility';
-    } else {
-      secretName.type = 'password';
-      togglePassword.textContent = 'visibility_off';
+  // ---------------------------------------------------------------------------
+  // Small UI helpers: screens, toast, sheets, sound
+
+  function show(name) {
+    Object.entries(screens).forEach(([key, el]) => { el.hidden = key !== name; });
+    window.scrollTo(0, 0);
+    if (name === 'lobby') requestAnimationFrame(() => { fitTable(); renderLobby(); });
+  }
+
+  let toastTimer = null;
+  function toast(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  document.addEventListener('click', event => {
+    const opener = event.target.closest('[data-open]');
+    if (opener) {
+      const open = document.querySelector('dialog[open]');
+      if (open) open.close();
+      $(opener.dataset.open).showModal();
+      return;
     }
+    if (event.target.closest('[data-close]')) {
+      event.target.closest('dialog').close();
+      return;
+    }
+    // Tap on the backdrop closes a sheet.
+    if (event.target.tagName === 'DIALOG') event.target.close();
   });
+
+  const soundOn = () => localStorage.getItem('mute') === 'volume_up';
+  function renderSound() {
+    document.querySelectorAll('.sound-toggle').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(soundOn()));
+      btn.querySelector('use').setAttribute('href', soundOn() ? '#i-sound-on' : '#i-sound-off');
+      const label = btn.querySelector('.sound-label');
+      if (label) label.textContent = `Read names aloud: ${soundOn() ? 'on' : 'off'}`;
+      else btn.setAttribute('aria-label', soundOn() ? 'Sound on' : 'Sound off');
+    });
+  }
+  if (!localStorage.getItem('mute')) localStorage.setItem('mute', 'volume_off');
+  document.querySelectorAll('.sound-toggle').forEach(btn => btn.addEventListener('click', () => {
+    localStorage.setItem('mute', soundOn() ? 'volume_off' : 'volume_up');
+    renderSound();
+  }));
+  renderSound();
 
   // ---------------------------------------------------------------------------
   // Current room. Everything room-specific is attached in enterRoom() and torn
@@ -101,8 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     presence = {};
     state = null;
     document.title = 'Empire';
-    document.getElementById('gameLink').innerHTML = '';
-    document.getElementById('nameList').innerHTML = '';
+    resetLobby();
   }
 
   function setRoomInUrl(code) {
@@ -122,32 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ---------------------------------------------------------------------------
-  // Screens
-
-  function showCreate() {
-    document.getElementById('setupTab').classList.add('disabled');
-    document.getElementById('setupPage').classList.add('hide');
-    document.getElementById('playTab').classList.add('disabled');
-    document.getElementById('playPage').classList.add('hide');
-    tabs.select('createPage');
-  }
-
-  function showSetup() {
-    document.getElementById('setupTab').classList.remove('disabled');
-    document.getElementById('setupPage').classList.remove('hide');
-    document.getElementById('playTab').classList.toggle('disabled', !users[uid]);
-    tabs.select('setupPage');
-  }
-
-  function showLobby() {
-    document.getElementById('setupTab').classList.remove('disabled');
-    document.getElementById('setupPage').classList.remove('hide');
-    document.getElementById('playTab').classList.remove('disabled');
-    document.getElementById('playPage').classList.remove('hide');
-    tabs.select('playPage');
-  }
-
-  // ---------------------------------------------------------------------------
   // Create or join
 
   function validCode(code) {
@@ -155,10 +155,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function codeError(message) {
-    userGameCode.classList.remove('valid');
     userGameCode.classList.add('invalid');
-    userGameCodeHelper.setAttribute('data-error', message);
+    userGameCodeHelper.textContent = message;
   }
+
+  function clearCodeError() {
+    userGameCode.classList.remove('invalid');
+    userGameCodeHelper.textContent = '';
+  }
+  userGameCode.addEventListener('input', clearCodeError);
 
   async function doesGameExist(code) {
     if (code === '') return false;
@@ -166,17 +171,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     return snapshot.exists();
   }
 
+  // A readable random room code, e.g. velvet-comet-42.
+  async function randomCode() {
+    const words = await wordList();
+    for (let i = 0; i < 5; i++) {
+      const code = `${pickRandom(words)}-${pickRandom(words)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (!await doesGameExist(code)) return code;
+    }
+    return db.ref('games').push().key;
+  }
+
   async function tryCreating() {
     const code = userGameCode.value.trim();
     if (!validCode(code)) {
-      codeError('Game codes can\'t contain . # $ [ ] or /');
+      codeError('Room codes can\'t contain . # $ [ ] or /');
       return;
     }
     if (await doesGameExist(code)) {
-      codeError(`${code} already exists. Join or choose a new Game Code.`);
+      codeError(`${code} already exists. Join it or pick another code.`);
       return;
     }
-    const newCode = code || db.ref('games').push().key;
+    const newCode = code || await randomCode();
     await db.ref(`games/${newCode}`).set({ state: 'waiting' });
     await enterRoom(newCode);
   }
@@ -184,16 +199,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function tryJoining(code = userGameCode.value.trim()) {
     if (!validCode(code) || !await doesGameExist(code)) {
       userGameCode.value = code;
-      document.getElementById('userGameCodeLabel').classList.add('active');
-      codeError(`${code} doesn't exist. Check the code or create a new game with this code.`);
+      codeError(code ? `${code} doesn't exist. Check the code or create a room with it.` : 'Enter a room code to join.');
       setRoomInUrl(null);
+      show('home');
       return;
     }
     await enterRoom(code);
   }
 
-  document.getElementById('createButton').addEventListener('click', tryCreating);
-  document.getElementById('joinButton').addEventListener('click', () => tryJoining());
+  $('roomForm').addEventListener('submit', event => {
+    event.preventDefault();
+    tryCreating();
+  });
+  $('joinButton').addEventListener('click', () => tryJoining());
 
   async function enterRoom(code) {
     await signedIn;
@@ -204,14 +222,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     gameID = code;
     document.title = `Empire: ${gameID}`;
     setRoomInUrl(gameID);
+    document.querySelectorAll('.room-name').forEach(el => { el.textContent = gameID; });
 
     // Reset the create form so it never points at the previous room.
     userGameCode.value = '';
-    userGameCode.classList.remove('valid', 'invalid');
-    userGameCodeHelper.removeAttribute('data-error');
-    M.updateTextFields();
+    clearCodeError();
 
-    renderShareButton();
     startPresence();
 
     const me = await db.ref(`games/${gameID}/users/${uid}`).once('value');
@@ -223,16 +239,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       users = snapshot.val() || {};
       renderLobby();
 
-      if (!first && localStorage.getItem('mute') === 'volume_up') {
-        document.getElementById('boop').load();
-        document.getElementById('boop').play();
+      if (!first && soundOn()) {
+        $('boop').load();
+        $('boop').play().catch(() => {});
       }
       first = false;
 
       // Removed by someone else (for example after being offline too long).
       if (hadMe && !users[uid] && state !== 'resetting' && state !== 'deleting') {
-        M.toast({ html: 'You were removed from the lobby. Enter your names to rejoin.' });
-        showSetup();
+        toast('You were removed from the lobby. Enter your names to rejoin.');
+        openSetup();
       }
     });
     listen(db.ref(`games/${gameID}/presence`), snapshot => {
@@ -243,11 +259,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (users[uid]) {
       realName.value = users[uid].real;
-      secretName.value = sessionStorage.getItem(`secret:${gameID}`) || '';
-      M.updateTextFields();
-      showLobby();
+      setSecret(sessionStorage.getItem(`secret:${gameID}`) || '');
+      show('lobby');
     } else {
-      showSetup();
+      openSetup();
     }
   }
 
@@ -268,11 +283,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     sessionStorage.removeItem(`secret:${code}`);
     if (goHome) {
       setRoomInUrl(null);
-      showCreate();
+      show('home');
     }
   }
 
-  document.getElementById('leaveRoom').addEventListener('click', () => leaveRoom());
+  $('leaveRoom').addEventListener('click', () => {
+    $('optionsDialog').close();
+    leaveRoom();
+  });
+  $('setupBack').addEventListener('click', () => {
+    // Back from editing names returns to the lobby; otherwise it leaves the room.
+    if (users[uid]) show('lobby');
+    else leaveRoom();
+  });
 
   // ---------------------------------------------------------------------------
   // Presence: online/offline is tracked by the server connection, away by tab visibility.
@@ -304,37 +327,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------------------------------------------------------------------
   // Share
 
-  function renderShareButton() {
-    const canShare = typeof navigator.share === 'function';
-
-    let shareLink = document.createElement('button');
-    shareLink.textContent = canShare ? 'Share Game Link' : 'Get Game Link';
-    shareLink.classList.add('waves-effect', 'waves-light', 'btn-flat', 'btn-large');
-    shareLink.addEventListener('click', async () => {
-      const link = roomLink();
-      if (canShare) {
-        try {
-          await navigator.share({ title: 'Empire', text: `Join my Empire game: ${gameID}`, url: link });
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-        }
+  document.querySelectorAll('.share-btn').forEach(btn => btn.addEventListener('click', async () => {
+    if (!gameID) return;
+    const link = roomLink();
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: 'Empire', text: `Join my Empire game: ${gameID}`, url: link });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
       }
-      navigator.clipboard.writeText(link).then(() => {
-        M.toast({ html: 'Link Copied' });
-      }, () => {
-        M.toast({ html: 'Error' });
-      });
-    });
-
-    let shareIcon = document.createElement('i');
-    shareIcon.classList.add('material-icons', 'left');
-    shareIcon.textContent = canShare ? 'share' : 'person_add';
-    shareLink.appendChild(shareIcon);
-
-    document.getElementById('gameLink').innerHTML = '';
-    document.getElementById('gameLink').appendChild(shareLink);
-  }
+    }
+    navigator.clipboard.writeText(link).then(() => toast('Link copied'), () => toast(link));
+  }));
 
   // ---------------------------------------------------------------------------
   // Pick names
@@ -344,10 +349,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     return raw.toLowerCase().replace(/[^ A-Za-z0-9]/g, '').replace(/\s+/g, ' ').trim();
   }
 
-  document.getElementById('submitNames').addEventListener('click', async () => {
+  // The secret field draws its own dots and letters over a transparent input, so
+  // show/hide can animate each character (a dot spins away as its letter flips up).
+  const glyphs = $('secretGlyphs');
+  let secretShown = false;
+
+  function renderGlyphs() {
+    const chars = [...secretName.value];
+    while (glyphs.children.length > chars.length) glyphs.lastChild.remove();
+    chars.forEach((ch, i) => {
+      let el = glyphs.children[i];
+      if (!el) {
+        el = document.createElement('span');
+        el.className = 'ch';
+        el.innerHTML = '<span class="ch-dot"></span><span class="ch-letter"></span>';
+        glyphs.appendChild(el);
+      }
+      el.lastChild.textContent = ch;
+      // Reveal ripples left to right; hiding folds back right to left.
+      el.style.setProperty('--d', `${(secretShown ? i : chars.length - 1 - i) * 45}ms`);
+    });
+    glyphs.style.transform = `translateX(${-secretName.scrollLeft}px)`;
+  }
+
+  function setSecret(value) {
+    secretName.value = value;
+    renderGlyphs();
+  }
+
+  secretName.addEventListener('input', () => {
+    secretBox.classList.remove('invalid');
+    secretNameHelper.textContent = '';
+    renderGlyphs();
+  });
+  secretName.addEventListener('scroll', renderGlyphs);
+  $('togglePassword').addEventListener('click', () => {
+    secretShown = !secretShown;
+    renderGlyphs();
+    secretBox.classList.toggle('open', secretShown);
+    $('togglePassword').setAttribute('aria-pressed', String(secretShown));
+    $('togglePassword').setAttribute('aria-label', secretShown ? 'Hide secret name' : 'Show secret name');
+  });
+
+  function openSetup() {
+    $('submitLabel').textContent = users[uid] ? 'Save names' : 'Enter the lobby';
+    show('setup');
+  }
+
+  realName.addEventListener('input', () => {
+    realName.classList.remove('invalid');
+    realNameHelper.textContent = '';
+  });
+
+  $('namesForm').addEventListener('submit', async event => {
+    event.preventDefault();
     if (!gameID) return;
-    realName.className = 'validate';
-    secretName.className = 'validate';
 
     const userRealName = realName.value.trim().slice(0, 100);
     const userFakeName = sanitizeName(secretName.value).slice(0, 100);
@@ -357,22 +413,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       key !== uid && user.real && user.real.toLowerCase() === userRealName.toLowerCase());
     if (userRealName === '') {
       realName.classList.add('invalid');
-      realNameHelper.setAttribute('data-error', 'Invalid Real Name');
+      realNameHelper.textContent = 'Enter your name';
       ok = false;
     } else if (taken) {
       realName.classList.add('invalid');
-      realNameHelper.setAttribute('data-error', 'Someone in this room already uses that name');
+      realNameHelper.textContent = 'Someone in this room already uses that name';
       ok = false;
-    } else {
-      realName.classList.add('valid');
     }
 
     if (userFakeName === '') {
-      secretName.classList.add('invalid');
-      secretNameHelper.setAttribute('data-error', 'Invalid Secret Name');
+      secretBox.classList.add('invalid');
+      secretNameHelper.textContent = 'Pick a secret name (letters and numbers)';
       ok = false;
-    } else {
-      secretName.classList.add('valid');
     }
 
     if (!ok) return;
@@ -392,20 +444,366 @@ document.addEventListener('DOMContentLoaded', async () => {
       [`secrets/${uid}`]: userFakeName
     });
 
-    showLobby();
+    show('lobby');
   });
 
-  document.getElementById('editNames').addEventListener('click', () => {
+  $('editNames').addEventListener('click', () => {
+    $('optionsDialog').close();
     if (users[uid]) {
       realName.value = users[uid].real;
     }
-    secretName.value = sessionStorage.getItem(`secret:${gameID}`) || '';
-    M.updateTextFields();
-    showSetup();
+    setSecret(sessionStorage.getItem(`secret:${gameID}`) || '');
+    openSetup();
   });
 
   // ---------------------------------------------------------------------------
-  // Lobby
+  // Senate table: players sit around the table clockwise; past 11 players a second
+  // (then third) inner ring opens. Seats per ring are proportional to the ring's size,
+  // so everyone gets about the same shoulder room, and no ring has fewer than 3.
+
+  const LAYOUTS = [
+    { R: [132], caps: [11], S: 52, f: 13, lw: 72, disc: 78, room: 15, num: 50, unit: 13, wait: 12 },
+    { R: [148, 88], caps: [14, 8], S: 40, f: 11, lw: 64, disc: 56, room: 12, num: 36, unit: 11, wait: 11 },
+    { R: [164, 116, 70], caps: [16, 11, 6], S: 30, f: 10, lw: 52, disc: 44, room: 10, num: 26, unit: 10, wait: 10 }
+  ];
+  const layoutFor = n => LAYOUTS[n <= 11 ? 0 : n <= 22 ? 1 : 2];
+
+  function share(n, R, caps) {
+    const k = R.length;
+    const lo = R.map(() => (k > 1 ? 3 : 0));
+    const fixed = R.map(() => null);
+    for (;;) {
+      const left = n - fixed.reduce((sum, v) => sum + (v || 0), 0);
+      const free = R.reduce((sum, r, i) => sum + (fixed[i] === null ? r : 0), 0);
+      const ideal = R.map((r, i) => (fixed[i] !== null ? fixed[i] : (left * r) / free));
+      const bad = ideal.findIndex((v, i) => fixed[i] === null && (v < lo[i] || v > caps[i]));
+      if (bad < 0) {
+        const seats = ideal.map(Math.floor);
+        let extra = n - seats.reduce((sum, v) => sum + v, 0);
+        ideal.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0] || a[1] - b[1])
+          .forEach(([, i]) => { if (extra > 0 && seats[i] < caps[i]) { seats[i]++; extra--; } });
+        return seats;
+      }
+      fixed[bad] = ideal[bad] < lo[bad] ? lo[bad] : caps[bad];
+    }
+  }
+  // Precomputed seats per ring for every room size.
+  const SEATING = Array.from({ length: MAX_PLAYERS + 1 }, (_, n) => share(n, layoutFor(n).R, layoutFor(n).caps));
+  const seatsFor = n => (n <= MAX_PLAYERS ? SEATING[n] : share(n, layoutFor(n).R, layoutFor(n).R.map(() => Infinity)));
+
+  const norm = a => ((a % 360) + 360) % 360;
+  const circDist = (a, b) => { const d = Math.abs(norm(a) - norm(b)); return Math.min(d, 360 - d); };
+  function gapMiddle(angles) {
+    if (angles.length === 0) return 0;
+    const sorted = angles.map(norm).sort((a, b) => a - b);
+    let best = 0, mid = sorted[0] + 180;
+    sorted.forEach((a, i) => {
+      const next = i + 1 < sorted.length ? sorted[i + 1] : sorted[0] + 360;
+      if (next - a > best) { best = next - a; mid = a + (next - a) / 2; }
+    });
+    return mid;
+  }
+
+  const seatRing = new Map();
+  const seatAngle = new Map();
+
+  // Seats stay put where possible: players keep their ring, a ring that is over its
+  // share hands the player nearest to the other ring's biggest gap inward/outward (so they
+  // move almost straight across), and each ring rotates as little as possible.
+  function assignSeats(ids) {
+    const n = ids.length;
+    const L = layoutFor(n);
+    const k = L.R.length;
+    const counts = seatsFor(n);
+    [...seatRing.keys()].forEach(id => { if (!ids.includes(id)) seatRing.delete(id); });
+
+    const rings = Array.from({ length: k }, () => []);
+    const newcomers = [];
+    ids.forEach(id => (seatRing.has(id) ? rings[Math.min(seatRing.get(id), k - 1)].push(id) : newcomers.push(id)));
+    newcomers.forEach(id => {
+      let best = 0, room = -Infinity;
+      rings.forEach((m, r) => { if (counts[r] - m.length > room) { room = counts[r] - m.length; best = r; } });
+      rings[best].push(id);
+    });
+
+    for (;;) {
+      const over = rings.findIndex((m, r) => m.length > counts[r]);
+      const under = rings.findIndex((m, r) => m.length < counts[r]);
+      if (over < 0 || under < 0) break;
+      const target = gapMiddle(rings[under].filter(id => seatAngle.has(id)).map(id => seatAngle.get(id)));
+      let pick = rings[over][rings[over].length - 1], nearest = Infinity;
+      rings[over].forEach(id => {
+        const d = seatAngle.has(id) ? circDist(seatAngle.get(id), target) : 360;
+        if (d < nearest) { nearest = d; pick = id; }
+      });
+      rings[over].splice(rings[over].indexOf(pick), 1);
+      rings[under].push(pick);
+    }
+
+    const seats = new Map();
+    rings.forEach((members, r) => {
+      const c = members.length;
+      if (!c) return;
+      const step = 360 / c;
+      const known = members.filter(id => seatAngle.has(id));
+      members.forEach((id, i) => {
+        if (seatAngle.has(id)) return;
+        // A first seating goes clockwise in join order; later arrivals take the widest gap.
+        seatAngle.set(id, known.length ? gapMiddle(members.filter(m => seatAngle.has(m)).map(m => seatAngle.get(m))) : i * step + (r % 2 ? step / 2 : 0));
+      });
+      const sorted = members.slice().sort((a, b) => norm(seatAngle.get(a)) - norm(seatAngle.get(b)));
+      // Rotate the evenly spaced seats to where people already are (least total movement).
+      let sx = 0, sy = 0;
+      sorted.forEach((id, j) => {
+        const d = ((seatAngle.get(id) - j * step) * Math.PI) / 180;
+        sx += Math.cos(d);
+        sy += Math.sin(d);
+      });
+      const offset = sx || sy ? (Math.atan2(sy, sx) * 180) / Math.PI : 0;
+      sorted.forEach((id, j) => {
+        let a = j * step + offset;
+        a += 360 * Math.round((seatAngle.get(id) - a) / 360); // take the short way round
+        seatAngle.set(id, a);
+        seatRing.set(id, r);
+        seats.set(id, { a, R: L.R[r] });
+      });
+    });
+    return { L, seats };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lobby rendering. Every player keeps their own element for their whole stay (keyed
+  // by id), so joining and leaving animate without anyone flickering or swapping.
+
+  let order = [];
+  const seatEls = new Map();
+  const rowEls = new Map();
+  let view = localStorage.getItem('lobbyView') === 'list' ? 'list' : 'table';
+
+  function resetLobby() {
+    order = [];
+    seatRing.clear();
+    seatAngle.clear();
+    seatEls.forEach(({ el }) => el.remove());
+    rowEls.forEach(({ el }) => el.remove());
+    seatEls.clear();
+    rowEls.clear();
+  }
+
+  function colorFor(key) {
+    let hash = 0;
+    for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return colors[hash % colors.length];
+  }
+
+  function minutesAgo(time) {
+    const minutes = Math.floor((Date.now() - time) / 60000);
+    return minutes < 1 ? 'just now' : `${minutes}m ago`;
+  }
+
+  function playerInfo(key, user) {
+    const seen = presence[key];
+    const bot = Boolean(user.fakeBadge);
+    const you = key === uid;
+    const offline = !bot && seen && seen.online === false;
+    const away = !bot && !offline && seen && seen.away;
+    let status = bot ? 'Bot' : offline ? `Offline · ${minutesAgo(seen.lastSeen)}` : away ? 'Away' : 'Online';
+    if (you) status = 'You';
+    return {
+      key, bot, you, offline, away,
+      name: user.real,
+      status,
+      color: bot ? '#2B3170' : offline ? '#3A3E63' : colorFor(key),
+      removable: !you && (bot || (offline && Date.now() - seen.lastSeen > OFFLINE_KICK_MS))
+    };
+  }
+
+  function removePlayer(key) {
+    db.ref(`games/${gameID}`).update({
+      [`users/${key}`]: null,
+      [`secrets/${key}`]: null
+    }).catch(() => toast('Could not remove that player'));
+  }
+
+  function avatarHtml() {
+    return '<span class="avatar"><span class="initial"></span><svg class="icon bot-icon"><use href="#i-bot" /></svg><span class="dot"></span></span>';
+  }
+
+  function paintAvatar(avatar, p, size) {
+    avatar.style.background = p.color;
+    if (size) {
+      avatar.style.width = `${size}px`;
+      avatar.style.height = `${size}px`;
+      avatar.style.fontSize = `${Math.round(size * 0.46)}px`;
+    }
+    avatar.classList.toggle('is-bot', p.bot);
+    avatar.classList.toggle('is-offline', p.offline);
+    avatar.classList.toggle('is-you', p.you);
+    avatar.querySelector('.initial').textContent = p.bot ? '' : [...p.name][0].toUpperCase();
+    avatar.querySelector('.bot-icon').style.display = p.bot ? '' : 'none';
+    const dot = avatar.querySelector('.dot');
+    dot.hidden = p.bot;
+    dot.className = `dot${p.away ? ' away' : p.offline ? ' offline' : ''}`;
+  }
+
+  function makeRemoveButton(cls) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = cls;
+    btn.innerHTML = '<svg class="icon"><use href="#i-x" /></svg>';
+    btn.addEventListener('click', () => removePlayer(btn.dataset.key));
+    return btn;
+  }
+
+  function fitTable() {
+    const width = $('tableView').clientWidth;
+    if (width > 0) $('tableInner').style.transform = `scale(${Math.min(1, width / 390)})`;
+  }
+  window.addEventListener('resize', fitTable);
+
+  function renderLobby() {
+    if (!gameID) return;
+    const entries = Object.entries(users).filter(([, user]) => user && user.real);
+    const keys = entries.map(([key]) => key);
+
+    // Stable seating order: first seen first; newcomers are added at the end.
+    order = order.filter(key => keys.includes(key));
+    keys.filter(key => !order.includes(key)).sort().forEach(key => order.push(key));
+
+    const players = order.map(key => playerInfo(key, users[key]));
+    const count = players.length;
+    const waiting = players.filter(p => p.away || p.offline).map(p => p.name);
+    const waitingText = waiting.length === 0 ? (count < 2 ? 'Need 2 to start' : 'Everyone is here')
+      : waiting.length <= 2 && count <= 11 ? `Waiting for ${waiting.join(', ')}` : `${waiting.length} away`;
+
+    $('playerCount').textContent = count;
+    $('waitingText').textContent = waitingText;
+    $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
+    startButton.classList.toggle('is-disabled', count < 2 || revealing);
+    $('generateName').disabled = count >= MAX_PLAYERS;
+
+    renderTable(players);
+    renderList(players);
+  }
+
+  function renderTable(players) {
+    const { L, seats } = assignSeats(players.map(p => p.key));
+    const cx = 195, cy = 195, S = L.S;
+
+    const guides = $('ringGuides');
+    while (guides.children.length > L.R.length) guides.lastChild.remove();
+    L.R.forEach((R, r) => {
+      let g = guides.children[r];
+      if (!g) { g = document.createElement('div'); g.className = 'ring-guide'; guides.appendChild(g); }
+      Object.assign(g.style, { left: `${cx - R}px`, top: `${cy - R}px`, width: `${2 * R}px`, height: `${2 * R}px`, opacity: String(1 - r * 0.25) });
+    });
+
+    const center = $('tableCenter');
+    Object.assign(center.style, { left: `${cx - L.disc}px`, top: `${cy - L.disc}px`, width: `${2 * L.disc}px`, height: `${2 * L.disc}px` });
+    center.querySelector('.tc-room').style.fontSize = `${L.room}px`;
+    center.querySelector('.tc-count').style.fontSize = `${L.num}px`;
+    center.querySelector('.tc-unit').style.fontSize = `${L.unit}px`;
+    const wait = center.querySelector('.tc-wait');
+    wait.style.fontSize = `${L.wait}px`;
+    wait.style.maxWidth = `${Math.round(L.disc * 1.55)}px`;
+
+    const container = $('seats');
+    const live = new Set(players.map(p => p.key));
+    seatEls.forEach((entry, key) => {
+      if (live.has(key) || entry.leaving) return;
+      entry.leaving = true;
+      entry.el.classList.remove('pop');
+      entry.el.classList.add('gone');
+      setTimeout(() => { entry.el.remove(); seatEls.delete(key); }, 420);
+    });
+
+    const lh = Math.round(L.f * 1.3);
+    players.forEach(p => {
+      let entry = seatEls.get(p.key);
+      if (entry && entry.leaving) { entry.el.remove(); seatEls.delete(p.key); entry = null; }
+      if (!entry) {
+        const el = document.createElement('div');
+        el.className = 'seat pop';
+        el.innerHTML = `<div class="seat-inner">${avatarHtml()}<span class="seat-label"></span></div>`;
+        const x = makeRemoveButton('seat-x');
+        el.querySelector('.seat-inner').appendChild(x);
+        container.appendChild(el);
+        setTimeout(() => el.classList.remove('pop'), 600);
+        entry = { el, avatar: el.querySelector('.avatar'), label: el.querySelector('.seat-label'), x };
+        seatEls.set(p.key, entry);
+      }
+      const { a, R } = seats.get(p.key);
+      const upper = Math.cos((a * Math.PI) / 180) > 0.05;
+      entry.el.style.top = `${cy - S / 2}px`;
+      entry.el.style.height = `${S}px`;
+      entry.el.style.transform = `rotate(${a.toFixed(2)}deg) translateY(${-R}px) rotate(${(-a).toFixed(2)}deg)`;
+      entry.el.classList.toggle('dim', p.away || p.offline);
+      paintAvatar(entry.avatar, p, S);
+      // Names sit on the outer side of each seat so they never cover the centre.
+      Object.assign(entry.label.style, {
+        left: `${36 - L.lw / 2}px`, width: `${L.lw}px`, top: `${upper ? -(lh + 3) : S + 3}px`,
+        lineHeight: `${lh}px`, fontSize: `${L.f}px`
+      });
+      entry.label.textContent = p.name;
+      entry.label.classList.toggle('you', p.you);
+      entry.x.hidden = !p.removable;
+      entry.x.dataset.key = p.key;
+      entry.x.setAttribute('aria-label', `Remove ${p.name}`);
+      entry.x.style.left = `${36 + S / 2 - 12}px`;
+    });
+  }
+
+  function renderList(players) {
+    const list = $('nameList');
+    const live = new Set(players.map(p => p.key));
+    rowEls.forEach((entry, key) => {
+      if (live.has(key) || entry.leaving) return;
+      entry.leaving = true;
+      entry.el.classList.add('gone');
+      setTimeout(() => { entry.el.remove(); rowEls.delete(key); }, 420);
+    });
+    players.forEach((p, i) => {
+      let entry = rowEls.get(p.key);
+      if (entry && entry.leaving) { entry.el.remove(); rowEls.delete(p.key); entry = null; }
+      if (!entry) {
+        const el = document.createElement('li');
+        el.className = 'row pop';
+        el.innerHTML = `${avatarHtml()}<span class="row-name"></span><span class="row-status"></span>`;
+        const x = makeRemoveButton('row-x');
+        el.appendChild(x);
+        setTimeout(() => el.classList.remove('pop'), 500);
+        entry = { el, avatar: el.querySelector('.avatar'), x };
+        rowEls.set(p.key, entry);
+      }
+      if (list.children[i] !== entry.el) list.insertBefore(entry.el, list.children[i] || null);
+      entry.el.classList.toggle('you', p.you);
+      entry.el.classList.toggle('offline', p.offline);
+      entry.el.classList.toggle('dim', p.away || p.offline);
+      paintAvatar(entry.avatar, p);
+      entry.el.querySelector('.row-name').textContent = p.name;
+      entry.el.querySelector('.row-status').textContent = p.status;
+      entry.x.hidden = !p.removable;
+      entry.x.dataset.key = p.key;
+      entry.x.setAttribute('aria-label', `Remove ${p.name}`);
+    });
+  }
+
+  function setView(next) {
+    view = next;
+    try { localStorage.setItem('lobbyView', view); } catch (err) { /* private mode */ }
+    document.querySelector('.seg').classList.toggle('list', view === 'list');
+    document.querySelectorAll('.seg-btn').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.view === view)));
+    $('tableView').hidden = view !== 'table';
+    $('listView').hidden = view !== 'list';
+    if (view === 'table') requestAnimationFrame(fitTable);
+  }
+  document.querySelectorAll('.seg-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+  setView(view);
+
+  // Refresh "offline · Xm ago" labels and the remove buttons as time passes.
+  setInterval(renderLobby, 30000);
+
+  // Bots
 
   let fakeNameList = [];
   let fakeSecretList = [];
@@ -420,12 +818,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  document.getElementById('generateName').addEventListener('click', async () => {
+  async function wordList() {
+    if (fakeSecretList.length === 0) fakeSecretList = await populateList('words.txt');
+    return fakeSecretList;
+  }
+
+  $('generateName').addEventListener('click', async () => {
     if (!gameID) return;
-    if (fakeNameList.length === 0) {
-      fakeNameList = await populateList('names.txt');
-      fakeSecretList = await populateList('words.txt');
-    }
+    if (fakeNameList.length === 0) fakeNameList = await populateList('names.txt');
+    await wordList();
     const fakeName = pickRandom(fakeNameList);
     const fakeSecret = pickRandom(fakeSecretList);
     const fakeID = db.ref(`games/${gameID}/users`).push().key;
@@ -437,128 +838,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  function removePlayer(key) {
-    db.ref(`games/${gameID}`).update({
-      [`users/${key}`]: null,
-      [`secrets/${key}`]: null
-    }).catch(() => M.toast({ html: 'Could not remove that player' }));
-  }
-
-  function minutesAgo(time) {
-    const minutes = Math.floor((Date.now() - time) / 60000);
-    return minutes < 1 ? 'just now' : `${minutes}m ago`;
-  }
-
-  function renderLobby() {
-    if (!gameID) return;
-    const nameList = document.getElementById('nameList');
-    const entries = Object.entries(users).filter(([, user]) => user && user.real);
-    const count = entries.length;
-    nameList.innerHTML = '';
-
-    const header = document.createElement('li');
-    header.classList.add('collection-header', 'center-align');
-    const title = document.createElement('h5');
-    title.textContent = `${gameID} Lobby`;
-    const subtitle = document.createElement('p');
-    subtitle.classList.add('grey-text');
-    const waitingOn = entries
-      .filter(([key, user]) => !user.fakeBadge && presence[key] && (!presence[key].online || presence[key].away))
-      .map(([, user]) => user.real);
-    subtitle.textContent = `${count} player${count === 1 ? '' : 's'}` +
-      (count < 2 ? ' · need at least 2 to start' : '') +
-      (waitingOn.length ? ` · waiting for ${waitingOn.join(', ')}` : '');
-    header.appendChild(title);
-    header.appendChild(subtitle);
-    nameList.appendChild(header);
-
-    for (let [key, user] of entries) {
-      let item = document.createElement('li');
-      item.classList.add('collection-item', 'avatar');
-
-      const hashedName = [...key, ...user.real].sort().reduce((a, c) => a + c.charCodeAt(0), 0);
-      const color = colors[hashedName % colors.length];
-
-      const pfp = document.createElement('i');
-      pfp.classList.add('material-icons', 'circle', color);
-      pfp.textContent = 'person';
-
-      const txt = document.createElement('h6');
-      txt.textContent = user.real;
-
-      const status = document.createElement('span');
-      status.classList.add('grey-text', 'status');
-      const seen = presence[key];
-      let removable = false;
-
-      if (user.fakeBadge) {
-        const b = document.createElement('span');
-        b.classList.add('new', 'badge', 'indigo', 'darken-3');
-        b.setAttribute('data-badge-caption', 'FAKE');
-        pfp.textContent = 'adb';
-        txt.appendChild(b);
-        removable = true;
-      } else if (seen && seen.online === false) {
-        item.classList.add('offline');
-        status.textContent = `offline · ${minutesAgo(seen.lastSeen)}`;
-        removable = Date.now() - seen.lastSeen > OFFLINE_KICK_MS;
-      } else if (seen && seen.away) {
-        item.classList.add('away');
-        status.textContent = 'away';
-      }
-      if (key === uid) {
-        status.textContent = status.textContent ? `you · ${status.textContent}` : 'you';
-      }
-
-      item.appendChild(pfp);
-      item.appendChild(txt);
-      item.appendChild(status);
-
-      if (removable && key !== uid) {
-        const remove = document.createElement('a');
-        remove.href = '#!';
-        remove.classList.add('secondary-content');
-        remove.title = `Remove ${user.real}`;
-        remove.innerHTML = '<i class="material-icons grey-text">close</i>';
-        remove.addEventListener('click', event => {
-          event.preventDefault();
-          removePlayer(key);
-        });
-        item.appendChild(remove);
-      }
-      nameList.appendChild(item);
-    }
-
-    startButton.classList.toggle('disabled', count < 2 || revealing);
-  }
-
-  // Refresh "offline · Xm ago" labels and the remove buttons as time passes.
-  setInterval(renderLobby, 30000);
-
-  document.getElementById('roomResetButton').addEventListener('click', () => {
+  $('roomResetButton').addEventListener('click', () => {
     db.ref(`games/${gameID}`).update({ state: 'resetting' });
   });
 
-  document.getElementById('roomDeleteButton').addEventListener('click', () => {
+  $('roomDeleteButton').addEventListener('click', () => {
     db.ref(`games/${gameID}`).update({ state: 'deleting' });
   });
 
   startButton.addEventListener('click', async () => {
-    if (startButton.classList.contains('disabled')) return;
-    const playIcon = document.getElementById('playIcon');
-    const revealSpinner = document.getElementById('revealSpinner');
-
-    playIcon.classList.add('hide');
-    revealSpinner.classList.remove('hide');
-    startButton.classList.add('disabled');
+    if (startButton.classList.contains('is-disabled')) {
+      if (Object.keys(users).length < 2) toast('You need at least 2 players. Add a bot or share the link.');
+      return;
+    }
+    const spinner = startButton.querySelector('.spinner');
+    spinner.hidden = false;
+    startButton.classList.add('is-disabled');
 
     try {
       await flashNames({ text: gameID });
     } catch (err) {
-      M.toast({ html: err.message });
+      toast(err.message);
     } finally {
-      playIcon.classList.remove('hide');
-      revealSpinner.classList.add('hide');
+      spinner.hidden = true;
       renderLobby();
     }
   });
@@ -583,62 +885,82 @@ document.addEventListener('DOMContentLoaded', async () => {
         [`users/${uid}`]: null,
         [`secrets/${uid}`]: null
       }).catch(() => {});
-      document.getElementsByClassName('reveal')[0].classList.add('hide');
-      document.getElementsByClassName('play')[0].classList.remove('hide');
-      secretName.value = '';
+      setSecret('');
       sessionStorage.removeItem(`secret:${code}`);
-      showSetup();
-      document.getElementById('playTab').classList.add('disabled');
-      document.getElementById('playPage').classList.add('hide');
+      document.querySelectorAll('dialog[open]').forEach(d => d.close());
+      $('submitLabel').textContent = 'Enter the lobby';
+      show('setup');
       await db.ref(`games/${code}/users`).remove().catch(() => {});
       await db.ref(`games/${code}/secrets`).remove().catch(() => {});
     }
   }
 
-  function displaySecrets() {
+  // ---------------------------------------------------------------------------
+  // Countdown + reveal: nothing on screen but the name and its sliding timer.
+
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Long names shrink to stay on one line; only very long ones wrap.
+  function fitWord(word, box) {
+    const room = box.clientWidth - 56;
+    let size = 80;
+    while (word.scrollWidth > room && size > 36) {
+      size -= 4;
+      word.style.fontSize = `${size}px`;
+    }
+    if (word.scrollWidth > room) word.classList.add('wrap');
+  }
+
+  async function displaySecrets() {
     if (revealing) return;
     revealing = true;
     const code = gameID;
-    document.getElementById('createTab').classList.add('disabled');
-    document.getElementById('setupTab').classList.add('disabled');
-    document.getElementsByClassName('play')[0].classList.add('hide');
-    document.getElementsByClassName('reveal')[0].classList.remove('hide');
-    const panel = document.getElementById('revealPanel');
+    const reveal = $('revealScreen');
+    const stage = $('revealStage');
+    const timer = $('revealTimer');
+    const bar = $('revealBar');
+    document.querySelectorAll('dialog[open]').forEach(d => d.close());
+    reveal.hidden = false;
+    timer.hidden = true;
+    stage.innerHTML = '';
 
-    db.ref(`games/${code}/names`).once('value', snapshot => {
-      show(snapshot.val() || []);
-    });
+    const snapshot = await db.ref(`games/${code}/names`).once('value');
+    const names = snapshot.val() || [];
+    const stillHere = () => gameID === code;
 
-    function show(fakes) {
-      const bar = document.getElementById('progressBar');
-      bar.style.setProperty('width', `0%`);
-
-      // const voice = speechSynthesis.getVoices().filter(i => i.lang.includes('en-GB') && i.name.includes('emale'))[0];
-      let utterance = new SpeechSynthesisUtterance();
-      // utterance.voice = voice;
-
-      fakes.forEach((name, i) => setTimeout(() => {
-        if (localStorage.getItem('mute') === 'volume_up') {
-          utterance.text = name;
-          speechSynthesis.speak(utterance);
-        }
-        panel.textContent = name;
-        bar.style.setProperty('width', `${100 * (i + 1) / fakes.length}%`);
-      }, i * 2500))
-
-      setTimeout(() => {
-        revealing = false;
-        panel.textContent = '';
-        if (gameID === code && state === 'playing') {
-          db.ref(`games/${code}`).update({ state: 'waiting' });
-        }
-        document.getElementById('createTab').classList.remove('disabled');
-        document.getElementById('setupTab').classList.remove('disabled');
-        document.getElementsByClassName('play')[0].classList.remove('hide');
-        document.getElementsByClassName('reveal')[0].classList.add('hide');
-        renderLobby();
-      }, fakes.length * 2500);
+    for (let n = 3; n >= 1 && stillHere(); n--) {
+      stage.innerHTML = `<div class="count"><span class="count-burst"></span><span class="count-num display">${n}</span></div>`;
+      await sleep(COUNTDOWN_MS);
     }
+
+    let utterance = new SpeechSynthesisUtterance();
+    bar.style.setProperty('--t', `${NAME_MS}ms`);
+    for (const name of names) {
+      if (!stillHere()) break;
+      const word = document.createElement('div');
+      word.className = 'reveal-name display';
+      word.textContent = name;
+      stage.replaceChildren(word);
+      fitWord(word, stage);
+      timer.hidden = false;
+      bar.classList.remove('run');
+      void bar.offsetWidth; // restart the timer animation
+      bar.classList.add('run');
+      if (soundOn()) {
+        utterance.text = name;
+        speechSynthesis.speak(utterance);
+      }
+      await sleep(NAME_MS);
+    }
+
+    revealing = false;
+    reveal.hidden = true;
+    stage.innerHTML = '';
+    bar.classList.remove('run');
+    if (stillHere() && state === 'playing') {
+      db.ref(`games/${code}`).update({ state: 'waiting' });
+    }
+    renderLobby();
   }
 
   // ---------------------------------------------------------------------------
@@ -648,6 +970,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (urlCode) {
     tryJoining(urlCode);
   } else {
-    showCreate();
+    show('home');
   }
 });
