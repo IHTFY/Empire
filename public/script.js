@@ -943,11 +943,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderList(players) {
     const list = $('nameList');
     const live = new Set(players.map(p => p.key));
+    // Remember where every row is, so rows that shift (when a player leaves or joins)
+    // glide to their new place instead of jumping.
+    const before = new Map();
+    rowEls.forEach(entry => { if (!entry.leaving) before.set(entry.el, entry.el.getBoundingClientRect().top); });
     rowEls.forEach((entry, key) => {
       if (live.has(key) || entry.leaving) return;
       entry.leaving = true;
+      // Lift the row out of the flow where it is, then let it fade away.
+      const { offsetTop: top, offsetLeft: left, offsetWidth: width } = entry.el;
+      Object.assign(entry.el.style, { position: 'absolute', top: `${top}px`, left: `${left}px`, width: `${width}px` });
+      list.appendChild(entry.el);
       entry.el.classList.add('gone');
-      setTimeout(() => { entry.el.remove(); rowEls.delete(key); }, 420);
+      setTimeout(() => { entry.el.remove(); if (rowEls.get(key) === entry) rowEls.delete(key); }, 420);
     });
     players.forEach((p, i) => {
       let entry = rowEls.get(p.key);
@@ -972,6 +980,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       entry.x.hidden = !p.removable;
       entry.x.dataset.key = p.key;
       entry.x.setAttribute('aria-label', `Remove ${p.name}`);
+    });
+    before.forEach((top, el) => {
+      if (!el.isConnected) return;
+      const dy = top - el.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 450, easing: 'cubic-bezier(.2, .8, .2, 1)' });
     });
   }
 
