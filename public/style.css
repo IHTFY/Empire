@@ -391,7 +391,7 @@ a:hover { color: var(--gold-hi); }
 .row.offline { border-style: dashed; }
 .row.dim { opacity: .55; }
 .row.pop { animation: row-in .45s var(--ease) both; }
-.row.gone { animation: row-out .4s cubic-bezier(.5, 0, .75, 0) both; pointer-events: none; }
+.row.gone { animation: row-out .4s cubic-bezier(.5, 0, .75, 0) both; pointer-events: none; overflow: hidden; }
 @keyframes row-in { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
 @keyframes row-out { to { opacity: 0; transform: translateX(60px); } }
 .row .avatar { width: 38px; height: 38px; font-size: 17px; }
