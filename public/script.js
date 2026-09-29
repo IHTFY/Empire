@@ -220,11 +220,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return snapshot.exists();
   }
 
-  // A readable random room code, e.g. velvet-comet-42.
+  // A readable random room code, e.g. amber-comet-42.
   async function randomCode() {
-    const words = await wordList();
+    // Short words keep the code easy to read out and small enough for the table centre.
+    const short = (await wordList()).filter(w => w.length >= 3 && w.length <= 6);
     for (let i = 0; i < 5; i++) {
-      const code = `${pickRandom(words)}-${pickRandom(words)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      const code = `${pickRandom(short)}-${pickRandom(short)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
       if (!await doesGameExist(code)) return code;
     }
     return db.ref('games').push().key;
@@ -731,9 +732,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return btn;
   }
 
+  let lastCenter = null;
+  document.fonts.ready.then(() => { centerFit = ''; if (lastCenter) fitCenter(...lastCenter); });
+
   function fitTable() {
     const width = $('tableView').clientWidth;
     if (width > 0) $('tableInner').style.transform = `scale(${Math.min(1, width / 390)})`;
+    if (width > 0 && lastCenter) fitCenter(...lastCenter);
   }
   window.addEventListener('resize', fitTable);
 
@@ -785,6 +790,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderList(players);
   }
 
+  // The room code runs along the top of the round centre like an engraved seal, so long
+  // codes fit without crowding the count. Everything is in viewBox units (the disc is
+  // 100 wide), so it scales smoothly when the disc grows or shrinks.
+  function fitRoomArc(center, L) {
+    const D = 2 * L.disc, u = 100 / D;
+    const size = L.room * u;
+    const r = 50 - (7 + L.room * 0.72) * u;
+    center.querySelector('#tcArcPath').setAttribute('d', `M ${50 - r} 50 A ${r} ${r} 0 0 1 ${50 + r} 50`);
+    const text = center.querySelector('.tc-room');
+    text.style.fontSize = `${size}px`;
+    text.style.letterSpacing = `${1.4 * u}px`;
+    center.style.paddingTop = `${Math.round(L.room * 0.9)}px`; // keep the count clear of the arc
+    const path = text.firstElementChild;
+    const full = path.textContent === path.dataset.shown ? path.dataset.full : path.textContent;
+    path.textContent = full;
+    const length = text.getComputedTextLength();
+    if (!length) return; // not showing; fitTable refits when it is
+    const room = Math.PI * r * 0.72; // leave the sides of the arc clear
+    const scale = Math.max(0.6, Math.min(1, room / length));
+    text.style.fontSize = `${size * scale}px`;
+    for (let n = full.length; n > 4 && text.getComputedTextLength() > room; n--) path.textContent = `${full.slice(0, n - 1)}…`;
+    path.dataset.full = full;
+    path.dataset.shown = path.textContent;
+  }
+
+  // The status line sits low in the disc, where the circle narrows: pick the largest
+  // size (on an invisible copy, so the real one still animates) that stays inside.
+  let centerFit = '';
+  function fitCenter(center, L) {
+    fitRoomArc(center, L);
+    const wait = center.querySelector('.tc-wait');
+    const key = [L.disc, wait.textContent].join('|');
+    if (key === centerFit || !center.offsetParent) return; // unchanged, or the table isn't showing
+    centerFit = key;
+
+    const probe = center.cloneNode(true);
+    probe.removeAttribute('id');
+    probe.querySelector('.tc-arc').remove();
+    probe.classList.add('measuring');
+    Object.assign(probe.style, { width: `${2 * L.disc}px`, height: `${2 * L.disc}px`, left: '0', top: '0' });
+    $('tableInner').appendChild(probe);
+    const pWait = probe.querySelector('.tc-wait');
+
+    const r = L.disc - 7;
+    const inside = el => {
+      const x = el.offsetLeft - L.disc, y = el.offsetTop - L.disc, w = el.offsetWidth, h = el.offsetHeight;
+      return [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].every(([a, b]) => a * a + b * b <= r * r);
+    };
+    const apply = (el, o) => Object.assign(el.style, { fontSize: `${o.size}px`, maxWidth: `${o.width}px` });
+    const options = [];
+    [1.5, 1.35, 1.2].forEach(width => {
+      for (let size = L.wait; size >= L.wait * 0.8; size -= 0.5) options.push({ size, width: Math.round(L.disc * width) });
+    });
+    let chosen = options[options.length - 1];
+    for (const o of options) { apply(pWait, o); if (inside(pWait)) { chosen = o; break; } }
+    probe.remove();
+    apply(wait, chosen);
+  }
+
   function renderTable(players) {
     const { L, seats } = assignSeats(players.map(p => p.key));
     const cx = 195, cy = 195, S = L.S;
@@ -799,12 +863,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const center = $('tableCenter');
     Object.assign(center.style, { left: `${cx - L.disc}px`, top: `${cy - L.disc}px`, width: `${2 * L.disc}px`, height: `${2 * L.disc}px` });
-    center.querySelector('.tc-room').style.fontSize = `${L.room}px`;
     center.querySelector('.tc-count').style.fontSize = `${L.num}px`;
     center.querySelector('.tc-unit').style.fontSize = `${L.unit}px`;
-    const wait = center.querySelector('.tc-wait');
-    wait.style.fontSize = `${L.wait}px`;
-    wait.style.maxWidth = `${Math.round(L.disc * 1.55)}px`;
+    lastCenter = [center, L];
+    fitCenter(center, L);
 
     const container = $('seats');
     const live = new Set(players.map(p => p.key));
