@@ -1,3 +1,5 @@
+import { SHAPES, COLOURS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+
 document.addEventListener('DOMContentLoaded', async () => {
   // NOTE ON for development. OFF for deployment.
   // firebase.functions().useFunctionsEmulator('http://localhost:5001');
@@ -606,8 +608,112 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('togglePassword').setAttribute('aria-label', secretShown ? 'Hide secret name' : 'Show secret name');
   });
 
+  // Crest: picked in a sheet from the names screen and kept on this device for every room.
+  $('crestDefs').innerHTML = crestDefs();
+  let crest = localStorage.getItem('crest') ? parseCrest(localStorage.getItem('crest')) : randomCrest();
+  const initialOf = name => ([...name.trim()][0] || '').toUpperCase();
+
+  function saveCrest() {
+    try { localStorage.setItem('crest', crestString(crest)); } catch (err) { /* private mode */ }
+  }
+  saveCrest();
+
+  // Another player in this room already bears the same crest (with the same letter, if any).
+  function crestTaken() {
+    const mine = crestString(crest) + (crest.emblem === 'letter' ? initialOf(realName.value) : '');
+    return Object.entries(users).some(([key, user]) => {
+      if (key === uid || !user || !user.real || user.fakeBadge) return false;
+      const theirs = user.crest ? parseCrest(user.crest) : defaultCrest(key);
+      return crestString(theirs) + (theirs.emblem === 'letter' ? initialOf(user.real) : '') === mine;
+    });
+  }
+
+  // Each group lists its choices; tiles preview the choice on your current crest.
+  const crestGroups = [
+    { part: 'shape', label: 'Shape', options: SHAPES },
+    { part: 'colour', label: 'Colour', options: COLOURS, swatch: true },
+    { part: 'pattern', label: 'Pattern', options: PATTERNS },
+    { part: 'emblem', label: 'Emblem', options: EMBLEMS }
+  ];
+
+  function crestTile(part, value, label, swatch) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = swatch ? 'crest-tile crest-swatch' : 'crest-tile';
+    btn.dataset.part = part;
+    btn.dataset.value = value;
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    if (swatch) btn.style.setProperty('--c', swatch);
+    return btn;
+  }
+
+  function buildCrestOptions() {
+    const box = $('crestOptions');
+    crestGroups.forEach(group => {
+      const section = document.createElement('div');
+      section.className = 'crest-group';
+      const head = document.createElement('div');
+      head.className = 'crest-group-head';
+      head.innerHTML = `<span class="eyebrow">${group.label}</span>`;
+      if (group.part === 'colour') {
+        const metals = document.createElement('div');
+        metals.className = 'crest-metals';
+        metals.innerHTML = '<span class="eyebrow">Trim</span>';
+        Object.entries(METALS).forEach(([key, metal]) => metals.appendChild(crestTile('metal', key, `${metal.label} trim`, metal.hex)));
+        head.appendChild(metals);
+      }
+      const grid = document.createElement('div');
+      grid.className = 'crest-grid';
+      grid.style.setProperty('--n', Object.keys(group.options).length);
+      Object.entries(group.options).forEach(([key, option]) => grid.appendChild(crestTile(group.part, key, option.label, group.swatch && option.hex)));
+      section.append(head, grid);
+      box.appendChild(section);
+    });
+    box.addEventListener('click', event => {
+      const tile = event.target.closest('.crest-tile');
+      if (!tile) return;
+      crest[tile.dataset.part] = tile.dataset.value;
+      saveCrest();
+      renderCrest();
+    });
+  }
+  buildCrestOptions();
+
+  function renderCrest() {
+    const letter = initialOf(realName.value) || '?';
+    $('crestPreview').innerHTML = crestSvg(crest, { letter });
+    if (!$('crestDialog').open) return;
+    $('crestBig').innerHTML = crestSvg(crest, { letter });
+    const taken = crestTaken();
+    $('crestNote').classList.toggle('taken', taken);
+    $('crestNote').textContent = taken ? 'Someone in this room already bears this crest. Change a part to stand apart.' : 'Your mark at the table. Tap to change any part.';
+    document.querySelectorAll('#crestOptions .crest-tile').forEach(tile => {
+      const { part, value } = tile.dataset;
+      tile.setAttribute('aria-pressed', String(crest[part] === value));
+      if (part === 'colour' || part === 'metal') return;
+      // Patterns are shown without the emblem so the division is easy to see.
+      const preview = { ...crest, [part]: value, ...(part === 'pattern' ? { emblem: 'letter' } : {}) };
+      tile.innerHTML = crestSvg(preview, { letter: part === 'pattern' ? '' : letter });
+    });
+  }
+
+  $('crestButton').addEventListener('click', () => {
+    $('crestDialog').showModal();
+    renderCrest();
+  });
+  $('crestShuffle').addEventListener('click', () => {
+    const emblems = Object.keys(EMBLEMS);
+    crest = { ...randomCrest(), emblem: emblems[Math.floor(Math.random() * emblems.length)] };
+    saveCrest();
+    renderCrest();
+  });
+  realName.addEventListener('input', renderCrest);
+  renderCrest();
+
   function openSetup() {
     $('submitLabel').textContent = users[uid] ? 'Save names' : 'Enter the lobby';
+    renderCrest();
     show('setup');
   }
 
@@ -661,10 +767,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // The player entry is public; the secret name is stored where only the server can read it.
     // Right after a New round the server may still be unlocking the room, so retry briefly.
+    // Fields are written one by one so a rename doesn't wipe the crest.
     for (let attempt = 0; ; attempt++) {
       try {
         await db.ref(`games/${gameID}`).update({
-          [`users/${uid}`]: { real: userRealName, clan: userRealName },
+          [`users/${uid}/real`]: userRealName,
+          [`users/${uid}/clan`]: userRealName,
           [`secrets/${uid}`]: userFakeName
         });
         break;
@@ -676,6 +784,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await sleep(700);
       }
     }
+    // Written on its own so a database without crest support still accepts the names.
+    db.ref(`games/${gameID}/users/${uid}/crest`).set(crestString(crest)).catch(() => {});
 
     show('lobby');
   });
@@ -851,6 +961,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       name: user.real,
       status,
       color: bot ? '#2B3170' : offline ? '#3A3E63' : colorFor(key),
+      crest: bot ? null : user.crest ? parseCrest(user.crest) : defaultCrest(key),
       removable: !you && (bot || (offline && Date.now() - seen.lastSeen > OFFLINE_KICK_MS))
     };
   }
@@ -866,11 +977,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function avatarHtml() {
-    return '<span class="avatar"><span class="initial"></span><svg class="icon bot-icon"><use href="#i-bot" /></svg><span class="dot"></span></span>';
+    return '<span class="avatar"><span class="crest-slot"></span><span class="initial"></span><svg class="icon bot-icon"><use href="#i-bot" /></svg><span class="dot"></span></span>';
   }
 
   function paintAvatar(avatar, p, size) {
-    avatar.style.background = p.color;
+    avatar.style.background = p.crest ? '' : p.color;
+    avatar.classList.toggle('has-crest', Boolean(p.crest));
+    const slot = avatar.querySelector('.crest-slot');
+    const drawn = p.crest ? [crestString(p.crest), p.name, p.you].join('|') : '';
+    if (slot.dataset.drawn !== drawn) {
+      slot.dataset.drawn = drawn;
+      slot.innerHTML = p.crest ? crestSvg(p.crest, { letter: initialOf(p.name), ring: p.you }) : '';
+    }
     if (size) {
       avatar.style.width = `${size}px`;
       avatar.style.height = `${size}px`;
