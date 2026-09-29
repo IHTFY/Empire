@@ -5,13 +5,13 @@ const functions = require('firebase-functions/v1');
 const { initializeApp } = require('firebase-admin/app');
 const { getDatabase, ServerValue } = require('firebase-admin/database');
 
-// Uses the Cloud Functions runtime's default service account credentials.
-initializeApp({
+// Uses the Cloud Functions runtime's default service account credentials. A named app keeps
+// this connection separate from the one the functions framework opens for database triggers.
+const app = initializeApp({
   databaseURL: 'https://empire-ihtfy.firebaseio.com'
-});
+}, 'empire');
 
-// const db = admin.firestore();
-const db = getDatabase();
+const db = getDatabase(app);
 
 
 function shuffle(a) {
@@ -45,12 +45,18 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
   const users = game.users || {};
   const secrets = game.secrets || {};
 
-  // Secret names live in /secrets; rooms from before that change kept them on the player.
-  const names = Object.keys(users)
-    .map(key => secrets[key] || users[key].fake)
-    .filter(name => typeof name === 'string' && name.length > 0);
-  if (names.length < 2) {
-    throw new functions.https.HttpsError('failed-precondition', 'You need at least 2 players to start.');
+  // After the first reveal the room is locked and keeps the same order, so reading the
+  // names again replays them exactly (players can memorize by position).
+  let names = game.locked && Array.isArray(game.names) ? game.names : null;
+  if (!names) {
+    // Secret names live in /secrets; rooms from before that change kept them on the player.
+    names = Object.keys(users)
+      .map(key => secrets[key] || users[key].fake)
+      .filter(name => typeof name === 'string' && name.length > 0);
+    if (names.length < 2) {
+      throw new functions.https.HttpsError('failed-precondition', 'You need at least 2 players to start.');
+    }
+    names = shuffle(names);
   }
 
   // A reveal takes 2.5s per name; if nobody finished it (everyone left mid-reveal),
@@ -75,9 +81,66 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
   }
 
   await gameRef.update({
-    names: shuffle(names),
+    names: names,
     startedAt: ServerValue.TIMESTAMP,
+    locked: true,
     state: 'playing'
   });
   return true;
 });
+
+const IDLE_MS = 12 * 60 * 60 * 1000;
+const SWEEP_EVERY_MS = 30 * 60 * 1000;
+
+// Room lifecycle: a new round unlocks the room and forgets the old order; creating a
+// room also sweeps away rooms nobody has been connected to for 12 hours.
+exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/state').onWrite(async (change, context) => {
+  const before = change.before.val();
+  const after = change.after.val();
+  if (after === 'resetting' && before !== 'resetting') {
+    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null });
+  }
+  if (!change.before.exists() && change.after.exists()) {
+    await sweepAbandonedRooms(context.params.gameId);
+  }
+  return null;
+});
+
+async function sweepAbandonedRooms(skipId) {
+  const now = Date.now();
+  const claim = await db.ref('meta/lastSweep').transaction(last => (last && now - last < SWEEP_EVERY_MS ? undefined : now));
+  if (!claim.committed) {
+    return;
+  }
+  const [gamesSnap, seenSnap] = await Promise.all([db.ref('games').once('value'), db.ref('meta/seen').once('value')]);
+  const games = gamesSnap.val() || {};
+  const seen = seenSnap.val() || {};
+  const updates = {};
+
+  Object.entries(games).forEach(([id, game]) => {
+    if (id === skipId || !game) {
+      return;
+    }
+    const presence = Object.values(game.presence || {}).filter(Boolean);
+    if (presence.some(p => p.online)) {
+      if (seen[id]) updates[`meta/seen/${id}`] = null;
+      return;
+    }
+    const times = presence.map(p => p.lastSeen).concat([game.startedAt, game.createdAt, seen[id]])
+      .filter(t => typeof t === 'number');
+    if (times.length === 0) {
+      // No sign of activity yet (a room from before presence tracking): start its clock now.
+      updates[`meta/seen/${id}`] = now;
+    } else if (now - Math.max(...times) > IDLE_MS) {
+      updates[`games/${id}`] = null;
+      updates[`meta/seen/${id}`] = null;
+    }
+  });
+  Object.keys(seen).forEach(id => {
+    if (!games[id]) updates[`meta/seen/${id}`] = null;
+  });
+
+  if (Object.keys(updates).length > 0) {
+    await db.ref().update(updates);
+  }
+}
