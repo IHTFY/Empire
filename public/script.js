@@ -994,8 +994,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       [`secrets/${key}`]: null
     };
     // A bot that took part in the round has its secret name announced when it is removed.
-    if (locked && users[key] && users[key].fakeBadge) update[`eliminated/${key}`] = true;
-    db.ref(`games/${gameID}`).update(update).catch(() => {
+    const flagged = locked && users[key] && users[key].fakeBadge;
+    if (flagged) update[`eliminated/${key}`] = true;
+    const room = db.ref(`games/${gameID}`);
+    // If the flag is refused (rules not updated yet), still remove the bot without announcing it.
+    room.update(update).catch(err => {
+      if (!flagged) throw err;
+      delete update[`eliminated/${key}`];
+      return room.update(update);
+    }).catch(() => {
       toast('Could not remove that player');
       if (onFail) onFail();
     });
