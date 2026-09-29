@@ -71,39 +71,68 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('resize', fitMarquees);
   document.fonts.ready.then(fitMarquees);
 
-  // Numbers roll like an odometer: each digit is a 0-9 strip that slides to its value.
+  // Numbers roll like an odometer: every place value (ones, tens, hundreds...) owns one slot
+  // holding a blank + 0-9 strip. Slots are never reused for another place, so growing or
+  // shrinking the number scrolls the same slots up or down and collapses/opens the leftmost ones.
+  function makeSlot() {
+    const slot = document.createElement('span');
+    slot.className = 'odo-digit is-blank';
+    slot.setAttribute('aria-hidden', 'true');
+    const strip = document.createElement('span');
+    strip.className = 'odo-strip';
+    for (const ch of ['', ...'0123456789']) {
+      const cell = document.createElement('span');
+      cell.textContent = ch;
+      strip.appendChild(cell);
+    }
+    slot.appendChild(strip);
+    return slot;
+  }
+
   function rollNumber(el, value) {
     const text = String(value);
     if (el.dataset.value === text) return;
     const first = el.dataset.value === undefined;
     el.dataset.value = text;
     el.setAttribute('aria-label', text);
-    const shape = text.replace(/\d/g, '0');
-    if (el.dataset.shape !== shape) {
-      el.dataset.shape = shape;
-      el.replaceChildren(...[...text].map(ch => {
-        const cell = document.createElement('span');
-        cell.setAttribute('aria-hidden', 'true');
-        if (!/\d/.test(ch)) {
-          cell.className = 'odo-char';
-          cell.textContent = ch;
-          return cell;
-        }
-        cell.className = 'odo-digit';
-        const strip = document.createElement('span');
-        strip.className = 'odo-strip';
-        strip.textContent = '0123456789';
-        cell.appendChild(strip);
-        return cell;
-      }));
-      void el.offsetWidth; // new digits start at 0 and roll up to their value
+    const match = /^(\d+)(\D*)$/.exec(text);
+    if (!match) { // no number to roll (e.g. "Off"): show plain text
+      el.dataset.mode = 'text';
+      el.replaceChildren(Object.assign(document.createElement('span'), { className: 'odo-char', textContent: text }));
+      el.querySelector('.odo-char').setAttribute('aria-hidden', 'true');
+      return;
     }
-    const strips = [...el.children].map(cell => cell.firstElementChild);
-    if (first) strips.forEach(strip => { if (strip) strip.style.transition = 'none'; });
-    [...text].forEach((ch, i) => { if (strips[i]) strips[i].style.transform = `translateY(${-Number(ch)}em)`; });
+    let slots;
+    let suffix;
+    if (el.dataset.mode !== 'num') {
+      el.dataset.mode = 'num';
+      suffix = document.createElement('span');
+      suffix.className = 'odo-char';
+      suffix.setAttribute('aria-hidden', 'true');
+      el.replaceChildren(suffix);
+      slots = [];
+    } else {
+      suffix = el.lastElementChild;
+      slots = [...el.children].slice(0, -1).reverse(); // slots[0] is the ones place
+    }
+    suffix.textContent = match[2];
+    const digits = match[1];
+    while (slots.length < digits.length) {
+      const slot = makeSlot();
+      el.insertBefore(slot, slots.length ? slots[slots.length - 1] : suffix);
+      slots.push(slot);
+    }
+    void el.offsetWidth; // newly added slots start blank before they open
+    slots.forEach((slot, place) => {
+      const ch = digits[digits.length - 1 - place];
+      const strip = slot.firstElementChild;
+      if (first) strip.style.transition = slot.style.transition = 'none';
+      slot.classList.toggle('is-blank', ch === undefined);
+      strip.style.transform = `translateY(${-(ch === undefined ? 0 : Number(ch) + 1)}em)`;
+    });
     if (first) {
       void el.offsetWidth;
-      strips.forEach(strip => { if (strip) strip.style.transition = ''; });
+      slots.forEach(slot => { slot.firstElementChild.style.transition = slot.style.transition = ''; });
     }
   }
 
