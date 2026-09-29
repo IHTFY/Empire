@@ -169,9 +169,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const value = Number(localStorage.getItem(key));
     return localStorage.getItem(key) === null || Number.isNaN(value) ? fallback : Math.min(100, Math.max(0, value));
   }
-  // Earlier versions had a single on/off switch for reading names aloud.
-  const oldVoiceOn = localStorage.getItem('mute') === 'volume_up';
-  const volume = { sfx: readVolume('sfxVolume', 60), voice: readVolume('voiceVolume', oldVoiceOn ? 80 : 0), reverb: localStorage.getItem('reverb') === 'on' };
+  // Defaults: effects 40%, voice 100%, reverb on (until the device saves a choice).
+  const volume = { sfx: readVolume('sfxVolume', 40), voice: readVolume('voiceVolume', 100), reverb: localStorage.getItem('reverb') !== 'off' };
 
   let audioContext = null;
   function audio() {
