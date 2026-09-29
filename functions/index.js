@@ -1,5 +1,6 @@
 // The Cloud Functions for Firebase SDK to create Cloud Functions and setup triggers.
 const functions = require('firebase-functions/v1');
+const { createHash } = require('node:crypto');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const { initializeApp, applicationDefault } = require('firebase-admin/app');
@@ -96,9 +97,13 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
 });
 
 // Google Cloud Text-to-Speech (Chirp 3 HD voices), called over REST with the function's
-// own service account so it needs no extra package. The free tier covers 1M characters
-// a month; a game uses a few hundred.
+// own service account so it needs no extra package.
+//
+// It must stay free: Google's free tier covers 1M characters a month, so recording stops
+// at FREE_CHARS a month (players then hear their device's voice), and every recorded word
+// is cached so the same word is never paid for twice.
 const VOICE = { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Charon' };
+const FREE_CHARS = 900000;
 
 async function synthesize(text) {
   const { access_token: token } = await applicationDefault().getAccessToken();
@@ -114,14 +119,44 @@ async function synthesize(text) {
   return (await response.json()).audioContent;
 }
 
+// Reserve characters from this month's free allowance; false once it would run over.
+async function reserve(chars) {
+  const month = new Date().toISOString().slice(0, 7);
+  const result = await db.ref(`meta/tts/${month}`).transaction(used => {
+    if ((used || 0) + chars > FREE_CHARS) return undefined;
+    return (used || 0) + chars;
+  });
+  return result.committed;
+}
+
+// A recording of `text`, from the cache or newly made; null when the free allowance is used up.
+async function recording(text) {
+  const key = createHash('sha256').update(`${VOICE.name}|${text}`).digest('hex').slice(0, 40);
+  const cached = db.ref(`meta/voiceCache/${key}`);
+  const used = db.ref(`meta/voiceUsed/${key}`);
+  const hit = (await cached.once('value')).val();
+  if (hit) {
+    await used.set(Date.now());
+    return hit;
+  }
+  if (!(await reserve(text.length))) return null;
+  const audio = await synthesize(text);
+  await Promise.all([cached.set(audio), used.set(Date.now())]);
+  return audio;
+}
+
 async function recordNames(gameRef, names) {
-  const sample = db.ref('voiceSample');
+  const once = new Map(); // a word used twice in one game is recorded once
   const jobs = names.map(async (name, i) => {
-    const audio = await synthesize(name);
-    await gameRef.child(`voice/${i}`).set(audio);
+    if (!once.has(name)) once.set(name, recording(name));
+    const audio = await once.get(name);
+    if (audio) await gameRef.child(`voice/${i}`).set(audio);
   });
   jobs.push((async () => {
-    if (!(await sample.once('value')).exists()) await sample.set(await synthesize('Empire'));
+    const sample = db.ref('voiceSample');
+    if ((await sample.once('value')).exists()) return;
+    const audio = await recording('Empire');
+    if (audio) await sample.set(audio);
   })());
   const results = await Promise.allSettled(jobs);
   const failed = results.filter(r => r.status === 'rejected');
@@ -131,6 +166,7 @@ async function recordNames(gameRef, names) {
 }
 
 const IDLE_MS = 12 * 60 * 60 * 1000;
+const VOICE_KEEP_MS = 60 * 24 * 60 * 60 * 1000;
 const SWEEP_EVERY_MS = 30 * 60 * 1000;
 
 // Room lifecycle: a new round unlocks the room and forgets the old order; creating a
@@ -153,10 +189,20 @@ async function sweepAbandonedRooms(skipId) {
   if (!claim.committed) {
     return;
   }
-  const [gamesSnap, seenSnap] = await Promise.all([db.ref('games').once('value'), db.ref('meta/seen').once('value')]);
+  const [gamesSnap, seenSnap, voiceSnap] = await Promise.all([
+    db.ref('games').once('value'), db.ref('meta/seen').once('value'), db.ref('meta/voiceUsed').once('value')
+  ]);
   const games = gamesSnap.val() || {};
   const seen = seenSnap.val() || {};
   const updates = {};
+
+  // Recordings nobody has needed for 60 days are dropped so the cache stays small.
+  Object.entries(voiceSnap.val() || {}).forEach(([key, last]) => {
+    if (now - last > VOICE_KEEP_MS) {
+      updates[`meta/voiceCache/${key}`] = null;
+      updates[`meta/voiceUsed/${key}`] = null;
+    }
+  });
 
   Object.entries(games).forEach(([id, game]) => {
     if (id === skipId || !game) {
