@@ -461,7 +461,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     listen(db.ref(`games/${gameID}/presence`), snapshot => {
+      const hadPresence = Boolean(presence[uid]);
       presence = snapshot.val() || {};
+      // A player removed my watching entry: leave the room.
+      if (hadPresence && !presence[uid] && !users[uid] && state !== 'resetting' && state !== 'deleting') {
+        toast('You were removed from the room.');
+        leaveRoom();
+        return;
+      }
       renderLobby();
     });
     listen(db.ref(`games/${gameID}/state`), onStateChange);
@@ -1047,13 +1054,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const spectator = !users[uid];
     const watchers = Object.entries(presence)
       .filter(([key, seen]) => seen && seen.online && !users[key])
-      .map(([key, seen]) => (key === uid ? 'You' : seen.name || 'Guest'));
+      .map(([key, seen]) => ({ key, name: key === uid ? 'You' : seen.name || 'Guest' }));
     $('watching').hidden = watchers.length === 0;
     const chips = $('watchingNames');
-    chips.replaceChildren(...watchers.map(name => {
+    chips.replaceChildren(...watchers.map(({ key, name }) => {
       const chip = document.createElement('span');
       chip.className = 'watch-chip';
       chip.textContent = name;
+      if (!spectator && key !== uid) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'watch-remove';
+        btn.setAttribute('aria-label', `Remove ${name}`);
+        btn.textContent = '×';
+        btn.addEventListener('click', () => {
+          btn.disabled = true;
+          db.ref(`games/${gameID}/presence/${key}`).remove().catch(() => {
+            toast('Could not remove that watcher');
+            btn.disabled = false;
+          });
+        });
+        chip.append(btn);
+      }
       return chip;
     }));
     $('lockNote').hidden = !spectator && !locked;
