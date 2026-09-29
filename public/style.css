@@ -319,7 +319,10 @@ a:hover { color: var(--gold-hi); }
   transition: all .7s var(--glide);
 }
 .table-center > * { transition: font-size .6s var(--glide); }
-.tc-room { font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-arc { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.tc-room { font-weight: 800; text-transform: uppercase; fill: var(--muted); font-family: inherit; }
+.measuring { visibility: hidden; pointer-events: none; }
+.measuring, .measuring * { transition: none !important; animation: none !important; }
 .tc-count { line-height: 1; }
 .tc-unit { font-weight: 700; color: var(--muted); margin-top: -2px; }
 .tc-wait { font-weight: 700; color: var(--gold); line-height: 1.2; margin-top: 2px; }
