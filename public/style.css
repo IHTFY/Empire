@@ -381,7 +381,7 @@ a:hover { color: var(--gold-hi); }
 .marquee.is-long .marquee-text { padding: 0 10px; animation: marquee var(--marquee-time, 8s) ease-in-out infinite alternate; }
 @keyframes marquee { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--marquee-shift)); } }
 @media (prefers-reduced-motion: reduce) { .marquee.is-long .marquee-text { animation: none; } }
-.player-list { position: relative; list-style: none; margin: 0; padding: 0 2px 0 0; flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.player-list { position: relative; overflow-x: hidden; list-style: none; margin: 0; padding: 0 2px 0 0; flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .row {
   display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-radius: 16px; flex-shrink: 0;
   background: var(--surface); border: 1px solid rgba(244, 241, 232, .08);
@@ -391,9 +391,20 @@ a:hover { color: var(--gold-hi); }
 .row.offline { border-style: dashed; }
 .row.dim { opacity: .55; }
 .row.pop { animation: row-in .45s var(--ease) both; }
-.row.gone { animation: row-out .4s cubic-bezier(.5, 0, .75, 0) both; pointer-events: none; }
+.row.gone {
+  position: relative; pointer-events: none; overflow: hidden;
+  animation: ember .36s cubic-bezier(.55, 0, .85, .45) both;
+  -webkit-mask-image: linear-gradient(to left, transparent calc(var(--burn) - 6%), #000 calc(var(--burn) + 6%));
+  mask-image: linear-gradient(to left, transparent calc(var(--burn) - 6%), #000 calc(var(--burn) + 6%));
+}
+/* The hot seam that burns across a removed row, from the X toward the name. */
+.row.gone::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to left, transparent calc(var(--burn) - 8%), var(--gold-hi) calc(var(--burn) - 2%), #FF5A0A calc(var(--burn) + 4%), rgba(224, 48, 11, .35) calc(var(--burn) + 14%), transparent calc(var(--burn) + 26%));
+}
 @keyframes row-in { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
-@keyframes row-out { to { opacity: 0; transform: translateX(60px); } }
+@property --burn { syntax: '<percentage>'; inherits: true; initial-value: 0%; }
+@keyframes ember { from { --burn: -10%; } to { --burn: 115%; } }
 .row .avatar { width: 38px; height: 38px; font-size: 17px; }
 .row-name { flex-grow: 1; min-width: 0; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-status { font-size: 13px; font-weight: 600; color: var(--muted); }
