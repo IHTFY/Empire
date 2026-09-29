@@ -558,6 +558,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------------------------------------------------------------------
   // Pick names
 
+  const SECRET_MAX = 28; // keep in sync with maxlength in index.html and database.rules.json
+
   function sanitizeName(raw) {
     //TODO different rules for allowed characters etc.
     return raw.toLowerCase().replace(/[^ A-Za-z0-9]/g, '').replace(/\s+/g, ' ').trim();
@@ -620,7 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!gameID) return;
 
     const userRealName = realName.value.trim().slice(0, 100);
-    const userFakeName = sanitizeName(secretName.value).slice(0, 100);
+    const userFakeName = sanitizeName(secretName.value).slice(0, SECRET_MAX);
     let ok = true;
 
     const taken = Object.entries(users).some(([key, user]) =>
