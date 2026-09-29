@@ -447,6 +447,14 @@ a:hover { color: var(--gold-hi); }
 .slider-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px 12px; padding: 10px 4px; }
 .slider-row label { font-weight: 700; }
 .slider-row output { font-variant-numeric: tabular-nums; color: var(--gold); font-weight: 800; min-width: 3ch; text-align: right; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px; }
+.switch-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 700; }
+.switch-text .muted { font-weight: 500; }
+.switch { position: relative; width: 52px; height: 32px; flex-shrink: 0; padding: 0; border-radius: 999px; border: 1px solid var(--line); background: #2A2D55; cursor: pointer; transition: background-color .25s, border-color .25s; }
+.switch-knob { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); box-shadow: 0 2px 6px rgba(0, 0, 0, .35); transition: transform .3s var(--spring); }
+.switch[aria-checked="true"] { background: var(--foil); background-size: 220% 100%; border-color: var(--lava-edge); animation: lava 7s ease-in-out infinite alternate; }
+.switch[aria-checked="true"] .switch-knob { transform: translateX(20px); }
+.switch:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .slider {
   grid-column: 1 / -1; width: 100%; height: 36px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none;
   --fill: 50%;
