@@ -1028,17 +1028,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     rowEls.forEach((entry, key) => {
       if (live.has(key) || entry.leaving) return;
       entry.leaving = true;
-      // The row keeps its place while it fades out, so nothing slides under it; only
-      // once it's gone does its space close up, carrying the rows below with it.
+      // The row burns away in place, so nothing slides under it; only once it's
+      // gone does its space close up, carrying the rows below with it.
       const el = entry.el;
-      el.classList.add('gone');
-      setTimeout(() => {
+      let done = false;
+      const close = () => {
+        if (done) return;
+        done = true;
         const collapse = el.animate([
           { height: `${el.offsetHeight}px` },
           { height: '0px', minHeight: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px', marginBottom: `${-rowGap(list)}px` }
-        ], { duration: 320, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
+        ], { duration: 260, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' });
         collapse.onfinish = () => { el.remove(); if (rowEls.get(key) === entry) rowEls.delete(key); };
-      }, 400);
+      };
+      el.addEventListener('animationend', e => { if (e.animationName === 'ember') close(); });
+      setTimeout(close, 600);
+      el.classList.add('gone');
     });
     const liveRows = () => [...list.children].filter(row => !row.classList.contains('gone'));
     players.forEach((p, i) => {
