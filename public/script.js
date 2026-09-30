@@ -375,27 +375,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     speak('Empire', voiceSample);
   }
-  // Fixed narrator lines from /voicePhrases, loaded once; the device voice reads them when a
-  // clip isn't there. The text must match PHRASES in functions/index.js.
-  const PHRASES = {
-    playerJoined: 'A player has joined the game.',
-    playerLeft: 'A player has left the game.',
-    botJoined: 'A bot has joined the game.',
-    botLeft: 'A bot has left the game.',
-    newRound: 'A new round is starting.'
-  };
-  let phraseClips = null;
-  let phrasesLoading = null;
-  async function narrate(key) {
-    if (!volume.voice) return;
-    if (!phrasesLoading) {
-      phrasesLoading = db.ref('voicePhrases').once('value')
-        .then(snap => { phraseClips = snap.val() || {}; }, () => { phrasesLoading = null; });
-    }
-    await phrasesLoading;
-    speak(PHRASES[key], phraseClips && phraseClips[key]);
-  }
-
   function renderSound() {
     const muted = !volume.sfx && !volume.voice;
     document.querySelectorAll('.sound-btn use').forEach(use => use.setAttribute('href', muted ? '#i-sound-off' : '#i-sound-on'));
@@ -809,18 +788,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Only a new player entering beeps; leaving or editing a name stays silent.
       const joined = Object.keys(users).filter(id => !previous[id]);
       if (!first && joined.length > 0) chime();
-      // Say who came or went by kind, not by name (the lobby shows the names). Nothing is said
-      // for myself, during a reveal, or while the room is being reset or closed.
-      const closing = state === 'resetting' || state === 'deleting' || revealing;
-      if (!first && !closing) {
-        const others = joined.filter(id => id !== uid);
-        const gone = Object.keys(previous).filter(id => !users[id] && id !== uid);
-        if (others.length > 0) narrate(others.every(id => users[id].fakeBadge) ? 'botJoined' : 'playerJoined');
-        // A bot removed after the reveal is announced by its own screen instead.
-        else if (gone.length > 0 && !(locked && gone.every(id => previous[id].fakeBadge))) {
-          narrate(gone.every(id => previous[id].fakeBadge) ? 'botLeft' : 'playerLeft');
-        }
-      }
       first = false;
 
       // Removed by someone else (for example after being offline too long).
@@ -1927,7 +1894,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.replace('/');
     }
     if (state === 'resetting' && previous !== 'resetting') {
-      narrate('newRound');
       await db.ref(`games/${code}`).update({
         [`users/${uid}`]: null,
         [`secrets/${uid}`]: null
