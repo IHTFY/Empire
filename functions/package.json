@@ -7,7 +7,9 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "node --test test/room-state.test.cjs",
+    "test:rules": "node --test test/rules.test.cjs"
   },
   "engines": {
     "node": "22"
