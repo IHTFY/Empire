@@ -1817,6 +1817,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.replace('/');
     }
     if (state === 'resetting' && previous !== 'resetting') {
+      // Forget membership before the server's roster/state callbacks arrive in either order.
+      users = {};
       setSecret('');
       sessionStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
