@@ -1,4 +1,4 @@
-import { SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+import { SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, botCrest, crestSvg, crestDefs } from './crest.js';
 import { suggestRoomName } from './room-names.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -703,6 +703,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const hadMe = Boolean(users[uid]);
       const previous = users;
       users = snapshot.val() || {};
+      Object.entries(users).forEach(([id, user]) => { if (user.fakeBadge) botNames[id] = user.real; });
       renderLobby();
 
       // Only a new player entering beeps; leaving or editing a name stays silent.
@@ -736,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!entry || typeof entry !== 'object' || announced.has(key)) return;
         announced.add(key);
         // Only announce fresh removals, not ones that happened before this device joined.
-        if (!firstEliminated || serverNow() - entry.at < 15000) announceRemoved(entry);
+        if (!firstEliminated || serverNow() - entry.at < 15000) announceRemoved(key, entry);
       });
       firstEliminated = false;
     });
@@ -1238,7 +1239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       name: user.real,
       status,
       color: bot ? '#2B3170' : offline ? '#3A3E63' : colorFor(key),
-      crest: bot ? null : user.crest ? parseCrest(user.crest) : defaultCrest(key),
+      crest: bot ? botCrest(key) : user.crest ? parseCrest(user.crest) : defaultCrest(key),
       removable: !you && (bot || (offline && Date.now() - seen.lastSeen > OFFLINE_KICK_MS))
     };
   }
@@ -1872,14 +1873,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // A removed bot's secret name, shown full screen and spoken. Announcements queue up.
   let announced = new Set();
   let announceQueue = Promise.resolve();
-  function announceRemoved(entry) {
+  // Bots' names outlive their removal, so the announcement can say who it was.
+  let botNames = {};
+  function announceRemoved(key, entry) {
     const code = gameID;
+    const botName = botNames[key];
     announceQueue = announceQueue.then(async () => {
       if (gameID !== code) return;
       while (revealing) await sleep(300);
       const screen = $('eliminatedScreen');
       const word = $('eliminatedName');
-      $('eliminatedLabel').textContent = 'Removed bot’s secret name';
+      $('eliminatedCrest').innerHTML = crestSvg(botCrest(key));
+      $('eliminatedWho').textContent = botName ? `Bot · ${botName}` : 'Bot';
+      $('eliminatedLabel').textContent = 'was secretly';
       word.textContent = entry.name;
       word.style.fontSize = '';
       word.classList.remove('wrap');
