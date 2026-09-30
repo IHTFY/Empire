@@ -1031,10 +1031,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('realName', userRealName);
     sessionStorage.setItem(`secret:${gameID}`, userFakeName);
 
-    // Leaving the reset screen: mark the room waiting first so nobody still clearing
-    // the old round can wipe this entry.
     if (state === 'resetting') {
-      await db.ref(`games/${gameID}`).update({ state: 'waiting' });
+      toast('The new round is getting ready. Try again in a moment.');
+      return;
     }
 
     if (locked && !users[uid]) {
@@ -1378,6 +1377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       ? 'Names are set for this round. You can watch and join at the next round.'
       : 'Names are set for this round. New players can watch and join next round.';
     $('generateName').hidden = spectator;
+    document.querySelectorAll('[data-open="confirmNewGame"], [data-open="confirmDelete"]').forEach(button => { button.hidden = spectator; });
     startButton.hidden = spectator;
     $('generateName').classList.toggle('is-disabled', locked);
     const preparing = state === 'shuffling';
@@ -1762,13 +1762,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  $('roomResetButton').addEventListener('click', () => {
-    db.ref(`games/${gameID}`).update({ state: 'resetting' });
-  });
-
-  $('roomDeleteButton').addEventListener('click', () => {
-    db.ref(`games/${gameID}`).update({ state: 'deleting' });
-  });
+  async function requestRoomState(next) {
+    if (!gameID || !users[uid]) return;
+    try {
+      await db.ref(`games/${gameID}/state`).set(next);
+    } catch (err) {
+      toast('Could not change the room. Try again.');
+    }
+  }
+  $('roomResetButton').addEventListener('click', () => requestRoomState('resetting'));
+  $('roomDeleteButton').addEventListener('click', () => requestRoomState('deleting'));
 
   startButton.addEventListener('click', async () => {
     if (startButton.classList.contains('is-disabled')) {
@@ -1814,17 +1817,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.replace('/');
     }
     if (state === 'resetting' && previous !== 'resetting') {
-      await db.ref(`games/${code}`).update({
-        [`users/${uid}`]: null,
-        [`secrets/${uid}`]: null
-      }).catch(() => {});
       setSecret('');
       sessionStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
       $('submitLabel').textContent = 'Enter the lobby';
       show('setup');
-      await db.ref(`games/${code}/users`).remove().catch(() => {});
-      await db.ref(`games/${code}/secrets`).remove().catch(() => {});
+      // The server clears the old roster and opens the next round.
     }
   }
 
@@ -1964,7 +1962,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bar.classList.remove('run');
     // The reveal is over (or was already over when this player arrived).
     if (stillHere() && serverNow() - startedAt >= total) {
-      db.ref(`games/${code}`).update({ state: 'waiting' });
+      db.ref(`games/${code}/state`).set('waiting').catch(() => {});
     }
     renderLobby();
   }

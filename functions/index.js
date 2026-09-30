@@ -88,7 +88,7 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
   // VOICE_WAIT_MS; a name still missing then falls back to the device's voice.
   const voice = game.locked && game.voice ? null : recordNames(gameRef, names);
   const ready = voice ? await voice.ready : {};
-  const start = { names: names, startedAt: ServerValue.TIMESTAMP, locked: true, state: 'playing' };
+  const start = { names: names, startedAt: ServerValue.TIMESTAMP, revealEndsAt: Date.now() + 3000 + names.length * 2500, locked: true, state: 'playing' };
   Object.entries(ready).forEach(([i, audio]) => { start[`voice/${i}`] = audio; });
   await gameRef.update(start);
   if (voice) await voice.done;
@@ -248,7 +248,16 @@ exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gam
   const before = change.before.val();
   const after = change.after.val();
   if (after === 'resetting' && before !== 'resetting') {
-    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null, voice: null, eliminated: null });
+    // Clients cannot return to waiting after their membership is cleared. Finish the reset
+    // here, and ignore a delayed trigger if the room has already moved on.
+    const room = db.ref(`games/${context.params.gameId}`);
+    await room.once('value');
+    await room.transaction(game => {
+      if (!game || game.state !== 'resetting') return undefined;
+      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'locked', 'voice', 'eliminated']) delete game[key];
+      game.state = 'waiting';
+      return game;
+    });
   }
   if (!change.before.exists() && change.after.exists()) {
     await sweepAbandonedRooms(context.params.gameId);
