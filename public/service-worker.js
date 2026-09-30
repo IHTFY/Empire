@@ -1,7 +1,7 @@
 'use strict';
 
 // Update cache names any time any of the cached files change.
-const CACHE_NAME = 'static-cache-v1';
+const CACHE_NAME = 'static-cache-v2';
 
 // Add list of files to cache here.
 const FILES_TO_CACHE = [
@@ -39,8 +39,7 @@ self.addEventListener('activate', (evt) => {
 });
 
 self.addEventListener('fetch', (evt) => {
-  console.log('[ServiceWorker] Fetch', evt.request.url);
-  // Add fetch event handler here.
+  // Serve the offline page when a page navigation fails.
   if (evt.request.mode !== 'navigate') {
     // Not a page navigation, bail.
     return;
@@ -50,7 +49,7 @@ self.addEventListener('fetch', (evt) => {
           .catch(() => {
             return caches.open(CACHE_NAME)
                 .then((cache) => {
-                  return cache.match('offline.html');
+                  return cache.match('./offline.html');
                 });
           })
   );
