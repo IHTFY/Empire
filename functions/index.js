@@ -1,6 +1,6 @@
 // The Cloud Functions for Firebase SDK to create Cloud Functions and setup triggers.
 const functions = require('firebase-functions/v1');
-const { createHash } = require('node:crypto');
+const { createHash, randomUUID } = require('node:crypto');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const { initializeApp, applicationDefault } = require('firebase-admin/app');
@@ -8,8 +8,10 @@ const { getDatabase, ServerValue } = require('firebase-admin/database');
 
 // Uses the Cloud Functions runtime's default service account credentials. A named app keeps
 // this connection separate from the one the functions framework opens for database triggers.
+const emulated = process.env.FUNCTIONS_EMULATOR === 'true';
+const instance = emulated ? `${process.env.GCLOUD_PROJECT}-default-rtdb` : 'empire-ihtfy';
 const app = initializeApp({
-  databaseURL: 'https://empire-ihtfy.firebaseio.com'
+  databaseURL: `https://${instance}.firebaseio.com`
 }, 'empire');
 
 const db = getDatabase(app);
@@ -21,6 +23,23 @@ function shuffle(a) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// Keep the first reveal as the canonical list. Playback indexes preserve voice alignment
+// and relative order, even when two players chose the same secret. Owners stay server-only.
+function indexesForReread(game) {
+  const retired = new Map();
+  Object.values(game.eliminated || {}).forEach(entry => {
+    if (typeof entry?.name === 'string') retired.set(entry.name, (retired.get(entry.name) || 0) + 1);
+  });
+  return game.names.map((name, i) => i).filter(i => {
+    if (Array.isArray(game.nameOwners)) return !game.eliminated?.[game.nameOwners[i]];
+    // Rooms revealed before ownership was recorded use one occurrence per announcement.
+    const name = game.names[i];
+    const count = retired.get(name) || 0;
+    if (count) { retired.set(name, count - 1); return false; }
+    return true;
+  });
 }
 
 // gcloud alpha functions add-iam-policy-binding flashNames --member=allUsers --role=roles/cloudfunctions.invoker
@@ -35,65 +54,79 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('invalid-argument', 'Invalid game code.');
   }
 
-  // Only players in the room can start it.
-  const member = await db.ref(`games/${gameID}/users/${context.auth.uid}`).once('value');
-  if (!member.exists()) {
+  const gameRef = db.ref(`games/${gameID}`);
+  // Reject outsiders before attempting a start; membership is checked again on every retry.
+  const initial = (await gameRef.once('value')).val();
+  if (!initial?.users?.[context.auth.uid]) {
     throw new functions.https.HttpsError('permission-denied', 'You are not in this game.');
   }
-
-  const gameRef = db.ref(`games/${gameID}`);
-  const game = (await gameRef.once('value')).val() || {};
-  const users = game.users || {};
-  const secrets = game.secrets || {};
-
-  // After the first reveal the room is locked and keeps the same order, so reading the
-  // names again replays them exactly (players can memorize by position).
-  let names = game.locked && Array.isArray(game.names) ? game.names : null;
-  if (!names) {
-    // Secret names live in /secrets; rooms from before that change kept them on the player.
-    names = Object.keys(users)
-      .map(key => secrets[key] || users[key].fake)
-      .filter(name => typeof name === 'string' && name.length > 0);
-    if (names.length < 2) {
-      throw new functions.https.HttpsError('failed-precondition', 'You need at least 2 players to start.');
+  const revealId = randomUUID();
+  const newRoundId = randomUUID();
+  let failure = null;
+  let reuseVoice = false;
+  const claim = await gameRef.transaction(game => {
+    // An empty local cache must reach the server before deciding that the room is gone.
+    if (game === null) return null;
+    if (!game?.users?.[context.auth.uid]) {
+      failure = new functions.https.HttpsError('permission-denied', 'You are not in this game.');
+      return undefined;
     }
-    names = shuffle(names);
-  }
-
-  // A reveal takes 2.5s per name; if nobody finished it (everyone left mid-reveal),
-  // let the room be started again instead of staying stuck.
-  const previousNames = Array.isArray(game.names) ? game.names.length : 0;
-  const stale = ['shuffling', 'playing'].includes(game.state) &&
-    !(Date.now() - (game.startedAt || 0) < previousNames * 2500 + 30000);
-
-  // Claim the start atomically so two players pressing Start at once only start one reveal.
-  const claim = await gameRef.child('state').transaction(current => {
-    // The first pass can run on an empty local cache; the server then retries with the real value.
-    if (current === null) {
-      return null;
+    const length = Array.isArray(game.names) ? game.names.length : 0;
+    const stale = ['shuffling', 'playing'].includes(game.state) &&
+      Date.now() - (game.startedAt || 0) >= length * 2500 + 33000;
+    if (game.state !== 'waiting' && !stale) return undefined;
+    let names = game.locked && Array.isArray(game.names) ? game.names : null;
+    reuseVoice = Boolean(names && game.voice);
+    if (!names) {
+      const entries = Object.keys(game.users)
+        .map(key => ({ key, name: game.secrets?.[key] || game.users[key].fake }))
+        .filter(entry => typeof entry.name === 'string' && entry.name.length > 0);
+      if (entries.length < 2) {
+        failure = new functions.https.HttpsError('failed-precondition', 'You need at least 2 players to start.');
+        return undefined;
+      }
+      shuffle(entries);
+      names = entries.map(entry => entry.name);
+      game.nameOwners = entries.map(entry => entry.key);
+      delete game.voice;
     }
-    if (current === 'waiting' || (stale && current === game.state)) {
-      return 'shuffling';
-    }
-    return undefined;
+    // Freeze names and lock submissions in the same transaction that claims the start.
+    return { ...game, names, locked: true, state: 'shuffling', startedAt: ServerValue.TIMESTAMP,
+      roundId: game.roundId || newRoundId, revealId };
   });
+  if (claim.committed && !claim.snapshot.exists()) {
+    throw new functions.https.HttpsError('permission-denied', 'You are not in this game.');
+  }
   if (!claim.committed) {
+    if (failure) throw failure;
     return true;
   }
-  // Marks when this start began, so a second press while the voices load isn't taken as stale.
-  await gameRef.child('startedAt').set(ServerValue.TIMESTAMP);
-
-  // Record every name before the countdown so each one plays in the recorded voice. Players
-  // wait (the Start button shows "Getting voices ready") until the clips are in, up to
-  // VOICE_WAIT_MS; a name still missing then falls back to the device's voice.
-  const voice = game.locked && game.voice ? null : recordNames(gameRef, names);
+  const names = claim.snapshot.val().names;
+  const voice = reuseVoice ? null : recordNames(gameRef, names, revealId);
   const ready = voice ? await voice.ready : {};
-  const start = { names: names, startedAt: ServerValue.TIMESTAMP, locked: true, state: 'playing' };
-  Object.entries(ready).forEach(([i, audio]) => { start[`voice/${i}`] = audio; });
-  await gameRef.update(start);
+  await updateReveal(gameRef, revealId, game => {
+    if (game.state !== 'shuffling') return undefined;
+    game.state = 'playing';
+    game.startedAt = ServerValue.TIMESTAMP;
+    const indexes = indexesForReread(game);
+    game.replay = { indexes, count: indexes.length };
+    game.revealEndsAt = Date.now() + 3000 + indexes.length * 2500;
+    game.voice = { ...game.voice, ...ready };
+    return game;
+  });
   if (voice) await voice.done;
   return true;
 });
+
+// Every asynchronous write belongs to one reveal attempt. A reset, deletion, or another
+// attempt invalidates it, including clips that finish after the readiness deadline.
+async function updateReveal(gameRef, revealId, update) {
+  return gameRef.transaction(game => {
+    if (game === null) return null;
+    if (!game || game.revealId !== revealId || !['shuffling', 'playing', 'waiting'].includes(game.state)) return undefined;
+    return update(game);
+  });
+}
 
 // Google Cloud Text-to-Speech (Chirp 3 HD voices), called over REST with the function's
 // own service account so it needs no extra package.
@@ -134,6 +167,8 @@ async function reserve(chars) {
 
 // A recording of `text`, from the cache or newly made; null when the free allowance is used up.
 async function recording(text) {
+  // Local games exercise the device-voice fallback without external TTS or credentials.
+  if (emulated) return null;
   const key = createHash('sha256').update(`${VOICE.name}|${text}`).digest('hex').slice(0, 40);
   const cached = db.ref(`${VOICE_DIR}/cache/${key}`);
   const used = db.ref(`${VOICE_DIR}/used/${key}`);
@@ -151,7 +186,7 @@ async function recording(text) {
 // Records the names in reveal order, a few at a time. `ready` resolves with the clips made
 // within VOICE_WAIT_MS (by reveal index); any clip made later goes straight to the room, and
 // `done` resolves once every recording has finished.
-function recordNames(gameRef, names) {
+function recordNames(gameRef, names, revealId) {
   const clips = {};
   let late = false;
   // At most VOICE_JOBS recordings at once; slots are handed out in reveal order.
@@ -175,8 +210,12 @@ function recordNames(gameRef, names) {
     if (!made.has(name)) made.set(name, slot().then(() => recording(name)).finally(release));
     const audio = await made.get(name);
     if (!audio) return;
-    if (late) await gameRef.child(`voice/${i}`).set(audio);
-    else clips[i] = audio;
+    if (late) {
+      await updateReveal(gameRef, revealId, game => {
+        game.voice = { ...game.voice, [i]: audio };
+        return game;
+      });
+    } else clips[i] = audio;
   });
   jobs.push(recordSample());
   const done = Promise.allSettled(jobs).then(results => {
@@ -186,7 +225,9 @@ function recordNames(gameRef, names) {
     }
     return failed.length;
   });
-  const ready = Promise.race([done, new Promise(resolve => setTimeout(resolve, VOICE_WAIT_MS))]).then(() => {
+  let timer;
+  const ready = Promise.race([done, new Promise(resolve => { timer = setTimeout(resolve, VOICE_WAIT_MS); })]).then(() => {
+    clearTimeout(timer);
     late = true;
     return { ...clips };
   });
@@ -204,7 +245,7 @@ async function recordSample() {
 
 // Record a secret name as soon as a player sets it, while the room is still waiting, so the
 // recording is usually ready (cached) by the time someone presses Start.
-exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onWrite(async change => {
+exports.prepareVoice = functions.database.instance(instance).ref('/games/{gameId}/secrets/{userId}').onWrite(async change => {
   const name = change.after.val();
   if (typeof name !== 'string' || name.length === 0 || name === change.before.val()) {
     return null;
@@ -220,7 +261,7 @@ exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{
 // A bot removed after the names were revealed: publish its secret name (and recording) so
 // every device shows and speaks it. Players flag the removal in /eliminated; only that flag
 // makes this a bot, so a player leaving the room never gives away their own secret.
-exports.revealRemoved = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onDelete(async (snapshot, context) => {
+exports.revealRemoved = functions.database.instance(instance).ref('/games/{gameId}/secrets/{userId}').onDelete(async (snapshot, context) => {
   const name = snapshot.val();
   const { gameId, userId } = context.params;
   if (typeof name !== 'string' || name.length === 0) {
@@ -234,7 +275,12 @@ exports.revealRemoved = functions.database.instance('empire-ihtfy').ref('/games/
   const audio = await recording(name).catch(() => null);
   const entry = { name, at: ServerValue.TIMESTAMP };
   if (audio) entry.voice = audio;
-  await gameRef.child(`eliminated/${userId}`).set(entry);
+  await gameRef.transaction(current => {
+    if (current === null) return null;
+    if (!current?.locked || current.roundId !== game.roundId || current.eliminated?.[userId] !== true || ['resetting', 'deleting'].includes(current.state)) return undefined;
+    current.eliminated[userId] = entry;
+    return current;
+  });
   return null;
 });
 
@@ -244,11 +290,22 @@ const SWEEP_EVERY_MS = 30 * 60 * 1000;
 
 // Room lifecycle: a new round unlocks the room and forgets the old order; creating a
 // room also sweeps away rooms nobody has been connected to for 12 hours.
-exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/state').onWrite(async (change, context) => {
+exports.roomState = functions.database.instance(instance).ref('/games/{gameId}/state').onWrite(async (change, context) => {
   const before = change.before.val();
   const after = change.after.val();
   if (after === 'resetting' && before !== 'resetting') {
-    await db.ref(`games/${context.params.gameId}`).update({ names: null, startedAt: null, locked: null, voice: null, eliminated: null });
+    // Clients cannot return to waiting after their membership is cleared. Finish the reset
+    // here, and ignore a delayed trigger if the room has already moved on.
+    const room = db.ref(`games/${context.params.gameId}`);
+    await room.once('value');
+    await room.transaction(game => {
+      // Ask the server to retry an empty local cache before checking the room state.
+      if (game === null) return null;
+      if (!game || game.state !== 'resetting') return undefined;
+      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated']) delete game[key];
+      game.state = 'waiting';
+      return game;
+    });
   }
   if (!change.before.exists() && change.after.exists()) {
     await sweepAbandonedRooms(context.params.gameId);
@@ -303,7 +360,7 @@ async function sweepAbandonedRooms(skipId) {
       return;
     }
     const presence = Object.values(game.presence || {}).filter(Boolean);
-    if (presence.some(p => p.online)) {
+    if (presence.some(p => p.version === 2 ? Object.keys(p.connections || {}).length > 0 : p.online)) {
       if (seen[id]) updates[`meta/seen/${id}`] = null;
       return;
     }
