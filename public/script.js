@@ -415,6 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let state = null;
   let locked = false;
   let revealing = false;
+  let revealRun = 0;
   let presenceRef = null;
   let awayTimer = null;
 
@@ -424,6 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function detachRoom() {
+    revealRun++;
     listeners.forEach(([ref, callback]) => ref.off('value', callback));
     listeners = [];
     if (presenceRef) {
@@ -1028,39 +1030,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!ok) return;
 
-    localStorage.setItem('realName', userRealName);
-    sessionStorage.setItem(`secret:${gameID}`, userFakeName);
-
+    const code = gameID;
     if (state === 'resetting') {
       toast('The new round is getting ready. Try again in a moment.');
       return;
     }
-
-    if (locked && !users[uid]) {
-      toast('This round has started. You can watch and join at the next round.');
-      show('lobby');
+    if (locked || state !== 'waiting') {
+      toast('Names are locked until the next round.');
       return;
     }
-
-    // The player entry is public; the secret name is stored where only the server can read it.
-    // Right after a New round the server may still be unlocking the room, so retry briefly.
-    // Fields are written one by one so a rename doesn't wipe the crest.
-    for (let attempt = 0; ; attempt++) {
-      try {
-        await db.ref(`games/${gameID}`).update({
-          [`users/${uid}/real`]: userRealName,
-          [`users/${uid}/clan`]: userRealName,
-          [`secrets/${uid}`]: userFakeName
-        });
-        break;
-      } catch (err) {
-        if (attempt >= 4) {
-          toast(locked ? 'Names are locked until the next round.' : 'Could not save your names. Try again.');
-          return;
-        }
-        await sleep(700);
-      }
+    // A submission racing Start either commits before the roster freezes or is rejected.
+    try {
+      await db.ref(`games/${code}`).update({
+        [`users/${uid}/real`]: userRealName,
+        [`users/${uid}/clan`]: userRealName,
+        [`secrets/${uid}`]: userFakeName
+      });
+    } catch (err) {
+      toast('Could not save your names. The round may have started; try again next round.');
+      return;
     }
+    if (gameID !== code) return;
+    localStorage.setItem('realName', userRealName);
+    sessionStorage.setItem(`secret:${code}`, userFakeName);
     // Written on its own so a database without crest support still accepts the names.
     db.ref(`games/${gameID}/users/${uid}/crest`).set(crestString(crest)).catch(() => {});
 
@@ -1795,6 +1787,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function onStateChange(snapshot) {
     const previous = state;
     state = snapshot.val();
+    if (previous === 'playing' && state !== 'playing') revealRun++;
     const code = gameID;
 
     if (state === 'playing' && previous !== 'playing') {
@@ -1900,6 +1893,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function displaySecrets() {
     if (revealing) return;
     revealing = true;
+    const run = ++revealRun;
     const code = gameID;
     const [namesSnap, startSnap] = await Promise.all([
       db.ref(`games/${code}/names`).once('value'),
@@ -1909,7 +1903,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const startedAt = startSnap.val() || serverNow();
     const countdown = 3 * COUNTDOWN_MS;
     const total = countdown + names.length * NAME_MS;
-    const stillHere = () => gameID === code && state === 'playing';
+    const stillHere = () => gameID === code && state === 'playing' && run === revealRun;
 
     const reveal = $('revealScreen');
     const stage = $('revealStage');
@@ -1967,6 +1961,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       db.ref(`games/${code}/state`).set('waiting').catch(() => {});
     }
     renderLobby();
+    if (gameID && state === 'playing' && run !== revealRun) displaySecrets();
   }
 
   // ---------------------------------------------------------------------------
