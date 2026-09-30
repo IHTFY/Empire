@@ -1,6 +1,14 @@
 {
+  "id": "/",
   "name": "Empire",
   "short_name": "Empire",
+  "description": "Empire: the party game of secret names, with an automated game master.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
   "icons": [
     {
       "src": "./images/icons/128.png",
@@ -31,11 +39,39 @@
       "src": "./images/icons/512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "./images/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./images/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "start_url": "./index.html",
-  "scope": "./*",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0B0D26",
-  "theme_color": "#0B0D26"
+  "theme_color": "#0B0D26",
+  "screenshots": [
+    {
+      "src": "./images/screenshots/narrow.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Create or join a room on your phone"
+    },
+    {
+      "src": "./images/screenshots/wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Create or join a room on a tablet or desktop"
+    }
+  ]
 }
