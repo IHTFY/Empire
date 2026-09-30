@@ -269,6 +269,9 @@ async function sweepAbandonedRooms(skipId) {
   if (!claim.committed) {
     return;
   }
+  // Names are read before rooms: a room is created together with its name, so every name
+  // read here has its room in the later read unless the room is really gone.
+  const roomNames = (await db.ref('roomNames').once('value')).val() || {};
   const [gamesSnap, seenSnap, voiceSnap, voiceNameSnap] = await Promise.all([
     db.ref('games').once('value'), db.ref('meta/seen').once('value'),
     db.ref(`${VOICE_DIR}/used`).once('value'), db.ref('meta/voiceName').once('value')
@@ -312,7 +315,15 @@ async function sweepAbandonedRooms(skipId) {
     } else if (now - Math.max(...times) > IDLE_MS) {
       updates[`games/${id}`] = null;
       updates[`meta/seen/${id}`] = null;
+      // Free the room's name along with it.
+      if (game.name && game.pass) updates[`roomNames/${game.name}/${game.pass}`] = null;
     }
+  });
+  // Names whose room has gone some other way.
+  Object.entries(roomNames).forEach(([name, passes]) => {
+    Object.entries(passes || {}).forEach(([pass, id]) => {
+      if (!games[id]) updates[`roomNames/${name}/${pass}`] = null;
+    });
   });
   Object.keys(seen).forEach(id => {
     if (!games[id]) updates[`meta/seen/${id}`] = null;
