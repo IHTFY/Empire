@@ -8,8 +8,10 @@ const { getDatabase, ServerValue } = require('firebase-admin/database');
 
 // Uses the Cloud Functions runtime's default service account credentials. A named app keeps
 // this connection separate from the one the functions framework opens for database triggers.
+const emulated = process.env.FUNCTIONS_EMULATOR === 'true';
+const instance = emulated ? `${process.env.GCLOUD_PROJECT}-default-rtdb` : 'empire-ihtfy';
 const app = initializeApp({
-  databaseURL: 'https://empire-ihtfy.firebaseio.com'
+  databaseURL: `https://${instance}.firebaseio.com`
 }, 'empire');
 
 const db = getDatabase(app);
@@ -165,6 +167,8 @@ async function reserve(chars) {
 
 // A recording of `text`, from the cache or newly made; null when the free allowance is used up.
 async function recording(text) {
+  // Local games exercise the device-voice fallback without external TTS or credentials.
+  if (emulated) return null;
   const key = createHash('sha256').update(`${VOICE.name}|${text}`).digest('hex').slice(0, 40);
   const cached = db.ref(`${VOICE_DIR}/cache/${key}`);
   const used = db.ref(`${VOICE_DIR}/used/${key}`);
@@ -241,7 +245,7 @@ async function recordSample() {
 
 // Record a secret name as soon as a player sets it, while the room is still waiting, so the
 // recording is usually ready (cached) by the time someone presses Start.
-exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onWrite(async change => {
+exports.prepareVoice = functions.database.instance(instance).ref('/games/{gameId}/secrets/{userId}').onWrite(async change => {
   const name = change.after.val();
   if (typeof name !== 'string' || name.length === 0 || name === change.before.val()) {
     return null;
@@ -257,7 +261,7 @@ exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{
 // A bot removed after the names were revealed: publish its secret name (and recording) so
 // every device shows and speaks it. Players flag the removal in /eliminated; only that flag
 // makes this a bot, so a player leaving the room never gives away their own secret.
-exports.revealRemoved = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onDelete(async (snapshot, context) => {
+exports.revealRemoved = functions.database.instance(instance).ref('/games/{gameId}/secrets/{userId}').onDelete(async (snapshot, context) => {
   const name = snapshot.val();
   const { gameId, userId } = context.params;
   if (typeof name !== 'string' || name.length === 0) {
@@ -286,7 +290,7 @@ const SWEEP_EVERY_MS = 30 * 60 * 1000;
 
 // Room lifecycle: a new round unlocks the room and forgets the old order; creating a
 // room also sweeps away rooms nobody has been connected to for 12 hours.
-exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/state').onWrite(async (change, context) => {
+exports.roomState = functions.database.instance(instance).ref('/games/{gameId}/state').onWrite(async (change, context) => {
   const before = change.before.val();
   const after = change.after.val();
   if (after === 'resetting' && before !== 'resetting') {

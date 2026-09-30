@@ -19,10 +19,19 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
       - run: npm ci --prefix functions
       - run: npm run lint --prefix functions
       - run: npm audit --prefix functions --omit=dev
+      - run: npm test
+      - run: npm run test:integration
 
   deploy:
     needs: check
@@ -34,12 +43,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - run: npm ci
       - run: npm ci --prefix functions
       - uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - run: npx --yes firebase-tools@latest deploy --project empire-ihtfy --only hosting,functions,database --non-interactive --force
+      - run: npx firebase deploy --project empire-ihtfy --only hosting,functions,database --non-interactive --force
 
   # Each pull request gets its own temporary copy of the site (a Firebase Hosting preview
   # channel) and a comment with the link. Only the site is previewed: it talks to the same

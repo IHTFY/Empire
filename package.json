@@ -1,0 +1,16 @@
+{
+  "name": "empire",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "dev": "firebase emulators:start --project demo-empire-local --only hosting,auth,database,functions",
+    "test": "npm test --prefix functions",
+    "test:integration": "firebase emulators:exec --project demo-empire-local --only hosting,auth,database,functions \"npm run test:rules --prefix functions && node scripts/smoke.cjs\""
+  },
+  "devDependencies": {
+    "firebase-tools": "15.32.0"
+  },
+  "type": "module"
+}
