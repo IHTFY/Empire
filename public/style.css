@@ -259,7 +259,7 @@ a:hover { color: var(--gold-hi); }
 /* The lit half can also be dragged like a slider; --drag-x follows the finger. */
 .mode-switch { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .mode-switch.is-dragging { cursor: grabbing; }
-.mode-switch.is-dragging::before { transition: none; transform: translateX(var(--drag-x, 0px)); }
+#roomForm .mode-switch.is-dragging::before { transition: none; transform: translateX(var(--drag-x, 0px)); }
 .mode-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .field-row { display: flex; align-items: center; gap: 10px; }
 .field-row .field { flex: 1; min-width: 0; }
