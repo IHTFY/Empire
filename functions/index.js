@@ -356,7 +356,7 @@ async function sweepAbandonedRooms(skipId) {
       return;
     }
     const presence = Object.values(game.presence || {}).filter(Boolean);
-    if (presence.some(p => p.online)) {
+    if (presence.some(p => p.version === 2 ? Object.keys(p.connections || {}).length > 0 : p.online)) {
       if (seen[id]) updates[`meta/seen/${id}`] = null;
       return;
     }

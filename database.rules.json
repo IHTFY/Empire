@@ -38,7 +38,7 @@
             // players, and remove a player who has been offline for 10 minutes. Once the names
             // have been revealed the room is locked: no joining, renaming or new bots until the
             // next round (removals still work).
-            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true))) || (data.parent().parent().child('users').child(auth.uid).exists() && ((!data.exists() && newData.child('fakeBadge').val() === true && data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && data.child('fakeBadge').val() === true) || (!newData.exists() && data.parent().parent().child('presence').child($userId).child('online').val() === false && data.parent().parent().child('presence').child($userId).child('lastSeen').val() < now - 600000))))",
+            ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true))) || (data.parent().parent().child('users').child(auth.uid).exists() && ((!data.exists() && newData.child('fakeBadge').val() === true && data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && data.child('fakeBadge').val() === true) || (!newData.exists() && ((data.parent().parent().child('presence').child($userId).child('version').val() === 2 && !data.parent().parent().child('presence').child($userId).child('connections').hasChildren()) || (data.parent().parent().child('presence').child($userId).child('version').val() !== 2 && data.parent().parent().child('presence').child($userId).child('online').val() === false)) && data.parent().parent().child('presence').child($userId).child('lastSeen').val() < now - 600000))))",
             ".validate": "newData.hasChildren(['real', 'clan'])",
             "real": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "clan": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
@@ -66,7 +66,16 @@
           "$userId": {
             // Players in the room can also remove a watcher (someone present but not a player).
             ".write": "auth != null && ($userId === auth.uid || (!newData.exists() && !data.parent().parent().child('users').child($userId).exists() && data.parent().parent().child('users').child(auth.uid).exists()))",
-            ".validate": "newData.hasChildren(['online', 'lastSeen'])",
+            ".validate": "newData.hasChild('lastSeen') && (newData.child('version').val() === 2 || (data.child('version').val() !== 2 && newData.hasChild('online')))",
+            "version": { ".validate": "newData.val() === 2" },
+            "connections": {
+              "$connectionId": {
+                ".validate": "newData.hasChildren(['away', 'name'])",
+                "away": { ".validate": "newData.isBoolean()" },
+                "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
+                "$other": { ".validate": false }
+              }
+            },
             "online": { ".validate": "newData.isBoolean()" },
             "away": { ".validate": "newData.isBoolean()" },
             "lastSeen": { ".validate": "newData.isNumber() && newData.val() <= now" },
