@@ -1,4 +1,5 @@
 import { SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+import { suggestRoomName } from './room-names.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // NOTE ON for development. OFF for deployment.
@@ -522,17 +523,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearCodeError();
   });
 
-  // A readable random room name, e.g. amber-comet. The password is what keeps it private.
-  async function randomName() {
-    // Short words keep the name easy to read out and small enough for the table center.
-    const short = (await wordList()).filter(w => w.length >= 3 && w.length <= 6);
-    return slugify(`${pickRandom(short)} ${pickRandom(short)}`);
-  }
-
-  // The create form suggests a name; leaving it as is takes the suggestion.
+  // The create form suggests a memorable name (e.g. worried-hamster); leaving it as is takes
+  // the suggestion. The password is what keeps the room private.
   let suggestedName = '';
-  async function suggestName() {
-    suggestedName = await randomName();
+  function suggestName() {
+    suggestedName = suggestRoomName();
     if (roomMode === 'create') userGameCode.placeholder = suggestedName;
   }
 
@@ -579,7 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     await signedIn;
     let id = null;
-    let name = custom || suggestedName || await randomName();
+    let name = custom || suggestedName || suggestRoomName();
     if (custom) {
       id = await claimRoom(name);
       if (!id) {
@@ -589,7 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       // The suggested name was taken in the meantime: quietly try a few more.
       for (let i = 0; i < 5 && !id; i++) {
-        if (i > 0) name = await randomName();
+        if (i > 0) name = suggestRoomName();
         id = await claimRoom(name);
       }
       if (!id) {
