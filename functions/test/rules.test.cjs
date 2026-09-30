@@ -9,11 +9,11 @@ const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST;
 if (!host) throw new Error('Start the database emulator and set FIREBASE_DATABASE_EMULATOR_HOST to run rule checks.');
 const namespace = 'demo-empire-rules';
 const apps = [];
-function client(uid) {
+function client(uid, name = uid) {
   const app = initializeApp({
     projectId: namespace, databaseURL: `https://${namespace}.firebaseio.com`,
     databaseAuthVariableOverride: { uid }
-  }, `rules-${uid}`);
+  }, `rules-${name}`);
   apps.push(app);
   return getDatabase(app);
 }
@@ -121,4 +121,56 @@ test('reveal ownership stays private while the playback indexes remain public', 
   await assert.rejects(alice.ref('games/private-owners/nameOwners').once('value'), /permission/i);
   assert.equal((await request('games/private-owners/replay', 'GET')).status, 200);
   await assert.rejects(alice.ref('games/private-owners').update({ 'eliminated/bob': true }), /permission/i);
+});
+
+async function pollPresence(id, predicate) {
+  for (let i = 0; i < 100; i++) {
+    // Polling must observe the preceding disconnect; these requests are deliberately sequential.
+    // eslint-disable-next-line no-await-in-loop
+    const response = await request(`games/${id}/presence/alice`, 'GET');
+    // eslint-disable-next-line no-await-in-loop
+    const entry = await response.json();
+    if (predicate(entry)) return entry;
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  throw new Error('Presence did not reach the expected state');
+}
+
+test('disconnecting one socket preserves another; removal waits for the final disconnect', async () => {
+  await seed('multitab');
+  const a = client('alice', 'tab-a');
+  const b = client('alice', 'tab-b');
+  const bob = client('bob');
+  const refs = [a, b].map(db => db.ref('games/multitab/presence/alice'));
+  await Promise.all(refs.map(async (ref, i) => {
+    const key = i === 0 ? 'a' : 'b';
+    await ref.update({ version: 2, name: 'Alice', lastSeen: { '.sv': 'timestamp' } });
+    await ref.onDisconnect().update({ version: 2, [`connections/${key}`]: null, lastSeen: { '.sv': 'timestamp' } });
+    await ref.update({ version: 2, lastSeen: { '.sv': 'timestamp' }, name: 'Alice', [`connections/${key}`]: { away: i === 0, name: 'Alice' } });
+  }));
+  // Even an old timestamp cannot make a player removable while a connection remains.
+  await request('games/multitab/presence/alice/lastSeen', 'PUT', Date.now() - 700000, true);
+  await assert.rejects(bob.ref('games/multitab/users/alice').remove(), /permission/i);
+  await assert.rejects(alice.ref('games/multitab/presence/alice').set({ online: false, away: false, lastSeen: Date.now() }), /permission/i);
+  b.goOffline();
+  const one = await pollPresence('multitab', entry => entry.connections?.a && !entry.connections?.b);
+  assert.equal(one.version, 2);
+  assert.equal((await a.ref('.info/connected').once('value')).val(), true);
+  await assert.rejects(bob.ref('games/multitab/users/alice').remove(), /permission/i);
+  a.goOffline();
+  const none = await pollPresence('multitab', entry => !entry.connections);
+  assert(Date.now() - none.lastSeen < 5000);
+  await assert.rejects(bob.ref('games/multitab/users/alice').remove(), /permission/i);
+  // Model the ten-minute offline threshold without a ten-minute test delay.
+  await request('games/multitab/presence/alice/lastSeen', 'PUT', Date.now() - 700000, true);
+  await bob.ref('games/multitab').update({ 'users/alice': null, 'secrets/alice': null });
+});
+
+test('members can remove a watcher with connection entries but cannot remove a connected player', async () => {
+  await seed('watchers');
+  await outsider.ref('games/watchers/presence/outsider').update({ version: 2, lastSeen: Date.now(), connections: { tab: { away: false, name: 'Guest' } } });
+  await alice.ref('games/watchers/presence/outsider').remove();
+  await alice.ref('games/watchers/presence/alice').update({ version: 2, lastSeen: Date.now(), connections: { tab: { away: false, name: 'Alice' } } });
+  await assert.rejects(outsider.ref('games/watchers/presence/alice').remove(), /permission/i);
 });

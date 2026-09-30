@@ -34,7 +34,7 @@ function harness(initial = {}, overrides = {}, globals = {}) {
     database: { instance: () => ({ ref: () => ({ onWrite: callback => callback, onDelete: callback => callback }) }) },
     pubsub: { schedule: () => ({ onRun: callback => callback }) }, logger: { warn: () => {} }
   };
-  const context = vm.createContext({ exports: {}, console, setTimeout, clearTimeout, fetch, AbortSignal, require: name => {
+  const context = vm.createContext({ exports: {}, process: { env: {} }, console, setTimeout, clearTimeout, fetch, AbortSignal, require: name => {
     if (name === 'firebase-functions/v1') return functions;
     if (name === 'firebase-admin/app') return { initializeApp: () => ({}), applicationDefault: () => ({}) };
     if (name === 'firebase-admin/database') return { getDatabase: () => globals.database || { ref }, ServerValue: { TIMESTAMP: Date.now() } };
