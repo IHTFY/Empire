@@ -220,8 +220,8 @@ exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{
 // A bot removed after the names were revealed: publish its secret name (and recording) so
 // every device shows and speaks it. Players flag the removal in /eliminated; only that flag
 // makes this a bot, so a player leaving the room never gives away their own secret.
-exports.revealRemoved = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onDelete(async (change, context) => {
-  const name = change.before.val();
+exports.revealRemoved = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onDelete(async (snapshot, context) => {
+  const name = snapshot.val();
   const { gameId, userId } = context.params;
   if (typeof name !== 'string' || name.length === 0) {
     return null;
