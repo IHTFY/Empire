@@ -298,9 +298,6 @@ exports.dailySweep = functions.pubsub.schedule('every 24 hours').onRun(async () 
 async function sweepAbandonedRooms(skipId) {
   const now = Date.now();
   const claim = await db.ref('meta/lastSweep').transaction(last => (last && now - last < SWEEP_EVERY_MS ? undefined : now));
-  if (claim.committed && !claim.snapshot.exists()) {
-    throw new functions.https.HttpsError('permission-denied', 'You are not in this game.');
-  }
   if (!claim.committed) {
     return;
   }
