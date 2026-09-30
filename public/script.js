@@ -1381,7 +1381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     rollNumber($('playerCount'), count);
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
-    startButton.classList.toggle('is-disabled', count < 2 || revealing || preparing);
+    startButton.classList.toggle('is-disabled', (!locked && count < 2) || revealing || preparing);
     $('generateName').disabled = count >= MAX_PLAYERS;
 
     renderTable(players);
@@ -1895,11 +1895,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     revealing = true;
     const run = ++revealRun;
     const code = gameID;
-    const [namesSnap, startSnap] = await Promise.all([
+    const [namesSnap, startSnap, replaySnap] = await Promise.all([
       db.ref(`games/${code}/names`).once('value'),
-      db.ref(`games/${code}/startedAt`).once('value')
+      db.ref(`games/${code}/startedAt`).once('value'),
+      db.ref(`games/${code}/replay`).once('value')
     ]);
-    const names = namesSnap.val() || [];
+    const canonical = namesSnap.val() || [];
+    const replay = replaySnap.val();
+    const indexes = replay ? Object.values(replay.indexes || {}) : canonical.map((name, i) => i);
+    const names = indexes.map(i => canonical[i]);
     const startedAt = startSnap.val() || serverNow();
     const countdown = 3 * COUNTDOWN_MS;
     const total = countdown + names.length * NAME_MS;
@@ -1944,7 +1948,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const i = Math.floor(spokenT / NAME_MS);
         if (i !== spoken && i < names.length) {
           spoken = i;
-          if (spokenT - i * NAME_MS < 800) speak(names[i], clips[i]);
+          if (spokenT - i * NAME_MS < 800) speak(names[i], clips[indexes[i]]);
         }
       }
       await sleep(60);

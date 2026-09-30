@@ -79,6 +79,9 @@
         // mid-reveal rejoins at the right moment instead of getting a replay). Written only by
         // the flashNames function; the first reveal also locks the room until the next round.
         "names": { ".read": true, ".validate": false },
+        "replay": { ".read": true, ".validate": false },
+        // Reveal ownership is private: it must never associate a player with their secret.
+        "nameOwners": { ".read": false, ".validate": false },
         "startedAt": { ".read": true, ".validate": false },
         "revealEndsAt": { ".read": true, ".validate": false },
         "locked": { ".read": true, ".validate": false },

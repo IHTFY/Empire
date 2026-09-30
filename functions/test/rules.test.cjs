@@ -114,3 +114,11 @@ test('a start transaction freezes submissions and admits only one concurrent cla
   await seed('reset-submit', { state: 'resetting' });
   await assert.rejects(outsider.ref('games/reset-submit').update({ 'users/outsider': player('Guest'), 'secrets/outsider': 'pear' }), /permission/i);
 });
+
+test('reveal ownership stays private while the playback indexes remain public', async () => {
+  await seed('private-owners', { locked: true, names: ['otter', 'apple'], nameOwners: ['alice', 'bob'], replay: { indexes: [0, 1], count: 2 } });
+  assert.equal((await request('games/private-owners/nameOwners', 'GET')).status, 401);
+  await assert.rejects(alice.ref('games/private-owners/nameOwners').once('value'), /permission/i);
+  assert.equal((await request('games/private-owners/replay', 'GET')).status, 200);
+  await assert.rejects(alice.ref('games/private-owners').update({ 'eliminated/bob': true }), /permission/i);
+});
