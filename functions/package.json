@@ -3,12 +3,12 @@
   "description": "Cloud Functions for Firebase",
   "scripts": {
     "lint": "eslint .",
-    "serve": "firebase emulators:start --only functions",
+    "serve": "npm --prefix .. run dev",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "node --test test/room-state.test.cjs test/rounds.test.cjs",
+    "test": "node --test test/room-state.test.cjs test/rounds.test.cjs test/bot-rereads.test.cjs test/presence.test.cjs test/emulators.test.cjs",
     "test:rules": "node --test test/rules.test.cjs"
   },
   "engines": {
