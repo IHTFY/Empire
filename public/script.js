@@ -862,7 +862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       el.lastChild.textContent = ch;
       // Reveal ripples left to right; hiding folds back right to left.
-      el.style.setProperty('--d', `${(secretShown ? i : chars.length - 1 - i) * 45}ms`);
+      el.style.setProperty('--d', `${(secretShown ? i : chars.length - 1 - i) * 22}ms`);
     });
     glyphs.style.transform = `translateX(${-secretName.scrollLeft}px)`;
   }
