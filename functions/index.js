@@ -209,8 +209,6 @@ const PHRASES = {
   playerLeft: 'A player has left the game.',
   botJoined: 'A bot has joined the game.',
   botLeft: 'A bot has left the game.',
-  listen: 'Listen carefully.',
-  lastName: "That's all the names.",
   newRound: 'A new round is starting.'
 };
 let phrasesJob = null;
