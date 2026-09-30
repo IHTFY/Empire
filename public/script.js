@@ -1984,8 +1984,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     stage.innerHTML = '';
     bar.classList.remove('run');
     // The reveal is over (or was already over when this player arrived).
+    // The rules check the server's clock, which can be slightly behind this device's estimate,
+    // so retry briefly instead of leaving the room stuck in playing.
     if (stillHere() && serverNow() - startedAt >= total) {
-      db.ref(`games/${code}/state`).set('waiting').catch(() => {});
+      (async () => {
+        for (let attempt = 0; attempt < 5 && stillHere(); attempt++) {
+          try {
+            await db.ref(`games/${code}/state`).set('waiting');
+            return;
+          } catch (err) {
+            await sleep(1000);
+          }
+        }
+      })();
     }
     renderLobby();
     if (gameID && state === 'playing' && run !== revealRun) displaySecrets();
