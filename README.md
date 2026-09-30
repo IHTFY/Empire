@@ -31,11 +31,41 @@
 - All member of each empire should cooperate to guess the remaining leaders' secret names and protect the secret name of their leader
 - Only the leader of an empire can make official guesses; other members can talk, but any guesses don't count as a turn for their empire
 
+## Local development and verification
+
+Use Node.js 22 and Java 21 or newer. Install both sets of dependencies once:
+
+```sh
+npm ci
+npm ci --prefix functions
+npm run dev
+```
+
+Open http://localhost:15000 (or the development machine's LAN address on port 15000 for
+another device). The browser on this port connects to local Authentication (19099),
+Realtime Database (19000), and Functions (15001); the emulator UI is at http://localhost:14000.
+The game uses the demo project `demo-empire-local` and its `demo-empire-local-default-rtdb`
+database instance. Local name reads use the device voice; no Cloud Text-to-Speech request
+is made. Emulator data is temporary and is discarded when the suite stops.
+
+For verification, stop the development suite first, then run:
+
+```sh
+npm test
+npm run test:integration
+```
+
+The integration command starts the suite, checks the actual database rules in an isolated
+rules-test namespace, then runs a synthetic create/join/reveal/reset/new-round/end scenario
+against the local callable and database triggers. It also checks outsider denial and private
+reveal ownership. Emulator checks need no deploy credentials. Only use these development
+ports on a trusted local network: the emulator's admin API is intentionally unauthenticated.
+
 ## Deploying
 
 The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy to the `empire-ihtfy` Firebase project through GitHub Actions (`.github/workflows/firebase-deploy.yml`):
 
-- **Pull requests:** install, lint and audit `functions/`, then deploy the site to a temporary preview link (posted as a comment on the PR, valid 7 days). The preview uses the live database and function, so only site changes can be tried there.
+- **Pull requests:** install, lint and audit `functions/`, run regression and whole-game emulator checks, then deploy the site to a temporary preview link (posted as a comment on the PR, valid 7 days). The preview uses the live database and function, so only site changes can be tried there.
 - **Push to `master`** (or **Actions → Firebase → Run workflow**): the checks run, then `firebase deploy --only hosting,functions,database`.
 
 ### One-time setup
