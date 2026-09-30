@@ -1,4 +1,4 @@
-import { SHAPES, COLOURS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+import { SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // NOTE ON for development. OFF for deployment.
@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // A readable random room code, e.g. amber-comet-42.
   async function randomCode() {
-    // Short words keep the code easy to read out and small enough for the table centre.
+    // Short words keep the code easy to read out and small enough for the table center.
     const short = (await wordList()).filter(w => w.length >= 3 && w.length <= 6);
     for (let i = 0; i < 5; i++) {
       const code = `${pickRandom(short)}-${pickRandom(short)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Each group lists its choices; tiles preview the choice on your current crest.
   const crestGroups = [
     { part: 'shape', label: 'Shape', options: SHAPES },
-    { part: 'colour', label: 'Colour', options: COLOURS, swatch: true },
+    { part: 'color', label: 'Color', options: COLORS, swatch: true },
     { part: 'pattern', label: 'Pattern', options: PATTERNS },
     { part: 'emblem', label: 'Emblem', options: EMBLEMS }
   ];
@@ -678,7 +678,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const head = document.createElement('div');
       head.className = 'crest-group-head';
       head.innerHTML = `<span class="eyebrow">${group.label}</span>`;
-      if (group.part === 'colour') {
+      if (group.part === 'color') {
         const metals = document.createElement('div');
         metals.className = 'crest-metals';
         metals.innerHTML = '<span class="eyebrow">Trim</span>';
@@ -713,7 +713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('#crestOptions .crest-tile').forEach(tile => {
       const { part, value } = tile.dataset;
       tile.setAttribute('aria-pressed', String(crest[part] === value));
-      if (part === 'colour' || part === 'metal') return;
+      if (part === 'color' || part === 'metal') return;
       // Patterns are shown without the emblem so the division is easy to see.
       const preview = { ...crest, [part]: value, ...(part === 'pattern' ? { emblem: 'letter' } : {}) };
       tile.innerHTML = crestSvg(preview, { letter: part === 'pattern' ? '' : letter });
@@ -1207,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       entry.el.style.transform = `rotate(${a.toFixed(2)}deg) translateY(${-R}px) rotate(${(-a).toFixed(2)}deg)`;
       entry.el.classList.toggle('dim', p.away || p.offline);
       paintAvatar(entry.avatar, p, S);
-      // Names sit on the outer side of each seat so they never cover the centre.
+      // Names sit on the outer side of each seat so they never cover the center.
       Object.assign(entry.label.style, {
         left: `${36 - L.lw / 2}px`, width: `${L.lw}px`, top: `${upper ? -(lh + 3) : S + 3}px`,
         lineHeight: `${lh}px`, fontSize: `${L.f}px`
@@ -1339,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return frames;
   }
 
-  // The table's ring and centre, left behind as a copy that dissolves outward.
+  // The table's ring and center, left behind as a copy that dissolves outward.
   function tableGhost() {
     const table = $('tableView');
     const rect = table.getBoundingClientRect();
