@@ -23,6 +23,23 @@ function shuffle(a) {
   return a;
 }
 
+// Keep the first reveal as the canonical list. Playback indexes preserve voice alignment
+// and relative order, even when two players chose the same secret. Owners stay server-only.
+function indexesForReread(game) {
+  const retired = new Map();
+  Object.values(game.eliminated || {}).forEach(entry => {
+    if (typeof entry?.name === 'string') retired.set(entry.name, (retired.get(entry.name) || 0) + 1);
+  });
+  return game.names.map((name, i) => i).filter(i => {
+    if (Array.isArray(game.nameOwners)) return !game.eliminated?.[game.nameOwners[i]];
+    // Rooms revealed before ownership was recorded use one occurrence per announcement.
+    const name = game.names[i];
+    const count = retired.get(name) || 0;
+    if (count) { retired.set(name, count - 1); return false; }
+    return true;
+  });
+}
+
 // gcloud alpha functions add-iam-policy-binding flashNames --member=allUsers --role=roles/cloudfunctions.invoker
 // https://github.com/firebase/functions-samples/issues/395#issuecomment-605025572
 exports.flashNames = functions.https.onCall(async (data, context) => {
@@ -59,14 +76,16 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
     let names = game.locked && Array.isArray(game.names) ? game.names : null;
     reuseVoice = Boolean(names && game.voice);
     if (!names) {
-      names = Object.keys(game.users)
-        .map(key => game.secrets?.[key] || game.users[key].fake)
-        .filter(name => typeof name === 'string' && name.length > 0);
-      if (names.length < 2) {
+      const entries = Object.keys(game.users)
+        .map(key => ({ key, name: game.secrets?.[key] || game.users[key].fake }))
+        .filter(entry => typeof entry.name === 'string' && entry.name.length > 0);
+      if (entries.length < 2) {
         failure = new functions.https.HttpsError('failed-precondition', 'You need at least 2 players to start.');
         return undefined;
       }
-      names = shuffle(names);
+      shuffle(entries);
+      names = entries.map(entry => entry.name);
+      game.nameOwners = entries.map(entry => entry.key);
       delete game.voice;
     }
     // Freeze names and lock submissions in the same transaction that claims the start.
@@ -87,7 +106,9 @@ exports.flashNames = functions.https.onCall(async (data, context) => {
     if (game.state !== 'shuffling') return undefined;
     game.state = 'playing';
     game.startedAt = ServerValue.TIMESTAMP;
-    game.revealEndsAt = Date.now() + 3000 + names.length * 2500;
+    const indexes = indexesForReread(game);
+    game.replay = { indexes, count: indexes.length };
+    game.revealEndsAt = Date.now() + 3000 + indexes.length * 2500;
     game.voice = { ...game.voice, ...ready };
     return game;
   });
@@ -277,7 +298,7 @@ exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gam
       // Ask the server to retry an empty local cache before checking the room state.
       if (game === null) return null;
       if (!game || game.state !== 'resetting') return undefined;
-      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'locked', 'voice', 'eliminated']) delete game[key];
+      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated']) delete game[key];
       game.state = 'waiting';
       return game;
     });
