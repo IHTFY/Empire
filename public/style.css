@@ -564,12 +564,20 @@ dialog.sheet {
   box-shadow: 0 -20px 60px rgba(0, 0, 0, .5);
   display: none; flex-direction: column; gap: 6px;
 }
-dialog.sheet[open] { display: flex; animation: sheet-up .35s var(--ease) both; }
+/* The open animation only fills backwards, so a drag's inline transform can move the sheet
+   once it has landed. Closing slides it back down from wherever it is. */
+dialog.sheet[open] { display: flex; animation: sheet-up .35s var(--ease) backwards; touch-action: none; }
 dialog.sheet::backdrop { background: rgba(4, 5, 16, .6); backdrop-filter: blur(2px); animation: fade-bg .3s ease both; }
+dialog.sheet.closing { animation: sheet-down .26s cubic-bezier(.4, 0, .9, .6) forwards; pointer-events: none; }
+dialog.sheet.closing::backdrop { animation: fade-bg-out .26s ease forwards; }
+dialog.sheet.dragging { animation: none; }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
 @keyframes fade-bg { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-bg-out { from { opacity: 1; } to { opacity: 0; } }
 .sheet-tall { max-height: 88vh; max-height: 88dvh; }
-.sheet-grip { align-self: center; width: 40px; height: 4px; border-radius: 2px; background: rgba(244, 241, 232, .25); margin-bottom: 8px; }
+.sheet-grip { align-self: center; width: 40px; height: 4px; border-radius: 2px; background: rgba(244, 241, 232, .25); margin-bottom: 8px; cursor: grab; }
+.sheet .rules, .sheet .crest-options { touch-action: pan-y; }
 .sheet-title { margin: 8px 0 4px; font-size: 34px; }
 .sheet hr { width: 100%; border: none; border-top: 1px solid var(--line); margin: 6px 0; }
 .sheet .row-2 { margin-top: 14px; }
@@ -626,8 +634,10 @@ dialog.sheet::backdrop { background: rgba(4, 5, 16, .6); backdrop-filter: blur(2
     width: min(480px, calc(100% - 48px)); margin: auto; padding: 20px 24px 24px;
     border-radius: 28px; box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
   }
-  dialog.sheet[open] { animation: sheet-pop .3s var(--ease) both; }
+  dialog.sheet[open] { animation: sheet-pop .3s var(--ease) backwards; touch-action: auto; }
+  dialog.sheet.closing { animation: sheet-unpop .2s cubic-bezier(.4, 0, 1, 1) forwards; }
   @keyframes sheet-pop { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+  @keyframes sheet-unpop { to { opacity: 0; transform: translateY(16px) scale(.97); } }
   .sheet-grip { display: none; }
   .sheet-tall { max-height: min(88dvh, 860px); }
   #rulesDialog { width: min(560px, calc(100% - 48px)); }
