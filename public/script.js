@@ -1,10 +1,15 @@
 import { SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, botCrest, crestSvg, crestDefs } from './crest.js';
 import { suggestRoomName } from './room-names.js';
+import { summarizePresence } from './presence.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // NOTE ON for development. OFF for deployment.
-  // firebase.functions().useFunctionsEmulator('http://localhost:5001');
-
+  try {
+    await window.empireFirebaseReady;
+  } catch (err) {
+    console.error(err);
+    document.getElementById('userGameCodeHelper').textContent = 'Could not connect. Reload to try again.';
+    return;
+  }
   const OFFLINE_KICK_MS = 10 * 60 * 1000;
   const AWAY_AFTER_MS = 2 * 60 * 1000;
   const COUNTDOWN_MS = 1000;
@@ -416,7 +421,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let state = null;
   let locked = false;
   let revealing = false;
+  let revealRun = 0;
   let presenceRef = null;
+  let presenceConnection = null;
   let awayTimer = null;
 
   function listen(ref, callback) {
@@ -425,12 +432,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function detachRoom() {
+    revealRun++;
     listeners.forEach(([ref, callback]) => ref.off('value', callback));
     listeners = [];
-    if (presenceRef) {
-      presenceRef.onDisconnect().cancel();
-      presenceRef = null;
-    }
+    const stopped = stopPresence();
     clearTimeout(awayTimer);
     gameID = null;
     roomName = null;
@@ -441,6 +446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     locked = false;
     document.title = 'Empire';
     resetLobby();
+    return stopped;
   }
 
   // Rooms live under a random Firebase key nobody types. People know a room by its name
@@ -753,7 +759,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (gameID && gameID !== code) {
       await leaveRoom({ goHome: false });
     }
-    detachRoom();
+    await detachRoom();
     gameID = code;
     const [nameSnap, passSnap] = await Promise.all([
       db.ref(`games/${code}/name`).once('value'), db.ref(`games/${code}/pass`).once('value')
@@ -798,7 +804,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     listen(db.ref(`games/${gameID}/presence`), snapshot => {
       const hadPresence = Boolean(presence[uid]);
-      presence = snapshot.val() || {};
+      presence = Object.fromEntries(Object.entries(snapshot.val() || {}).map(([key, seen]) => [key, summarizePresence(seen)]));
       // A player removed my watching entry: leave the room.
       if (hadPresence && !presence[uid] && !users[uid] && state !== 'resetting' && state !== 'deleting') {
         toast('You were removed from the room.');
@@ -843,11 +849,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function leaveRoom({ goHome = true } = {}) {
     if (!gameID) return;
     const code = gameID;
-    if (presenceRef) {
-      await presenceRef.onDisconnect().cancel();
-    }
     // Stop listening first so removing myself isn't mistaken for being removed.
-    detachRoom();
+    await detachRoom();
     await db.ref(`games/${code}`).update({
       [`users/${uid}`]: null,
       [`secrets/${uid}`]: null,
@@ -873,27 +876,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------------------------------------------------------------------
   // Presence: online/offline is tracked by the server connection, away by tab visibility.
 
+  function stopPresence() {
+    const ref = presenceRef;
+    const connection = presenceConnection;
+    presenceRef = presenceConnection = null;
+    clearTimeout(awayTimer);
+    if (!ref) return Promise.resolve();
+    // Remove our entry before canceling the disconnect hook, including when reentering a room.
+    const remove = connection ? ref.update({ [`connections/${connection.key}`]: null, lastSeen: firebase.database.ServerValue.TIMESTAMP }) : Promise.resolve();
+    return remove.then(() => ref.onDisconnect().cancel()).catch(err => console.error(err));
+  }
+
   function startPresence() {
     presenceRef = db.ref(`games/${gameID}/presence/${uid}`);
     const ref = presenceRef;
     listen(db.ref('.info/connected'), async snapshot => {
       if (snapshot.val() !== true || ref !== presenceRef) return;
-      // A full set (not update): the rules require online + lastSeen together.
-      await ref.onDisconnect().set({ online: false, away: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
-      await ref.set({ online: true, away: document.hidden, lastSeen: firebase.database.ServerValue.TIMESTAMP, name: (localStorage.getItem('realName') || 'Guest').slice(0, 100) });
+      const connection = ref.child('connections').push();
+      presenceConnection = connection;
+      const name = (localStorage.getItem('realName') || 'Guest').slice(0, 100);
+      try {
+        // Establish the schema before registering a multi-path disconnect write. No online
+        // entry is published until its cleanup is registered.
+        await ref.update({ version: 2, name, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+        if (ref !== presenceRef || presenceConnection !== connection) return;
+        await ref.onDisconnect().update({ version: 2, [`connections/${connection.key}`]: null, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+        if (ref !== presenceRef || presenceConnection !== connection) return;
+        await connection.set({ away: document.hidden, name });
+        if (ref !== presenceRef) await ref.update({ [`connections/${connection.key}`]: null, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+      } catch (err) { console.error(err); }
     });
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (!presenceRef) return;
+    if (!presenceConnection) return;
     clearTimeout(awayTimer);
+    const connection = presenceConnection;
     if (document.hidden) {
-      const ref = presenceRef;
       awayTimer = setTimeout(() => {
-        ref.update({ away: true, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+        if (connection === presenceConnection) connection.update({ away: true }).catch(() => {});
       }, AWAY_AFTER_MS);
     } else {
-      presenceRef.update({ online: true, away: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+      connection.update({ away: false }).catch(() => {});
     }
   });
 
@@ -1108,40 +1132,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!ok) return;
 
-    localStorage.setItem('realName', userRealName);
-    sessionStorage.setItem(`secret:${gameID}`, userFakeName);
-
-    // Leaving the reset screen: mark the room waiting first so nobody still clearing
-    // the old round can wipe this entry.
+    const code = gameID;
     if (state === 'resetting') {
-      await db.ref(`games/${gameID}`).update({ state: 'waiting' });
-    }
-
-    if (locked && !users[uid]) {
-      toast('This round has started. You can watch and join at the next round.');
-      show('lobby');
+      toast('The new round is getting ready. Try again in a moment.');
       return;
     }
-
-    // The player entry is public; the secret name is stored where only the server can read it.
-    // Right after a New round the server may still be unlocking the room, so retry briefly.
-    // Fields are written one by one so a rename doesn't wipe the crest.
-    for (let attempt = 0; ; attempt++) {
-      try {
-        await db.ref(`games/${gameID}`).update({
-          [`users/${uid}/real`]: userRealName,
-          [`users/${uid}/clan`]: userRealName,
-          [`secrets/${uid}`]: userFakeName
-        });
-        break;
-      } catch (err) {
-        if (attempt >= 4) {
-          toast(locked ? 'Names are locked until the next round.' : 'Could not save your names. Try again.');
-          return;
-        }
-        await sleep(700);
-      }
+    if (locked || state !== 'waiting') {
+      toast('Names are locked until the next round.');
+      return;
     }
+    // A submission racing Start either commits before the roster freezes or is rejected.
+    try {
+      await db.ref(`games/${code}`).update({
+        [`users/${uid}/real`]: userRealName,
+        [`users/${uid}/clan`]: userRealName,
+        [`secrets/${uid}`]: userFakeName
+      });
+    } catch (err) {
+      toast('Could not save your names. The round may have started; try again next round.');
+      return;
+    }
+    if (gameID !== code) return;
+    localStorage.setItem('realName', userRealName);
+    sessionStorage.setItem(`secret:${code}`, userFakeName);
+    if (presenceConnection) presenceConnection.update({ name: userRealName }).catch(() => {});
     // Written on its own so a database without crest support still accepts the names.
     db.ref(`games/${gameID}/users/${uid}/crest`).set(crestString(crest)).catch(() => {});
 
@@ -1458,6 +1472,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       ? 'Names are set for this round. You can watch and join at the next round.'
       : 'Names are set for this round. New players can watch and join next round.';
     $('generateName').hidden = spectator;
+    document.querySelectorAll('[data-open="confirmNewGame"], [data-open="confirmDelete"]').forEach(button => { button.hidden = spectator; });
     startButton.hidden = spectator;
     $('generateName').classList.toggle('is-disabled', locked);
     const preparing = state === 'shuffling';
@@ -1469,7 +1484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     rollNumber($('playerCount'), count);
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
-    startButton.classList.toggle('is-disabled', count < 2 || revealing || preparing);
+    startButton.classList.toggle('is-disabled', (!locked && count < 2) || revealing || preparing);
     $('generateName').disabled = count >= MAX_PLAYERS;
 
     renderTable(players);
@@ -1842,13 +1857,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  $('roomResetButton').addEventListener('click', () => {
-    db.ref(`games/${gameID}`).update({ state: 'resetting' });
-  });
-
-  $('roomDeleteButton').addEventListener('click', () => {
-    db.ref(`games/${gameID}`).update({ state: 'deleting' });
-  });
+  async function requestRoomState(next) {
+    if (!gameID || !users[uid]) return;
+    try {
+      await db.ref(`games/${gameID}/state`).set(next);
+    } catch (err) {
+      toast('Could not change the room. Try again.');
+    }
+  }
+  $('roomResetButton').addEventListener('click', () => requestRoomState('resetting'));
+  $('roomDeleteButton').addEventListener('click', () => requestRoomState('deleting'));
 
   startButton.addEventListener('click', async () => {
     if (startButton.classList.contains('is-disabled')) {
@@ -1872,6 +1890,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function onStateChange(snapshot) {
     const previous = state;
     state = snapshot.val();
+    if (previous === 'playing' && state !== 'playing') revealRun++;
     const code = gameID;
 
     if (state === 'playing' && previous !== 'playing') {
@@ -1885,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (state === 'deleting' || (state === null && previous !== null)) {
       // Stop listening first so the room disappearing doesn't trigger this twice.
       const [name, pass] = [roomName, roomPass];
-      detachRoom();
+      await detachRoom();
       // The room's name is freed in the same write, so it can be used again right away.
       const gone = { [`games/${code}`]: null };
       if (pass) gone[`roomNames/${name}/${pass}`] = null;
@@ -1894,17 +1913,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.replace('/');
     }
     if (state === 'resetting' && previous !== 'resetting') {
-      await db.ref(`games/${code}`).update({
-        [`users/${uid}`]: null,
-        [`secrets/${uid}`]: null
-      }).catch(() => {});
+      // Forget membership before the server's roster/state callbacks arrive in either order.
+      users = {};
       setSecret('');
       sessionStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
       $('submitLabel').textContent = 'Enter the lobby';
       show('setup');
-      await db.ref(`games/${code}/users`).remove().catch(() => {});
-      await db.ref(`games/${code}/secrets`).remove().catch(() => {});
+      // The server clears the old roster and opens the next round.
     }
   }
 
@@ -1980,16 +1996,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function displaySecrets() {
     if (revealing) return;
     revealing = true;
+    const run = ++revealRun;
     const code = gameID;
-    const [namesSnap, startSnap] = await Promise.all([
+    const [namesSnap, startSnap, replaySnap] = await Promise.all([
       db.ref(`games/${code}/names`).once('value'),
-      db.ref(`games/${code}/startedAt`).once('value')
+      db.ref(`games/${code}/startedAt`).once('value'),
+      db.ref(`games/${code}/replay`).once('value')
     ]);
-    const names = namesSnap.val() || [];
+    const canonical = namesSnap.val() || [];
+    const replay = replaySnap.val();
+    const indexes = replay ? Object.values(replay.indexes || {}) : canonical.map((name, i) => i);
+    const names = indexes.map(i => canonical[i]);
     const startedAt = startSnap.val() || serverNow();
     const countdown = 3 * COUNTDOWN_MS;
     const total = countdown + names.length * NAME_MS;
-    const stillHere = () => gameID === code && state === 'playing';
+    const stillHere = () => gameID === code && state === 'playing' && run === revealRun;
 
     const reveal = $('revealScreen');
     const stage = $('revealStage');
@@ -2030,7 +2051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const i = Math.floor(spokenT / NAME_MS);
         if (i !== spoken && i < names.length) {
           spoken = i;
-          if (spokenT - i * NAME_MS < 800) speak(names[i], clips[i]);
+          if (spokenT - i * NAME_MS < 800) speak(names[i], clips[indexes[i]]);
         }
       }
       await sleep(60);
@@ -2043,10 +2064,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     stage.innerHTML = '';
     bar.classList.remove('run');
     // The reveal is over (or was already over when this player arrived).
+    // The rules check the server's clock, which can be slightly behind this device's estimate,
+    // so retry briefly instead of leaving the room stuck in playing.
     if (stillHere() && serverNow() - startedAt >= total) {
-      db.ref(`games/${code}`).update({ state: 'waiting' });
+      (async () => {
+        for (let attempt = 0; attempt < 5 && stillHere(); attempt++) {
+          try {
+            await db.ref(`games/${code}/state`).set('waiting');
+            return;
+          } catch (err) {
+            await sleep(1000);
+          }
+        }
+      })();
     }
     renderLobby();
+    if (gameID && state === 'playing' && run !== revealRun) displaySecrets();
   }
 
   // ---------------------------------------------------------------------------
