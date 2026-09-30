@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function harness(initial = {}, overrides = {}) {
+function harness(initial = {}, overrides = {}, globals = {}) {
   const data = structuredClone(initial);
   const clone = value => value === undefined ? null : structuredClone(value);
   const read = target => target.split('/').filter(Boolean).reduce((value, key) => value?.[key], data);
@@ -37,14 +37,14 @@ function harness(initial = {}, overrides = {}) {
   const context = vm.createContext({ exports: {}, console, setTimeout, clearTimeout, fetch, AbortSignal, require: name => {
     if (name === 'firebase-functions/v1') return functions;
     if (name === 'firebase-admin/app') return { initializeApp: () => ({}), applicationDefault: () => ({}) };
-    if (name === 'firebase-admin/database') return { getDatabase: () => ({ ref }), ServerValue: { TIMESTAMP: Date.now() } };
+    if (name === 'firebase-admin/database') return { getDatabase: () => globals.database || { ref }, ServerValue: { TIMESTAMP: Date.now() } };
     return require(name);
-  } });
+  }, ...globals });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../../index.js'), 'utf8'), context);
   Object.entries(overrides).forEach(([name, callback]) => {
     context.override = callback;
     vm.runInContext(`${name} = override`, context);
   });
-  return { data, ref, snapshot, exports: context.exports };
+  return { data, ref, snapshot, exports: context.exports, evaluate: expression => vm.runInContext(expression, context) };
 }
 module.exports = { harness };

@@ -94,3 +94,23 @@ test('only members can manage bots or remove offline players', async () => {
   await alice.ref('games/players').update({ 'users/bot': null, 'secrets/bot': null });
   await alice.ref('games/players').update({ 'users/bob': null, 'secrets/bob': null });
 });
+
+test('a start transaction freezes submissions and admits only one concurrent claim', async () => {
+  const { harness } = require('./support/functions.cjs');
+  const app = initializeApp({ projectId: namespace, databaseURL: `https://${namespace}.firebaseio.com` }, 'rules-admin');
+  apps.push(app);
+  const database = getDatabase(app);
+  await seed('race');
+  let calls = 0;
+  const h = harness({}, { recordNames: () => { calls++; return { ready: Promise.resolve({}), done: Promise.resolve() }; } }, { database });
+  await Promise.all([1, 2].map(() => h.exports.flashNames({ text: 'race' }, { auth: { uid: 'alice' } })));
+  const room = (await database.ref('games/race').once('value')).val();
+  assert.equal(calls, 1);
+  assert.equal(room.locked, true);
+  assert.equal(room.state, 'playing');
+  assert.deepEqual([...room.names].sort(), ['apple', 'otter']);
+  await assert.rejects(outsider.ref('games/race').update({ 'users/outsider': player('Guest'), 'secrets/outsider': 'pear' }), /permission/i);
+  await assert.rejects(alice.ref('games/race/secrets/alice').set('tiger'), /permission/i);
+  await seed('reset-submit', { state: 'resetting' });
+  await assert.rejects(outsider.ref('games/reset-submit').update({ 'users/outsider': player('Guest'), 'secrets/outsider': 'pear' }), /permission/i);
+});
