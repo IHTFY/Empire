@@ -248,6 +248,23 @@ a:hover { color: var(--gold-hi); }
   box-shadow: 0 30px 60px rgba(0, 0, 0, .35);
 }
 
+/* Create / join switch: the lit half slides between the two choices. */
+.mode-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 16px; background: var(--field); border: 1px solid var(--line); }
+.mode-switch::before {
+  content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 12px;
+  background: var(--surface-2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 8px rgba(0, 0, 0, .3);
+  transition: transform .35s var(--ease);
+}
+#roomForm[data-mode="join"] .mode-switch::before { transform: translateX(100%); }
+.mode-switch button { position: relative; height: 40px; border: none; background: none; border-radius: 12px; font-size: 15px; font-weight: 700; color: var(--muted); transition: color .2s; }
+.mode-switch button[aria-pressed="true"] { color: var(--ink); }
+#passField:not([hidden]) { animation: rise .35s var(--ease) both; }
+.field-pass { font-family: var(--mono); font-size: 20px; letter-spacing: .3em; text-transform: uppercase; }
+.field-pass::placeholder { letter-spacing: .3em; }
+.btn.is-busy { pointer-events: none; opacity: .7; }
+.room-pass { font-size: 14px; color: var(--muted); }
+.room-pass strong { margin-left: 6px; font-family: var(--mono); font-size: 17px; letter-spacing: .18em; color: var(--gold-hi); user-select: all; }
+
 /* ---------- Pick names ---------- */
 
 .setup-title { margin: 0; font-size: 48px; }
@@ -715,10 +732,10 @@ dialog.sheet.dragging { animation: none; }
 /* Big, high-resolution screens: the controls and text around the stage grow in steps so
    they stay in proportion with the table and hero, which already scale with the viewport. */
 @media (min-width: 1600px) and (min-height: 1000px) {
-  .bar, #roomForm, .names-form, .list-head .eyebrow, .invite, #listSummary, .watching, .notice, #generateName, #revealSecrets, dialog.sheet, .toast { zoom: 1.2; }
+  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, .notice, #generateName, #revealSecrets, dialog.sheet, .toast { zoom: 1.2; }
 }
 @media (min-width: 2200px) and (min-height: 1300px) {
-  .bar, #roomForm, .names-form, .list-head .eyebrow, .invite, #listSummary, .watching, .notice, #generateName, #revealSecrets, dialog.sheet, .toast { zoom: 1.45; }
+  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, .notice, #generateName, #revealSecrets, dialog.sheet, .toast { zoom: 1.45; }
 }
 
 @media (prefers-reduced-motion: reduce) {
