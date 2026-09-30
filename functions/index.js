@@ -256,6 +256,13 @@ exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gam
   return null;
 });
 
+// Creating a room is what normally triggers the sweep, so quiet spells would leave abandoned
+// rooms (and bot-only ones) around indefinitely. This runs it once a day regardless.
+exports.dailySweep = functions.pubsub.schedule('every 24 hours').onRun(async () => {
+  await sweepAbandonedRooms(null);
+  return null;
+});
+
 async function sweepAbandonedRooms(skipId) {
   const now = Date.now();
   const claim = await db.ref('meta/lastSweep').transaction(last => (last && now - last < SWEEP_EVERY_MS ? undefined : now));
