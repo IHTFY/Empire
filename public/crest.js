@@ -83,6 +83,12 @@ export const EMBLEMS = {
   cross: { label: 'Cross', svg: '<path d="M9 2h6l-1.5 8.5L22 9v6l-8.5-1.5L15 22H9l1.5-8.5L2 15V9l8.5 1.5z"/>' }
 };
 
+// Bots wear a robot instead of an emblem. It isn't offered in the picker, so people can't
+// pass themselves off as a bot.
+const BOT_EMBLEM = '<rect x="11.2" y="3.2" width="1.6" height="4.6"/><circle cx="12" cy="2.9" r="1.8"/>'
+  + '<rect x="1.3" y="11" width="2.2" height="4.6" rx=".9"/><rect x="20.5" y="11" width="2.2" height="4.6" rx=".9"/>'
+  + '<path fill-rule="evenodd" d="M5.5 7.5h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2zM8.6 11a2 2 0 1 0 0 4a2 2 0 1 0 0-4zM15.4 11a2 2 0 1 0 0 4a2 2 0 1 0 0-4zM8.5 16.9h7v1.5h-7z"/>';
+
 const KEYS = { shape: SHAPES, color: COLORS, pattern: PATTERNS, emblem: EMBLEMS, metal: METALS };
 export const PARTS = ['shape', 'color', 'pattern', 'emblem', 'metal'];
 
@@ -110,6 +116,14 @@ export function defaultCrest(key) {
   return { shape: 'round', color: colors[hash % colors.length], pattern: 'plain', emblem: 'letter', metal: hash % 2 ? 'gold' : 'silver' };
 }
 
+// A bot's crest, worked out from its id so every device draws the same one.
+export function botCrest(key) {
+  let hash = 0;
+  for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const from = obj => { const keys = Object.keys(obj); const k = keys[hash % keys.length]; hash = Math.floor(hash / keys.length); return k; };
+  return { shape: from(SHAPES), color: from(COLORS), pattern: from(PATTERNS), emblem: 'bot', metal: from(METALS) };
+}
+
 const escape = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
 // The crest as inline SVG. `letter` is the initial shown by the Letter emblem; `ring`
@@ -126,7 +140,8 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
       ? `<text x="${cx}" y="${round(cy + 9.4 * s)}" text-anchor="middle" font-family="'Barlow Condensed', 'Arial Narrow', sans-serif" font-style="italic" font-weight="800" font-size="${round(27 * s)}" fill="${metal}">${escape(letter)}</text>`
       : '';
   } else {
-    emblem = `<g fill="${metal}" color="${metal}" transform="translate(${round(cx - 12 * s)} ${round(cy - 12 * s)}) scale(${s})">${EMBLEMS[crest.emblem].svg}</g>`;
+    const art = crest.emblem === 'bot' ? BOT_EMBLEM : EMBLEMS[crest.emblem].svg;
+    emblem = `<g fill="${metal}" color="${metal}" transform="translate(${round(cx - 12 * s)} ${round(cy - 12 * s)}) scale(${s})">${art}</g>`;
   }
   return `<svg class="crest" viewBox="0 0 48 48" aria-hidden="true">`
     + (ring ? `<path d="${shape.d}" fill="none" stroke="url(#lava-ring)" stroke-width="6" stroke-linejoin="round"/>` : '')
