@@ -120,7 +120,12 @@
           </div>
           <div class="stack-sm">
             <label for="userGameCode" class="eyebrow">Room name</label>
-            <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
+            <div class="field-row">
+              <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
+              <button type="button" id="rerollName" class="icon-btn reroll-btn" aria-label="Suggest another room name" title="Suggest another room name">
+                <svg class="icon"><use href="#i-dice" /></svg>
+              </button>
+            </div>
             <p id="userGameCodeHelper" class="field-error" role="alert"></p>
           </div>
           <div id="passField" class="stack-sm" hidden>

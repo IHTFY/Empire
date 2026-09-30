@@ -256,6 +256,17 @@ a:hover { color: var(--gold-hi); }
   transition: transform .35s var(--ease);
 }
 #roomForm[data-mode="join"] .mode-switch::before { transform: translateX(100%); }
+/* The lit half can also be dragged like a slider; --drag-x follows the finger. */
+.mode-switch { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.mode-switch.is-dragging { cursor: grabbing; }
+.mode-switch.is-dragging::before { transition: none; transform: translateX(var(--drag-x, 0px)); }
+.mode-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.field-row { display: flex; align-items: center; gap: 10px; }
+.field-row .field { flex: 1; min-width: 0; }
+.reroll-btn { flex: none; width: 56px; height: 56px; border-radius: 16px; color: var(--muted); }
+.reroll-btn:hover { color: var(--ink); }
+.reroll-btn:disabled, .field[readonly] { opacity: .6; pointer-events: none; }
+#roomForm[data-mode="join"] .reroll-btn { display: none; }
 .mode-switch button { position: relative; height: 40px; border: none; background: none; border-radius: 12px; font-size: 15px; font-weight: 700; color: var(--muted); transition: color .2s; }
 .mode-switch button[aria-pressed="true"] { color: var(--ink); }
 #passField:not([hidden]) { animation: rise .35s var(--ease) both; }
