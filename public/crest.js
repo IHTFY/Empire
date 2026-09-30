@@ -1,5 +1,5 @@
 // Crests: each player's avatar is a small coat of arms built from five choices.
-// A crest is stored as one short string, "shape.colour.pattern.emblem.metal", e.g.
+// A crest is stored as one short string, "shape.color.pattern.emblem.metal", e.g.
 // "heater.crimson.chevron.crown.gold". Unknown parts fall back to defaults, so older
 // or newer clients never break each other.
 
@@ -14,7 +14,7 @@ export const SHAPES = {
   pennon: { label: 'Pennon', d: 'M4 9h40l-8 15 8 15H4z', cx: 19.5, cy: 24, s: 0.94 }
 };
 
-export const COLOURS = {
+export const COLORS = {
   crimson: { label: 'Crimson', hex: '#B8283B' },
   rust: { label: 'Rust', hex: '#C0662B' },
   ochre: { label: 'Ochre', hex: '#8F7A14' },
@@ -32,7 +32,7 @@ export const METALS = {
   silver: { label: 'Silver', hex: '#E4E6EF' }
 };
 
-// Divisions of the field, drawn as a shade of the field colour.
+// Divisions of the field, drawn as a shade of the field color.
 export const PATTERNS = {
   plain: { label: 'Plain', d: '' },
   pale: { label: 'Per pale', d: 'M24 0h24v48H24z' },
@@ -83,8 +83,8 @@ export const EMBLEMS = {
   cross: { label: 'Cross', svg: '<path d="M9 2h6l-1.5 8.5L22 9v6l-8.5-1.5L15 22H9l1.5-8.5L2 15V9l8.5 1.5z"/>' }
 };
 
-const KEYS = { shape: SHAPES, colour: COLOURS, pattern: PATTERNS, emblem: EMBLEMS, metal: METALS };
-export const PARTS = ['shape', 'colour', 'pattern', 'emblem', 'metal'];
+const KEYS = { shape: SHAPES, color: COLORS, pattern: PATTERNS, emblem: EMBLEMS, metal: METALS };
+export const PARTS = ['shape', 'color', 'pattern', 'emblem', 'metal'];
 
 const pick = obj => { const keys = Object.keys(obj); return keys[Math.floor(Math.random() * keys.length)]; };
 
@@ -98,16 +98,16 @@ export function parseCrest(text) {
 export const crestString = crest => PARTS.map(part => crest[part]).join('.');
 
 export function randomCrest() {
-  return { shape: pick(SHAPES), colour: pick(COLOURS), pattern: pick(PATTERNS), emblem: 'letter', metal: pick(METALS) };
+  return { shape: pick(SHAPES), color: pick(COLORS), pattern: pick(PATTERNS), emblem: 'letter', metal: pick(METALS) };
 }
 
 // A stable crest for players who never picked one (older clients): a round badge with
-// their initial, in a colour taken from their id, much like the old circle avatars.
+// their initial, in a color taken from their id, much like the old circle avatars.
 export function defaultCrest(key) {
   let hash = 0;
   for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  const colours = Object.keys(COLOURS).filter(c => c !== 'sable');
-  return { shape: 'round', colour: colours[hash % colours.length], pattern: 'plain', emblem: 'letter', metal: hash % 2 ? 'gold' : 'silver' };
+  const colors = Object.keys(COLORS).filter(c => c !== 'sable');
+  return { shape: 'round', color: colors[hash % colors.length], pattern: 'plain', emblem: 'letter', metal: hash % 2 ? 'gold' : 'silver' };
 }
 
 const escape = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
@@ -116,9 +116,9 @@ const escape = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<
 // draws the lava ring that marks your own seat.
 export function crestSvg(crest, { letter = '', ring = false } = {}) {
   const shape = SHAPES[crest.shape];
-  const field = COLOURS[crest.colour].hex;
+  const field = COLORS[crest.color].hex;
   const metal = METALS[crest.metal].hex;
-  const shade = crest.colour === 'sable' ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.3)';
+  const shade = crest.color === 'sable' ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.3)';
   const { cx, cy, s } = shape;
   let emblem;
   if (crest.emblem === 'letter') {
