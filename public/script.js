@@ -3,9 +3,13 @@ import { suggestRoomName } from './room-names.js';
 import { summarizePresence } from './presence.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // NOTE ON for development. OFF for deployment.
-  // firebase.functions().useFunctionsEmulator('http://localhost:5001');
-
+  try {
+    await window.empireFirebaseReady;
+  } catch (err) {
+    console.error(err);
+    document.getElementById('userGameCodeHelper').textContent = 'Could not connect. Reload to try again.';
+    return;
+  }
   const OFFLINE_KICK_MS = 10 * 60 * 1000;
   const AWAY_AFTER_MS = 2 * 60 * 1000;
   const COUNTDOWN_MS = 1000;
