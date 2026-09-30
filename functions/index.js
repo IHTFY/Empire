@@ -178,7 +178,7 @@ function recordNames(gameRef, names) {
     if (late) await gameRef.child(`voice/${i}`).set(audio);
     else clips[i] = audio;
   });
-  jobs.push(recordSample(), recordPhrases());
+  jobs.push(recordSample());
   const done = Promise.allSettled(jobs).then(results => {
     const failed = results.filter(r => r.status === 'rejected');
     if (failed.length > 0) {
@@ -202,37 +202,6 @@ async function recordSample() {
   if (audio) await Promise.all([db.ref('voiceSample').set(audio), marker.set(VOICE.name)]);
 }
 
-// Fixed narrator lines, one clip each, stored at /voicePhrases/<key> (kept like the sample).
-// The player's name isn't part of them, so nothing here depends on who is in the room.
-const PHRASES = {
-  playerJoined: 'A player has joined the game.',
-  playerLeft: 'A player has left the game.',
-  botJoined: 'A bot has joined the game.',
-  botLeft: 'A bot has left the game.',
-  newRound: 'A new round is starting.'
-};
-let phrasesJob = null;
-
-// Records the phrases in the current voice, once per voice and phrase list. Nothing is stored
-// unless the free allowance covered every phrase, so the next game tries again.
-function recordPhrases() {
-  if (!phrasesJob) {
-    phrasesJob = makePhrases().finally(() => { phrasesJob = null; });
-  }
-  return phrasesJob;
-}
-async function makePhrases() {
-  const version = createHash('sha256').update(`${VOICE.name}|${JSON.stringify(PHRASES)}`).digest('hex').slice(0, 20);
-  const marker = db.ref('meta/voicePhrasesVersion');
-  if ((await marker.once('value')).val() === version) return;
-  const keys = Object.keys(PHRASES);
-  const clips = await Promise.all(keys.map(key => recording(PHRASES[key])));
-  if (clips.some(audio => !audio)) return;
-  const all = {};
-  keys.forEach((key, i) => { all[key] = clips[i]; });
-  await Promise.all([db.ref('voicePhrases').set(all), marker.set(version)]);
-}
-
 // Record a secret name as soon as a player sets it, while the room is still waiting, so the
 // recording is usually ready (cached) by the time someone presses Start.
 exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{gameId}/secrets/{userId}').onWrite(async change => {
@@ -240,7 +209,7 @@ exports.prepareVoice = functions.database.instance('empire-ihtfy').ref('/games/{
   if (typeof name !== 'string' || name.length === 0 || name === change.before.val()) {
     return null;
   }
-  const results = await Promise.allSettled([recording(name), recordSample(), recordPhrases()]);
+  const results = await Promise.allSettled([recording(name), recordSample()]);
   const failed = results.find(r => r.status === 'rejected');
   if (failed) {
     functions.logger.warn('Voice: could not record in advance', failed.reason && failed.reason.message);
