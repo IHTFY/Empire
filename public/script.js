@@ -1052,12 +1052,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let lastCenter = null;
   document.fonts.ready.then(() => { centerFit = ''; if (lastCenter) fitCenter(...lastCenter); });
 
+  // The stage is scaled to the table's width: down on narrow phones, up on big screens.
   function fitTable() {
     const width = $('tableView').clientWidth;
-    if (width > 0) $('tableInner').style.transform = `scale(${Math.min(1, width / 390)})`;
+    if (width > 0) $('tableInner').style.transform = `scale(${width / 390})`;
     if (width > 0 && lastCenter) fitCenter(...lastCenter);
   }
-  window.addEventListener('resize', fitTable);
+  new ResizeObserver(fitTable).observe($('tableView'));
 
   function renderLobby() {
     if (!gameID) return;
@@ -1557,10 +1558,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Long names shrink to stay on one line; only very long ones wrap.
+  // Long names shrink from their styled size to stay on one line; only very long ones wrap.
   function fitWord(word, box) {
     const room = box.clientWidth - 56;
-    let size = 80;
+    let size = Math.round(parseFloat(getComputedStyle(word).fontSize) / 4) * 4;
     while (word.scrollWidth > room && size > 36) {
       size -= 4;
       word.style.fontSize = `${size}px`;
