@@ -52,7 +52,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------------------------------------------------------------------
   // Small UI helpers: screens, toast, sheets, sound
 
+  let homeFormStale = false;
   function show(name) {
+    if (name !== 'home' && homeFormStale) resetHomeForm();
     Object.entries(screens).forEach(([key, el]) => { el.hidden = key !== name; });
     window.scrollTo(0, 0);
     requestAnimationFrame(fitMarquees);
@@ -523,16 +525,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearCodeError();
   });
 
-  // The create form suggests a memorable name (e.g. worried-hamster); leaving it as is takes
-  // the suggestion. The password is what keeps the room private.
-  let suggestedName = '';
-  function suggestName() {
-    suggestedName = suggestRoomName();
-    if (roomMode === 'create') userGameCode.placeholder = suggestedName;
+  // The create form fills the field with a memorable name (e.g. worried-hamster) that can be
+  // kept, edited or rerolled; what is in the field is exactly what gets created. Each mode
+  // remembers its own text while the other one is showing. The password is what keeps the
+  // room private.
+  let roomMode = 'create';
+  const drafts = { create: suggestRoomName(), join: '' };
+  userGameCode.value = drafts.create;
+  userGameCode.placeholder = '';
+
+  let formLocked = false;
+  function lockForm(locked) {
+    formLocked = locked;
+    userGameCode.readOnly = locked;
+    roomPassInput.readOnly = locked;
+    $('rerollName').disabled = locked;
   }
 
-  let roomMode = 'create';
   function setRoomMode(mode) {
+    if (mode !== roomMode) {
+      drafts[roomMode] = userGameCode.value;
+      userGameCode.value = drafts[mode];
+    }
     roomMode = mode;
     const joining = mode === 'join';
     $('roomForm').dataset.mode = mode;
@@ -541,11 +555,89 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('passField').hidden = !joining;
     $('createHint').hidden = joining;
     $('roomSubmitLabel').textContent = joining ? 'Join' : 'Create';
-    userGameCode.placeholder = joining ? 'Room name' : suggestedName;
+    userGameCode.placeholder = joining ? 'Room name' : '';
     clearCodeError();
   }
-  $('modeCreate').addEventListener('click', () => setRoomMode('create'));
-  $('modeJoin').addEventListener('click', () => setRoomMode('join'));
+
+  // Puts the home form back to a fresh state with a new suggestion.
+  function resetHomeForm() {
+    homeFormStale = false;
+    drafts.create = suggestRoomName();
+    drafts.join = '';
+    userGameCode.value = drafts.create;
+    roomPassInput.value = '';
+    roomMode = 'create';
+    setRoomMode('create');
+  }
+
+  $('rerollName').addEventListener('click', () => {
+    if (formLocked) return;
+    userGameCode.value = suggestRoomName();
+    clearCodeError();
+  });
+
+  $('modeCreate').addEventListener('click', () => { if (!suppressModeClick && !formLocked) setRoomMode('create'); });
+  $('modeJoin').addEventListener('click', () => { if (!suppressModeClick && !formLocked) setRoomMode('join'); });
+
+  // The create / join switch can be dragged like a slider: the lit half follows the pointer
+  // and, on release, settles on the closer side (or the side a quick flick points to).
+  let suppressModeClick = false;
+  {
+    const track = document.querySelector('.mode-switch');
+    let drag = null;
+    const range = () => track.clientWidth / 2 - 4;
+    const finish = () => {
+      track.classList.remove('is-dragging');
+      track.style.removeProperty('--drag-x');
+      drag = null;
+    };
+    track.addEventListener('pointerdown', event => {
+      if (formLocked || !event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+      drag = {
+        id: event.pointerId, x0: event.clientX, from: roomMode === 'join' ? range() : 0,
+        pos: 0, moving: false, lastX: event.clientX, lastT: event.timeStamp, velocity: 0
+      };
+    });
+    track.addEventListener('pointermove', event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x0;
+      if (!drag.moving) {
+        if (Math.abs(dx) < 6) return;
+        drag.moving = true;
+        track.setPointerCapture(event.pointerId);
+        track.classList.add('is-dragging');
+      }
+      drag.pos = Math.min(range(), Math.max(0, drag.from + dx));
+      track.style.setProperty('--drag-x', `${drag.pos}px`);
+      const dt = event.timeStamp - drag.lastT;
+      if (dt > 0) drag.velocity = 0.6 * drag.velocity + 0.4 * ((event.clientX - drag.lastX) / dt);
+      drag.lastX = event.clientX;
+      drag.lastT = event.timeStamp;
+    });
+    track.addEventListener('pointerup', event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      if (drag.moving) {
+        let joining = drag.pos > range() / 2;
+        if (Math.abs(drag.velocity) > 0.5) joining = drag.velocity > 0;
+        // The click that follows a drag must not toggle a second time.
+        suppressModeClick = true;
+        setTimeout(() => { suppressModeClick = false; }, 0);
+        finish();
+        setRoomMode(joining ? 'join' : 'create');
+      } else {
+        drag = null;
+      }
+    });
+    track.addEventListener('pointercancel', () => { if (drag) finish(); });
+    // Arrow keys move the switch too, on top of Tab and Enter / Space on each button.
+    track.addEventListener('keydown', event => {
+      if (formLocked || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+      event.preventDefault();
+      const joining = event.key === 'ArrowRight';
+      setRoomMode(joining ? 'join' : 'create');
+      $(joining ? 'modeJoin' : 'modeCreate').focus();
+    });
+  }
 
   // Claims the name and creates the room in one write. The rules refuse it if the name is
   // already in use, so two people can never end up with the same room name.
@@ -567,32 +659,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   let busy = false;
   async function tryCreating() {
     const typed = userGameCode.value.trim();
-    const custom = slugify(typed);
-    if (typed && !custom) {
-      codeError('Use letters or numbers in the room name.');
+    const name = slugify(typed);
+    if (!name) {
+      codeError(typed ? 'Use letters or numbers in the room name.' : 'Enter a room name, or tap the dice for a suggestion.');
       return;
     }
+    // Show exactly the name being created, and keep it there until the room opens.
+    userGameCode.value = name;
     await signedIn;
-    let id = null;
-    let name = custom || suggestedName || suggestRoomName();
-    if (custom) {
-      id = await claimRoom(name);
-      if (!id) {
-        codeError(`A room called ${name} is already open. Pick another name, or join it with its password.`);
-        return;
-      }
-    } else {
-      // The suggested name was taken in the meantime: quietly try a few more.
-      for (let i = 0; i < 5 && !id; i++) {
-        if (i > 0) name = suggestRoomName();
-        id = await claimRoom(name);
-      }
-      if (!id) {
-        codeError('Could not create a room. Try again.');
-        return;
-      }
+    const id = await claimRoom(name);
+    if (!id) {
+      codeError(`A room called ${name} is already open. Pick another name, or join it with its password.`);
+      return;
     }
-    suggestName();
     await enterRoom(id);
   }
 
@@ -656,6 +735,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     event.preventDefault();
     if (busy) return;
     busy = true;
+    lockForm(true);
     $('roomSubmit').classList.add('is-busy');
     try {
       await (roomMode === 'join' ? tryJoining() : tryCreating());
@@ -664,6 +744,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       codeError('Something went wrong. Try again.');
     } finally {
       busy = false;
+      lockForm(false);
       $('roomSubmit').classList.remove('is-busy');
     }
   });
@@ -688,10 +769,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('inviteText').textContent = roomPass ? 'with this room name and password' : 'with this code';
     requestAnimationFrame(fitMarquees);
 
-    // Reset the home form so it never points at the previous room.
-    userGameCode.value = '';
-    roomPassInput.value = '';
-    setRoomMode('create');
+    // The home form is reset once the home screen is out of sight (see show), so the name
+    // that was just created never flickers into something else.
+    homeFormStale = true;
 
     startPresence();
 
@@ -1972,7 +2052,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------------------------------------------------------------------
   // Open the room from a game link (a reload keeps the room in the address bar).
 
-  suggestName();
   const params = (new URL(document.location)).searchParams;
   if (params.get('room')) {
     tryJoining(params.get('room'), params.get('pass') || '');
