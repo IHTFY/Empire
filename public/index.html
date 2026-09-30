@@ -113,14 +113,23 @@
           <p class="hero-tagline rise" style="animation-delay: 0.08s">The party game of secret names. Guess them all, rule them all.</p>
         </div>
 
-        <form id="roomForm" class="card rise" style="animation-delay: 0.16s" novalidate>
-          <label for="userGameCode" class="eyebrow">Room code</label>
-          <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="128" placeholder="Leave blank for a random room" />
-          <p id="userGameCodeHelper" class="field-error" role="alert"></p>
-          <div class="row-2">
-            <button id="createButton" type="submit" class="btn btn-gold"><span class="sheen"></span><span>Create</span></button>
-            <button id="joinButton" type="button" class="btn btn-ghost">Join</button>
+        <form id="roomForm" class="card rise" style="animation-delay: 0.16s" data-mode="create" novalidate>
+          <div class="mode-switch" role="group" aria-label="Create or join">
+            <button type="button" id="modeCreate" aria-pressed="true">Create a room</button>
+            <button type="button" id="modeJoin" aria-pressed="false">Join a room</button>
           </div>
+          <div class="stack-sm">
+            <label for="userGameCode" class="eyebrow">Room name</label>
+            <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
+            <p id="userGameCodeHelper" class="field-error" role="alert"></p>
+          </div>
+          <div id="passField" class="stack-sm" hidden>
+            <label for="roomPass" class="eyebrow">Password</label>
+            <input id="roomPass" class="field field-pass" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ABCDEF" enterkeyhint="go" />
+            <p id="roomPassHelper" class="field-error" role="alert"></p>
+          </div>
+          <p id="createHint" class="hint">Keep the suggested name or type your own. The room gets a password to share with friends.</p>
+          <button id="roomSubmit" type="submit" class="btn btn-gold"><span class="sheen"></span><span id="roomSubmitLabel">Create</span></button>
         </form>
       </section>
 
@@ -203,10 +212,11 @@
         </div>
 
         <div class="list-head">
-          <span class="eyebrow wide-only">Room code</span>
+          <span class="eyebrow wide-only">Room</span>
           <span class="display list-room marquee"><span class="marquee-text room-name"></span></span>
+          <span class="room-pass" id="roomPassRow" hidden>Password <strong id="roomPassText"></strong></span>
           <span class="muted small" id="listSummary" hidden></span>
-          <p class="muted invite wide-only">Friends join at <strong>empire.ihtfy.com</strong> with this code, or share the link with them.</p>
+          <p class="muted invite wide-only">Friends join at <strong>empire.ihtfy.com</strong> <span id="inviteText">with this room name and password</span>, or share the link with them.</p>
         </div>
 
         <div class="lobby-body">
@@ -340,7 +350,7 @@
         <h3>Setup</h3>
         <ol class="steps">
           <li>Create a room, or leave the name blank for a random one.</li>
-          <li>Tap <strong>Share</strong> and send the link, or have friends enter the room code at <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>.</li>
+          <li>Tap <strong>Share</strong> and send the link, or have friends enter the room name and password at <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>. Both are shown in the lobby.</li>
           <li>Enter your real name and a secret name.</li>
           <li>Short on players? Add bots from the room menu.</li>
           <li>Press <strong>Reveal the names</strong> once everyone is in.</li>

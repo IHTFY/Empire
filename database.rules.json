@@ -4,11 +4,23 @@
     ".write": false,
     // A short recorded sample for the voice volume slider, written by flashNames only.
     "voiceSample": { ".read": true },
+    // Room name -> password -> room key. Reading needs both the name and the password, and
+    // names can't be listed. A name holds one room at a time: it can only be claimed while
+    // unused, in the same write that creates the room, and is freed when the room is deleted.
+    "roomNames": {
+      "$name": {
+        "$pass": {
+          ".read": true,
+          ".write": "auth != null && ((newData.exists() && !data.parent().exists() && !root.child('games').child(newData.val()).exists() && newData.parent().parent().parent().child('games').child(newData.val()).child('name').val() === $name && newData.parent().parent().parent().child('games').child(newData.val()).child('pass').val() === $pass) || (!newData.exists() && (!data.exists() || !newData.parent().parent().parent().child('games').child(data.val()).exists())))",
+          ".validate": "newData.isString() && newData.val().length === 20"
+        }
+      }
+    },
     "games": {
       "$gameId": {
-        // Create a new room (also over a leftover presence stub), or delete one that is
-        // marked for deletion (or already gone). Nothing can list every room.
-        ".write": "(!data.child('state').exists() && newData.child('state').val() === 'waiting') || (!newData.exists() && (!data.child('state').exists() || data.child('state').val() === 'deleting'))",
+        // Create a new room, together with its /roomNames entry, or delete one that is marked
+        // for deletion (or already gone). Nothing can list every room.
+        ".write": "(!data.child('state').exists() && newData.child('state').val() === 'waiting' && newData.parent().parent().child('roomNames').child(newData.child('name').val()).child(newData.child('pass').val()).val() === $gameId) || (!newData.exists() && (!data.child('state').exists() || data.child('state').val() === 'deleting'))",
         ".validate": "$gameId.length <= 128 && newData.hasChild('state')",
         "state": {
           // Readable by anyone with the room code (game links load before sign-in finishes).
@@ -80,6 +92,10 @@
             ".write": "auth != null && !data.exists() && newData.val() === true && data.parent().parent().child('locked').val() === true && data.parent().parent().child('users').child($userId).child('fakeBadge').val() === true"
           }
         },
+        // The room's public name and its password, set once when the room is created. Anyone
+        // who reached the room can read them (the lobby shows both so players can invite others).
+        "name": { ".read": true, ".validate": "newData.isString() && newData.val().length <= 32 && newData.val().matches(/^[a-z0-9]+(-[a-z0-9]+)*$/)" },
+        "pass": { ".read": true, ".validate": "newData.isString() && newData.val().matches(/^[A-HJKMNP-Z]{6}$/)" },
         // Set when the room is created; used to clean up abandoned rooms.
         "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
         "$other": { ".validate": false }

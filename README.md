@@ -2,9 +2,9 @@
 
 ## Setup
 1. Create a new room at [empire.ihtfy.com](https://empire.ihtfy.com)
-   * Name the room or leave it blank to generate a random name
+   * Keep the suggested room name or type your own; the room gets a password
 2. Click `GET GAME LINK` and share with your friends
-   * Or simply have them go to [empire.ihtfy.com](https://empire.ihtfy.com) and type in the game code
+   * Or simply have them go to [empire.ihtfy.com](https://empire.ihtfy.com) and enter the room name and password shown in the lobby
 3. Enter your display name and secret name, then `SUBMIT`
 4. You will see who has entered the lobby
 5. If you have a small party, you can add fake names under the `OPTIONS` menu

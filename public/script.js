@@ -431,6 +431,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     clearTimeout(awayTimer);
     gameID = null;
+    roomName = null;
+    roomPass = null;
     users = {};
     presence = {};
     state = null;
@@ -439,27 +441,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetLobby();
   }
 
-  function setRoomInUrl(code) {
+  // Rooms live under a random Firebase key nobody types. People know a room by its name
+  // (unique among open rooms) and a short password; the pair looks the key up in
+  // /roomNames/{name}/{password}, which can only be read by someone who knows both.
+  let roomName = null;
+  let roomPass = null;
+
+  function setRoomInUrl(name, pass) {
     const url = new URL(document.location);
-    if (code) {
-      url.searchParams.set('code', code);
-    } else {
-      url.searchParams.delete('code');
+    url.searchParams.delete('code');
+    url.searchParams.delete('room');
+    url.searchParams.delete('pass');
+    if (name && pass) {
+      url.searchParams.set('room', name);
+      url.searchParams.set('pass', pass);
+    } else if (name) {
+      url.searchParams.set('code', name); // a room from before passwords
     }
     history.replaceState(null, '', url);
   }
 
   function roomLink() {
     const url = new URL(document.location.origin);
-    url.searchParams.set('code', gameID);
+    if (roomPass) {
+      url.searchParams.set('room', roomName);
+      url.searchParams.set('pass', roomPass);
+    } else {
+      url.searchParams.set('code', gameID);
+    }
     return url.href;
   }
 
   // ---------------------------------------------------------------------------
   // Create or join
 
-  function validCode(code) {
-    return code.length <= 128 && !/[.#$[\]/]/.test(code);
+  const NAME_MAX = 32; // keep in sync with database.rules.json
+  // No I, L or O, so a password read off a screen can't be mistaken for 1 or 0.
+  const PASS_LETTERS = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const roomPassInput = $('roomPass');
+  const roomPassHelper = $('roomPassHelper');
+
+  // Room names are written as lowercase words joined by dashes: "Friday Night!" → friday-night.
+  function slugify(raw) {
+    return raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, NAME_MAX).replace(/-+$/, '');
+  }
+
+  function cleanPass(raw) {
+    return raw.toUpperCase().replace(/[^A-Z]/g, '');
+  }
+
+  function randomPass() {
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    return [...bytes].map(b => PASS_LETTERS[b % PASS_LETTERS.length]).join('');
   }
 
   function codeError(message) {
@@ -467,60 +500,178 @@ document.addEventListener('DOMContentLoaded', async () => {
     userGameCodeHelper.textContent = message;
   }
 
+  function passError(message) {
+    roomPassInput.classList.add('invalid');
+    roomPassHelper.textContent = message;
+  }
+
   function clearCodeError() {
     userGameCode.classList.remove('invalid');
     userGameCodeHelper.textContent = '';
+    roomPassInput.classList.remove('invalid');
+    roomPassHelper.textContent = '';
   }
   userGameCode.addEventListener('input', clearCodeError);
+  roomPassInput.addEventListener('input', () => {
+    const at = roomPassInput.selectionStart;
+    const clean = cleanPass(roomPassInput.value).slice(0, 6);
+    if (clean !== roomPassInput.value) {
+      roomPassInput.value = clean;
+      roomPassInput.setSelectionRange(Math.min(at, clean.length), Math.min(at, clean.length));
+    }
+    clearCodeError();
+  });
 
-  async function doesGameExist(code) {
-    if (code === '') return false;
-    let snapshot = await db.ref(`games/${code}/state`).once('value');
-    return snapshot.exists();
-  }
-
-  // A readable random room code, e.g. amber-comet-42.
-  async function randomCode() {
-    // Short words keep the code easy to read out and small enough for the table center.
+  // A readable random room name, e.g. amber-comet. The password is what keeps it private.
+  async function randomName() {
+    // Short words keep the name easy to read out and small enough for the table center.
     const short = (await wordList()).filter(w => w.length >= 3 && w.length <= 6);
-    for (let i = 0; i < 5; i++) {
-      const code = `${pickRandom(short)}-${pickRandom(short)}-${Math.floor(Math.random() * 90) + 10}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
-      if (!await doesGameExist(code)) return code;
-    }
-    return db.ref('games').push().key;
+    return slugify(`${pickRandom(short)} ${pickRandom(short)}`);
   }
 
+  // The create form suggests a name; leaving it as is takes the suggestion.
+  let suggestedName = '';
+  async function suggestName() {
+    suggestedName = await randomName();
+    if (roomMode === 'create') userGameCode.placeholder = suggestedName;
+  }
+
+  let roomMode = 'create';
+  function setRoomMode(mode) {
+    roomMode = mode;
+    const joining = mode === 'join';
+    $('roomForm').dataset.mode = mode;
+    $('modeCreate').setAttribute('aria-pressed', String(!joining));
+    $('modeJoin').setAttribute('aria-pressed', String(joining));
+    $('passField').hidden = !joining;
+    $('createHint').hidden = joining;
+    $('roomSubmitLabel').textContent = joining ? 'Join' : 'Create';
+    userGameCode.placeholder = joining ? 'Room name' : suggestedName;
+    clearCodeError();
+  }
+  $('modeCreate').addEventListener('click', () => setRoomMode('create'));
+  $('modeJoin').addEventListener('click', () => setRoomMode('join'));
+
+  // Claims the name and creates the room in one write. The rules refuse it if the name is
+  // already in use, so two people can never end up with the same room name.
+  async function claimRoom(name) {
+    const id = db.ref('games').push().key;
+    const pass = randomPass();
+    try {
+      await db.ref().update({
+        [`games/${id}`]: { state: 'waiting', createdAt: firebase.database.ServerValue.TIMESTAMP, name, pass },
+        [`roomNames/${name}/${pass}`]: id
+      });
+      return id;
+    } catch (err) {
+      if (err.code !== 'PERMISSION_DENIED' && !/permission/i.test(err.message)) throw err;
+      return null;
+    }
+  }
+
+  let busy = false;
   async function tryCreating() {
-    const code = userGameCode.value.trim();
-    if (!validCode(code)) {
-      codeError('Room codes can\'t contain . # $ [ ] or /');
+    const typed = userGameCode.value.trim();
+    const custom = slugify(typed);
+    if (typed && !custom) {
+      codeError('Use letters or numbers in the room name.');
       return;
     }
-    if (await doesGameExist(code)) {
-      codeError(`${code} already exists. Join it or pick another code.`);
-      return;
+    await signedIn;
+    let id = null;
+    let name = custom || suggestedName || await randomName();
+    if (custom) {
+      id = await claimRoom(name);
+      if (!id) {
+        codeError(`A room called ${name} is already open. Pick another name, or join it with its password.`);
+        return;
+      }
+    } else {
+      // The suggested name was taken in the meantime: quietly try a few more.
+      for (let i = 0; i < 5 && !id; i++) {
+        if (i > 0) name = await randomName();
+        id = await claimRoom(name);
+      }
+      if (!id) {
+        codeError('Could not create a room. Try again.');
+        return;
+      }
     }
-    const newCode = code || await randomCode();
-    await db.ref(`games/${newCode}`).set({ state: 'waiting', createdAt: firebase.database.ServerValue.TIMESTAMP });
-    await enterRoom(newCode);
+    suggestName();
+    await enterRoom(id);
   }
 
-  async function tryJoining(code = userGameCode.value.trim()) {
-    if (!validCode(code) || !await doesGameExist(code)) {
-      userGameCode.value = code;
-      codeError(code ? `${code} doesn't exist. Check the code or create a room with it.` : 'Enter a room code to join.');
+  // Finds a room by name and password; null when nothing matches.
+  async function findRoom(name, pass) {
+    if (!name || pass.length !== 6) return null;
+    try {
+      const id = (await db.ref(`roomNames/${name}/${pass}`).once('value')).val();
+      if (!id || !(await db.ref(`games/${id}/state`).once('value')).exists()) return null;
+      return id;
+    } catch {
+      return null;
+    }
+  }
+
+  async function tryJoining(rawName = userGameCode.value, rawPass = roomPassInput.value) {
+    const name = slugify(rawName.trim());
+    const pass = cleanPass(rawPass);
+    const backHome = () => {
+      setRoomMode('join');
+      userGameCode.value = name;
+      roomPassInput.value = pass;
       setRoomInUrl(null);
       show('home');
+    };
+    if (!name) {
+      backHome();
+      codeError('Enter the room name.');
       return;
     }
-    await enterRoom(code);
+    if (pass.length !== 6) {
+      backHome();
+      passError('Enter the 6-letter password.');
+      return;
+    }
+    await signedIn;
+    const id = await findRoom(name, pass);
+    if (!id) {
+      backHome();
+      passError(`No open room matches ${name} with that password.`);
+      return;
+    }
+    await enterRoom(id);
   }
 
-  $('roomForm').addEventListener('submit', event => {
+  // Links from before rooms had passwords: ?code=<room key>.
+  async function joinOldLink(code) {
+    await signedIn;
+    const exists = code.length <= 128 && !/[.#$[\]/]/.test(code) &&
+      (await db.ref(`games/${code}/state`).once('value').catch(() => null))?.exists();
+    if (exists) {
+      await enterRoom(code);
+    } else {
+      setRoomInUrl(null);
+      show('home');
+      toast('That room has closed.');
+    }
+  }
+
+  $('roomForm').addEventListener('submit', async event => {
     event.preventDefault();
-    tryCreating();
+    if (busy) return;
+    busy = true;
+    $('roomSubmit').classList.add('is-busy');
+    try {
+      await (roomMode === 'join' ? tryJoining() : tryCreating());
+    } catch (err) {
+      console.error(err);
+      codeError('Something went wrong. Try again.');
+    } finally {
+      busy = false;
+      $('roomSubmit').classList.remove('is-busy');
+    }
   });
-  $('joinButton').addEventListener('click', () => tryJoining());
 
   async function enterRoom(code) {
     await signedIn;
@@ -529,14 +680,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     detachRoom();
     gameID = code;
-    document.title = `Empire: ${gameID}`;
-    setRoomInUrl(gameID);
-    document.querySelectorAll('.room-name').forEach(el => { el.textContent = gameID; });
+    const [nameSnap, passSnap] = await Promise.all([
+      db.ref(`games/${code}/name`).once('value'), db.ref(`games/${code}/pass`).once('value')
+    ]);
+    roomName = nameSnap.val() || code;
+    roomPass = passSnap.val();
+    document.title = `Empire: ${roomName}`;
+    setRoomInUrl(roomName, roomPass);
+    document.querySelectorAll('.room-name').forEach(el => { el.textContent = roomName; });
+    $('roomPassText').textContent = roomPass || '';
+    $('roomPassRow').hidden = !roomPass;
+    $('inviteText').textContent = roomPass ? 'with this room name and password' : 'with this code';
     requestAnimationFrame(fitMarquees);
 
-    // Reset the create form so it never points at the previous room.
+    // Reset the home form so it never points at the previous room.
     userGameCode.value = '';
-    clearCodeError();
+    roomPassInput.value = '';
+    setRoomMode('create');
 
     startPresence();
 
@@ -669,7 +829,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const link = roomLink();
     if (typeof navigator.share === 'function') {
       try {
-        await navigator.share({ title: 'Empire', text: `Join my Empire game: ${gameID}`, url: link });
+        await navigator.share({ title: 'Empire', text: roomPass ? `Join my Empire game: ${roomName} (password ${roomPass})` : `Join my Empire game: ${roomName}`, url: link });
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;
@@ -1648,8 +1808,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (state === 'deleting' || (state === null && previous !== null)) {
       // Stop listening first so the room disappearing doesn't trigger this twice.
+      const [name, pass] = [roomName, roomPass];
       detachRoom();
-      await db.ref(`games/${code}`).remove().catch(() => {});
+      // The room's name is freed in the same write, so it can be used again right away.
+      const gone = { [`games/${code}`]: null };
+      if (pass) gone[`roomNames/${name}/${pass}`] = null;
+      await db.ref().update(gone).catch(() => {});
       sessionStorage.removeItem(`secret:${code}`);
       window.location.replace('/');
     }
@@ -1805,11 +1969,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ---------------------------------------------------------------------------
-  // Open the room from a game link (a reload keeps ?code= in the address bar).
+  // Open the room from a game link (a reload keeps the room in the address bar).
 
-  let urlCode = (new URL(document.location)).searchParams.get('code');
-  if (urlCode) {
-    tryJoining(urlCode);
+  suggestName();
+  const params = (new URL(document.location)).searchParams;
+  if (params.get('room')) {
+    tryJoining(params.get('room'), params.get('pass') || '');
+  } else if (params.get('code')) {
+    joinOldLink(params.get('code'));
   } else {
     show('home');
   }
