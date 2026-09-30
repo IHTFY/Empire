@@ -196,10 +196,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       osc.stop(audioContext.currentTime + length + 0.02);
     } catch (err) { /* audio not available */ }
   }
+  // The boop file is mastered much louder than the voice clips, so scale it down to match at equal settings.
+  const BOOP_LEVEL = 0.3;
   function chime() {
     if (!volume.sfx) return;
     const boop = $('boop');
-    boop.volume = volume.sfx / 100;
+    boop.volume = BOOP_LEVEL * volume.sfx / 100;
     boop.currentTime = 0;
     boop.play().catch(() => {});
   }
