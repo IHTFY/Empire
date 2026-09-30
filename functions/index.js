@@ -253,6 +253,8 @@ exports.roomState = functions.database.instance('empire-ihtfy').ref('/games/{gam
     const room = db.ref(`games/${context.params.gameId}`);
     await room.once('value');
     await room.transaction(game => {
+      // Ask the server to retry an empty local cache before checking the room state.
+      if (game === null) return null;
       if (!game || game.state !== 'resetting') return undefined;
       for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'locked', 'voice', 'eliminated']) delete game[key];
       game.state = 'waiting';
