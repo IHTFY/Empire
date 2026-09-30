@@ -302,6 +302,7 @@
     </dialog>
 
     <dialog id="confirmNewGame" class="sheet" aria-labelledby="newGameTitle">
+      <div class="sheet-grip"></div>
       <h2 id="newGameTitle" class="display sheet-title">New round?</h2>
       <p class="muted">Everyone goes back to pick new names. The room and its link stay the same.</p>
       <div class="row-2">
@@ -311,11 +312,22 @@
     </dialog>
 
     <dialog id="confirmDelete" class="sheet" aria-labelledby="deleteTitle">
+      <div class="sheet-grip"></div>
       <h2 id="deleteTitle" class="display sheet-title">End this room?</h2>
       <p class="muted">This removes every player and sends everyone back to the home screen.</p>
       <div class="row-2">
         <button type="button" class="btn btn-ghost" data-close>Cancel</button>
         <button type="button" id="roomDeleteButton" class="btn btn-danger" data-close>End room</button>
+      </div>
+    </dialog>
+
+    <dialog id="confirmRemoveBot" class="sheet" aria-labelledby="removeBotTitle">
+      <div class="sheet-grip"></div>
+      <h2 id="removeBotTitle" class="display sheet-title">Remove <span id="removeBotName"></span>?</h2>
+      <p class="muted">The round has started, so its secret name will be revealed to everyone and taken off the list.</p>
+      <div class="row-2">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" id="removeBotButton" class="btn btn-danger" data-close>Remove bot</button>
       </div>
     </dialog>
 
