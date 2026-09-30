@@ -4,8 +4,6 @@
     ".write": false,
     // A short recorded sample for the voice volume slider, written by flashNames only.
     "voiceSample": { ".read": true },
-    // Fixed narrator lines ("A player has joined the game." and so on), written by the functions only.
-    "voicePhrases": { ".read": true },
     // Room name -> password -> room key. Reading needs both the name and the password, and
     // names can't be listed. A name holds one room at a time: it can only be claimed while
     // unused, in the same write that creates the room, and is freed when the room is deleted.
