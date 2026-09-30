@@ -382,8 +382,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     playerLeft: 'A player has left the game.',
     botJoined: 'A bot has joined the game.',
     botLeft: 'A bot has left the game.',
-    listen: 'Listen carefully.',
-    lastName: "That's all the names.",
     newRound: 'A new round is starting.'
   };
   let phraseClips = null;
@@ -2057,7 +2055,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           reveal.hidden = false;
         }
         shown = step;
-        if (step === 0 && t < 500) narrate('listen');
         const stepStart = step < 3 ? step * COUNTDOWN_MS : countdown + (step - 3) * NAME_MS;
         showStep(stage, timer, bar, step, t - stepStart, names);
       }
@@ -2081,7 +2078,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     bar.classList.remove('run');
     // The reveal is over (or was already over when this player arrived).
     if (stillHere() && serverNow() - startedAt >= total) {
-      if (serverNow() - startedAt < total + 1000) narrate('lastName');
       db.ref(`games/${code}`).update({ state: 'waiting' });
     }
     renderLobby();
