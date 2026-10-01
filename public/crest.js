@@ -1,5 +1,6 @@
 import { CREATURES } from './crest-creatures.js';
 import { MYTHICALS } from './crest-mythicals.js';
+import { BEASTS } from './crest-beasts.js';
 
 // Crests: each player's avatar is a small coat of arms built from six choices.
 // A crest is stored as "shape.color.pattern.emblem.metal.trim". The last component
@@ -128,14 +129,14 @@ export const EMBLEMS = {
   star: { retired: true, label: 'Star', svg: starPath() },
   sword: { label: 'Sword', svg: '<path d="M12 1.5l1.4 2.4V15h-2.8V3.9z"/><rect x="6" y="15" width="12" height="2.2" rx="1.1"/><rect x="11" y="17" width="2" height="3.6"/><circle cx="12" cy="21.6" r="1.6"/>' },
   tower: { retired: true, label: 'Tower', svg: '<path fill-rule="evenodd" d="M5 22V8h3V5h2.5v3h3V5H16v3h3v14zM10 22v-4.5a2 2 0 0 1 4 0V22z"/>' },
-  helm: { label: 'Helm', svg: lineArt('<path d="M6 20V9a6 6 0 0 1 12 0v11Q12 24 6 20zM6 10q6-2 12 0M6 12q6 2 12 0M12 13v8M8 16v2M16 16v2M9 4q3 2 6 0"/>') },
+  helm: { label: 'Helm', svg: CREATURES.helm },
   moon: { retired: true, label: 'Moon', svg: '<path d="M16.1 4A9 9 0 1 0 16.1 20A8 8 0 1 1 16.1 4z"/>' },
   cross: { label: 'Cross', svg: '<path d="M9 2h6l-1.5 8.5L22 9v6l-8.5-1.5L15 22H9l1.5-8.5L2 15V9l8.5 1.5z"/>' },
   eagle:{label:'Eagle',svg:'<path d="M10 8V5q0-3 3-3h2l2 3h-4v3l2 2 7-6v5l-5 4 5-2v3l-6 2 5 1-2 3-5-3 2 5h-8l2-5-5 3-2-3 5-1-6-2v-3l5 2-5-4V4l7 6z"/>'},
-  spartan: { label: 'Spartan', svg: lineArt('<path d="M5 8C5 1 17 0 20 7M7 8C8 4 14 3 17 7M7 21V11a5 5 0 0 1 10 0v10M7 21l3-3v-4M17 21l-3-3v-4M8 11q2 1 3 .5M13 11.5q1-.5 3-.5M12 11v10"/>') },
+  spartan: { label: 'Spartan', svg: CREATURES.spartan },
   spears: { label: 'Spears', svg: lineArt('<path d="M5 21 17 7M19 21 7 7M16 8Q14 4 21 2Q20 9 16 8zM8 8Q10 4 3 2Q4 9 8 8zM6 18l2 1.5M16 19.5l2-1.5"/>') },
   axe:{label:'Axe',svg:'<path d="M11 2h2v21h-2zM13 4q6 0 9-3v10q-4-4-9-4zM11 4Q5 4 2 1v10q4-4 9-4z"/>'},
-  wolf: { label: 'Wolf', svg: lineArt('<path d="M5 10Q3 6 4 2Q9 3 10 6Q12 5 14 6Q15 3 20 2Q21 6 19 10C20 15 16 18 12 22C8 18 4 15 5 10M7 10q2 0 3 2M17 10q-2 0-3 2M10 15q2-2 4 0l-2 2zM12 17v2M6 6l2 1M18 6l-2 1M7 14q1 3 3 3M17 14q-1 3-3 3"/>') },
+  wolf: { label: 'Wolf', svg: BEASTS.wolf },
   lion: { label: 'Lion', svg: CREATURES.lion },
   sun:{label:'Sun',svg:'<circle cx="12" cy="12" r="5"/><path d="m12 1 2 5h-4zM12 23l-2-5h4zM1 12l5-2v4zM23 12l-5 2v-4zM4 4l5 2-3 3zM20 4l-2 5-3-3zM4 20l2-5 3 3zM20 20l-5-2 3-3z"/>'},
   oak:{retired:true,label:'Oak',svg:'<path d="M11 14h2v8h-2zM8 19h8v2H8z"/><path d="M12 2c3 0 4 2 4 4 4-1 6 3 4 5 4 4-1 8-5 5-1 3-5 3-6 0-4 3-9-1-5-5-2-2 0-6 4-5 0-2 1-4 4-4z"/>'},
@@ -143,8 +144,8 @@ export const EMBLEMS = {
   lambda: { retired: true, label: 'Lambda', svg: '<path d="M10.5 3h3L22 21h-4L12 8 6 21H2z"/>' },
   gladius: { label: 'Gladius', svg: '<path d="M10 2h4l1 9-3 4-3-4z"/><rect x="6" y="14" width="12" height="2.5" rx="1"/><path d="M10.5 16h3v4h-3z"/><ellipse cx="12" cy="21" rx="2.5" ry="1.5"/>' },
   legion: { label: 'Legion standard', svg: '<path d="M11 2h2v21h-2zM4 6h16v3H4zM6 10h12v7l-6 3-6-3z"/><circle cx="12" cy="3" r="2.5"/>' },
-  column: { label: 'Column', svg: '<path d="M3 3h18v3H3zM5 7h14v2H5zM6 20h12v2H6zM3 22h18v2H3zM7 9h2v10H7zM11 9h2v10h-2zM15 9h2v10h-2z"/>' },
-  amphora: { label: 'Amphora', svg: '<path d="M8 2h8v2h-1v4q4 3 3 7l-4 6H10l-4-6q-1-4 3-7V4H8zM9 22h6v2H9z"/><path d="M8 7C1 5 1 15 7 14M16 7c7-2 7 8 1 7" fill="none" stroke="currentColor" stroke-width="2"/>' },
+  column: { retired: true, label: 'Column', svg: '<path d="M3 3h18v3H3zM5 7h14v2H5zM6 20h12v2H6zM3 22h18v2H3zM7 9h2v10H7zM11 9h2v10h-2zM15 9h2v10h-2z"/>' },
+  amphora: { retired: true, label: 'Amphora', svg: '<path d="M8 2h8v2h-1v4q4 3 3 7l-4 6H10l-4-6q-1-4 3-7V4H8zM9 22h6v2H9z"/><path d="M8 7C1 5 1 15 7 14M16 7c7-2 7 8 1 7" fill="none" stroke="currentColor" stroke-width="2"/>' },
   horse: { label: 'War horse', svg: CREATURES.horse },
   trident: { label: 'Trident', svg: '<path d="M12 1l2.5 6-1.5-.5v6h3l2-3V7l-2 1 3-6 3 6-2-1v4l-3 4h-4v8h-2v-8H7l-3-4V7L2 8l3-6 3 6-2-1v2.5l2 3h3v-6L9.5 7z"/>' },
   victory: { retired: true, label: 'Victory palm', svg: lineArt('<path d="M10 22Q13 15 13 3M13 8Q8 7 6 3Q12 3 13 8zM13 12Q6 11 3 7Q10 7 13 12zM12 17Q6 17 3 13Q10 13 12 17zM13 7Q13 3 18 1Q18 6 13 7zM13 12Q16 6 21 5Q20 11 13 12zM12 17Q17 11 22 11Q20 17 12 17z"/>') },
@@ -154,7 +155,7 @@ export const EMBLEMS = {
   wyvern: { label: 'Wyvern', svg: CREATURES.wyvern },
   twinwyrm: { label: 'Twin hydra', svg: CREATURES.twinwyrm },
   dragon: { label: 'Dragon', svg: CREATURES.dragon },
-  serpent: { label: 'Serpent', svg: lineArt('<path d="M17 7C9 3 2 8 5 13C7 17 18 12 19 17C21 23 6 24 5 18M16 7C10 5 5 9 7 12C10 15 19 10 21 16M16 7Q13 5 15 3Q19 1 22 4Q21 7 16 7zM18 4h.1M21 5l2 1M23 6v2"/>') },
+  serpent: { label: 'Serpent', svg: BEASTS.serpent },
 };
 
 // Bots wear a robot instead of an emblem. It isn't offered in the picker, so people can't
