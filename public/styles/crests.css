@@ -1,0 +1,45 @@
+/* ---------- Crests ---------- */
+
+.crest-slot { position: absolute; inset: -2px; display: flex; pointer-events: none; }
+.crest-slot:empty { display: none; }
+.crest { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .35)); }
+.crest-btn {
+  position: relative; width: 92px; height: 92px; flex-shrink: 0; padding: 0; border: none; border-radius: 20px; background: none;
+  transition: transform .14s cubic-bezier(.3, .7, .4, 1);
+}
+.crest-btn .crest-slot { inset: 0; }
+.crest-btn .crest-slot { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)); }
+.crest-btn .crest { filter: none; animation: float 3s cubic-bezier(.37, 0, .63, 1) infinite alternate; will-change: transform; }
+.crest-btn:active { transform: scale(.95); }
+.crest-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 4px; }
+.crest-edit {
+  position: absolute; right: -2px; bottom: 0; width: 30px; height: 30px; border-radius: 15px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--foil); border: 2px solid var(--bg); color: var(--gold-ink);
+}
+.crest-edit .icon { width: 14px; height: 14px; }
+.crest-head { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+.crest-head .sheet-title { margin: 0; }
+.crest-big { position: relative; inset: auto; width: 84px; height: 84px; flex-shrink: 0; }
+.crest-big .crest { animation: crest-in .35s var(--spring); }
+@keyframes crest-in { from { transform: scale(.9); } to { transform: none; } }
+#crestNote.taken { color: #FFB23D; font-weight: 700; }
+.crest-options { overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 5px 2px; margin: 0 -5px; }
+.crest-group { display: flex; flex-direction: column; gap: 8px; }
+.crest-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.crest-group-head .eyebrow { font-size: 12px; }
+.crest-grid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 48px)); justify-content: space-between; gap: 6px; }
+.crest-tile {
+  position: relative; aspect-ratio: 1; padding: 4px; border-radius: 12px;
+  border: 1.5px solid transparent; background: var(--field);
+  transition: transform .14s cubic-bezier(.3, .7, .4, 1), border-color .2s, background-color .2s;
+}
+.crest-tile .crest { filter: none; }
+.crest-tile:active { transform: scale(.92); }
+.crest-tile[aria-pressed="true"] { border-color: var(--gold); background: rgba(255, 122, 26, .14); }
+.crest-tile:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.crest-swatch { padding: 0; background: var(--c); border-radius: 50%; border: 2px solid rgba(244, 241, 232, .14); }
+.crest-swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 3px var(--gold); background-color: var(--c); }
+.crest-metals { display: flex; gap: 8px; align-items: center; }
+.crest-metals .eyebrow { margin-right: 2px; }
+.crest-metals .crest-swatch { width: 26px; height: 26px; aspect-ratio: auto; }

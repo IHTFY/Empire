@@ -1,0 +1,99 @@
+/* Empire · Imperial Night */
+
+:root {
+  --bg: #0B0D26;
+  --bg-deep: #070819;
+  --surface: #151838;
+  --surface-2: #1D2150;
+  --field: #0F1233;
+  --ink: #F4F1E8;
+  --muted: #B9BCDA;
+  --faint: #8A8FB8;
+  /* The accent is lava: a flat ember-to-amber gradient that slowly flows and glows from beneath.
+     (The --gold / --foil names are kept so every accent follows these tokens.) */
+  --gold: #FF7A1A;
+  --gold-hi: #FFB23D;
+  --gold-ink: #1A0600;
+  --foil: linear-gradient(115deg, #E0300B 0%, #FF5A0A 35%, #FF8A00 65%, #FFB23D 100%);
+  --foil-text: linear-gradient(115deg, #FF5A0A 0%, #FF8A00 50%, #FFB23D 100%);
+  --foil-edge: inset 0 1px 0 rgba(255, 220, 170, .45), 0 1px 0 rgba(0, 0, 0, .4);
+  --lava-edge: rgba(255, 178, 61, .55);
+  --lava-glow: rgba(255, 70, 10, .38);
+  --indigo: #4F63D9;
+  --bot: #2B3170;
+  --online: #3DDC97;
+  --offline: #6B6F94;
+  --danger: #E5484D;
+  --line: rgba(244, 241, 232, 0.12);
+  --display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --body: Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --glide: cubic-bezier(.45, 0, .2, 1);
+  --spring: cubic-bezier(.3, 1.5, .5, 1);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: contain;
+}
+
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--gold); }
+a:hover { color: var(--gold-hi); }
+[hidden] { display: none !important; }
+
+.icon { width: 20px; height: 20px; flex-shrink: 0; }
+.icon-gold { color: var(--gold); width: 16px; height: 16px; }
+.display {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: .92;
+  letter-spacing: .5px;
+}
+.muted { color: var(--muted); margin: 0; line-height: 1.5; }
+.small { font-size: 14px; }
+.grow { flex-grow: 1; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.stack-sm { display: flex; flex-direction: column; gap: 8px; }
+.row-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.eyebrow-gold { color: var(--gold); }
+.noscript { padding: 24px; }
+.wide-only { display: none; }
+
+/* ---------- Layout ---------- */
+
+.app {
+  max-width: 440px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: max(16px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: screen-in .45s var(--ease) both;
+}
+@keyframes screen-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; }
+.bar-group { display: flex; gap: 8px; }
+.bar-logo { width: 40px; height: 40px; }
