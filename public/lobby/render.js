@@ -1,22 +1,27 @@
 import { $ } from '../dom.js';
 import { MAX_PLAYERS, OFFLINE_KICK_MS } from '../config.js';
-import { openSheet } from '../sheets.js';
+import { openSheet, closeSheet } from '../sheets.js';
 import { initialOf, botCrest, defaultCrest, parseCrest, crestString, crestSvg } from '../crest.js';
 import { createSeating } from './seating.js';
 
 // Owns the stable roster order and player DOM elements. It renders snapshots and delegates database actions.
-export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher }) {
+export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher, capturePlayer, releasePlayer }) {
   const startButton = $('revealSecrets');
   const colors = ['#4F63D9', '#0E8A74', '#B5487A', '#C0662B', '#6D4FC2', '#2E7FB8', '#8A7A12', '#A8433F'];
   const { rollNumber, toast } = ui;
   const seating = createSeating();
 
   let order = [];
+  const attached = new Map(); // captured player -> leader already seated beside
   const seatEls = new Map();
   const rowEls = new Map();
 
+  let seenCaptured = null;
+
   function resetLobby() {
     order = [];
+    seenCaptured = null;
+    attached.clear();
     seating.reset();
     seatEls.forEach(({ el }) => el.remove());
     rowEls.forEach(({ el }) => el.remove());
@@ -35,7 +40,26 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     return minutes < 1 ? 'just now' : `${minutes}m ago`;
   }
 
-  function playerInfo(key, user) {
+  function crestFor(key, user) {
+    return user.fakeBadge ? botCrest(key) : user.crest ? parseCrest(user.crest) : defaultCrest(key);
+  }
+
+  // Captured players belong to the empire of an uncaptured leader who is still in the room.
+  function empiresOf(room) {
+    const leaderOf = {};
+    const size = {};
+    Object.entries(room.captures || {}).forEach(([key, c]) => {
+      if (c && room.users[key] && room.users[c.leader] && !(room.captures[c.leader])) leaderOf[key] = c.leader;
+    });
+    Object.keys(room.users).forEach(key => { if (!leaderOf[key]) size[key] = 1; });
+    Object.values(leaderOf).forEach(leader => { size[leader]++; });
+    return { leaderOf, size };
+  }
+
+  function playerInfo(key, user, empires) {
+    const room = getRoom();
+    const leader = empires.leaderOf[key] || null;
+    const leaderUser = leader && room.users[leader];
     const seen = getRoom().presence[key];
     const bot = Boolean(user.fakeBadge);
     const you = key === getUid();
@@ -43,18 +67,23 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     const away = !bot && !offline && seen && seen.away;
     let status = bot ? 'Bot' : offline ? `Offline · ${minutesAgo(seen.lastSeen)}` : away ? 'Away' : 'Online';
     if (you) status = 'You';
+    if (leader) status = `Captured by ${leaderUser.real}`;
     return {
-      key, bot, you, offline, away,
+      key, bot, you, offline, away, leader,
+      captured: Boolean(leader),
+      direct: Boolean(leader) && room.captures[key].via === key,
+      size: leader || empires.size[key] < 2 ? 0 : empires.size[key],
+      capturable: room.locked && !bot && !leader && Boolean(room.users[getUid()]),
       name: user.real,
       status,
       color: bot ? '#2B3170' : offline ? '#3A3E63' : colorFor(key),
-      crest: bot ? botCrest(key) : user.crest ? parseCrest(user.crest) : defaultCrest(key),
+      crest: leader ? crestFor(leader, leaderUser) : crestFor(key, user),
       removable: !you && (bot || (offline && Date.now() - seen.lastSeen > OFFLINE_KICK_MS))
     };
   }
 
   function avatarHtml() {
-    return '<span class="avatar"><span class="crest-slot"></span><span class="initial"></span><svg class="icon bot-icon"><use href="#i-bot" /></svg><span class="dot"></span></span>';
+    return '<span class="avatar"><span class="crest-slot"></span><span class="initial"></span><svg class="icon bot-icon"><use href="#i-bot" /></svg><span class="dot"></span><span class="empire-badge" hidden></span></span>';
   }
 
   function paintAvatar(avatar, p, size) {
@@ -62,6 +91,18 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     avatar.classList.toggle('has-crest', Boolean(p.crest));
     const slot = avatar.querySelector('.crest-slot');
     const drawn = p.crest ? [crestString(p.crest), p.name, p.you].join('|') : '';
+    // A newly captured player takes on their leader's look with a flash.
+    const empire = p.leader || '';
+    if (avatar.dataset.empire !== undefined && avatar.dataset.empire !== empire && empire) {
+      avatar.classList.remove('captured-in');
+      void avatar.offsetWidth;
+      avatar.classList.add('captured-in');
+    }
+    avatar.dataset.empire = empire;
+    const badge = avatar.querySelector('.empire-badge');
+    badge.hidden = !p.size;
+    badge.textContent = p.size || '';
+    badge.title = p.size ? `Empire of ${p.size}` : '';
     if (slot.dataset.drawn !== drawn) {
       slot.dataset.drawn = drawn;
       slot.innerHTML = p.crest ? crestSvg(p.crest, { letter: initialOf(p.name), ring: p.you }) : '';
@@ -103,6 +144,46 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     return btn;
   }
 
+  // Humans are captured rather than removed: pick the leader whose empire they joined.
+  function makeCaptureButton(cls) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = cls;
+    btn.innerHTML = '<svg class="icon"><use href="#i-flag" /></svg>';
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      if (btn.dataset.mode === 'undo') { releasePlayer(key); return; }
+      openCapture(key);
+    });
+    return btn;
+  }
+
+  function openCapture(key) {
+    const room = getRoom();
+    const empires = empiresOf(room);
+    const captive = room.users[key];
+    if (!captive) return;
+    $('captureName').textContent = captive.real;
+    $('captureMore').hidden = !Object.values(empires.leaderOf).includes(key);
+    const mine = empires.leaderOf[getUid()] || getUid();
+    const options = Object.keys(empires.size)
+      .filter(id => id !== key && !room.users[id].fakeBadge)
+      .sort((a, b) => (b === mine) - (a === mine) || empires.size[b] - empires.size[a]);
+    $('captureLeaders').replaceChildren(...options.map(id => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-ghost capture-leader';
+      btn.textContent = `${room.users[id].real}${id === getUid() ? ' (you)' : ''} · ${empires.size[id]}`;
+      btn.addEventListener('click', () => {
+        closeSheet($('confirmCapture'));
+        capturePlayer(key, id);
+      });
+      return btn;
+    }));
+    if (options.length === 0) { toast('Nobody else can lead an empire yet'); return; }
+    openSheet($('confirmCapture'));
+  }
+
   let pendingBotRemoval = null;
   $('removeBotButton').addEventListener('click', () => {
     if (pendingBotRemoval && getRoom().users[pendingBotRemoval]) removePlayer(pendingBotRemoval);
@@ -132,7 +213,9 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     order = order.filter(key => keys.includes(key));
     keys.filter(key => !order.includes(key)).sort().forEach(key => order.push(key));
 
-    const players = order.map(key => playerInfo(key, room.users[key]));
+    const empires = empiresOf(room);
+    const players = order.map(key => playerInfo(key, room.users[key], empires));
+    announceCaptures(room);
     const count = players.length;
     const waiting = players.filter(p => p.away || p.offline).map(p => p.name);
     const waitingText = waiting.length === 0 ? (count < 2 ? 'Need 2 to start' : 'Everyone is here')
@@ -185,8 +268,27 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     startButton.classList.toggle('is-disabled', (!room.locked && count < 2) || isRevealing() || preparing);
     $('generateName').disabled = count >= MAX_PLAYERS;
 
+    // The list ranks empires by size, each leader followed by their captured players.
+    const rank = key => order.indexOf(key);
+    const listed = players.filter(p => !p.captured).sort((a, b) => empires.size[b.key] - empires.size[a.key] || rank(a.key) - rank(b.key))
+      .flatMap(leader => [leader, ...players.filter(p => p.leader === leader.key).sort((a, b) => rank(a.key) - rank(b.key))]);
     renderTable(players);
-    renderList(players);
+    renderList(listed);
+  }
+
+  function announceCaptures(room) {
+    if (!room.capturesReady) return;
+    // Only a player who was free is announced; their followers and undo restorations stay quiet.
+    const captured = new Set(Object.keys(room.captures).filter(key => room.captures[key]));
+    if (seenCaptured) {
+      captured.forEach(key => {
+        const c = room.captures[key];
+        if (!seenCaptured.has(key) && c.via === key && room.users[key] && room.users[c.leader]) {
+          toast(`${room.users[key].real} was captured by ${room.users[c.leader].real}`);
+        }
+      });
+    }
+    seenCaptured = captured;
   }
 
   // The status line sits low in the disc, where the circle narrows: pick the largest
@@ -222,6 +324,11 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
   }
 
   function renderTable(players) {
+    // A captured player takes a seat right beside their leader, once.
+    players.forEach(p => {
+      if (!p.leader) attached.delete(p.key);
+      else if (attached.get(p.key) !== p.leader) { seating.attach(p.key, p.leader); attached.set(p.key, p.leader); }
+    });
     const { L, seats } = seating.assign(players.map(p => p.key));
     const cx = 195, cy = 195, S = L.S;
 
@@ -271,10 +378,11 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
         el.className = 'seat pop';
         el.innerHTML = `<div class="seat-inner">${avatarHtml()}<span class="seat-label"></span></div>`;
         const x = makeRemoveButton('seat-x');
-        el.querySelector('.seat-inner').appendChild(x);
+        const cap = makeCaptureButton('seat-cap');
+        el.querySelector('.seat-inner').append(x, cap);
         container.appendChild(el);
         setTimeout(() => el.classList.remove('pop'), 600);
-        entry = { el, avatar: el.querySelector('.avatar'), label: el.querySelector('.seat-label'), x };
+        entry = { el, avatar: el.querySelector('.avatar'), label: el.querySelector('.seat-label'), x, cap };
         seatEls.set(p.key, entry);
       }
       const { a, R } = seats.get(p.key);
@@ -283,6 +391,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       entry.el.style.height = `${S}px`;
       entry.el.style.transform = `rotate(${a.toFixed(2)}deg) translateY(${-R}px) rotate(${(-a).toFixed(2)}deg)`;
       entry.el.classList.toggle('dim', p.away || p.offline);
+      entry.el.classList.toggle('captured', p.captured);
       paintAvatar(entry.avatar, p, S);
       // Names sit on the outer side of each seat so they never cover the center.
       Object.assign(entry.label.style, {
@@ -295,7 +404,18 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       entry.x.dataset.key = p.key;
       entry.x.setAttribute('aria-label', `Remove ${p.name}`);
       entry.x.style.left = `${36 + S / 2 - 12}px`;
+      setCaptureButton(entry.cap, p);
+      entry.cap.style.left = `${36 - S / 2 - 10}px`;
     });
+  }
+
+  function setCaptureButton(btn, p) {
+    const undo = p.direct;
+    btn.hidden = !(p.capturable || undo);
+    btn.dataset.key = p.key;
+    btn.dataset.mode = undo ? 'undo' : 'capture';
+    btn.setAttribute('aria-label', undo ? `Undo capture of ${p.name}` : `${p.name} was captured`);
+    btn.querySelector('use').setAttribute('href', undo ? '#i-refresh' : '#i-flag');
   }
 
   const rowGap = list => parseFloat(getComputedStyle(list).rowGap) || 0;
@@ -336,9 +456,10 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
         el.className = 'row pop';
         el.innerHTML = `${avatarHtml()}<span class="row-name"></span><span class="row-status"></span>`;
         const x = makeRemoveButton('row-x');
-        el.appendChild(x);
+        const cap = makeCaptureButton('row-cap');
+        el.append(cap, x);
         setTimeout(() => el.classList.remove('pop'), 500);
-        entry = { el, avatar: el.querySelector('.avatar'), x };
+        entry = { el, avatar: el.querySelector('.avatar'), x, cap };
         rowEls.set(p.key, entry);
       }
       const here = liveRows()[i];
@@ -346,7 +467,9 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       entry.el.classList.toggle('you', p.you);
       entry.el.classList.toggle('offline', p.offline);
       entry.el.classList.toggle('dim', p.away || p.offline);
+      entry.el.classList.toggle('captured', p.captured);
       paintAvatar(entry.avatar, p);
+      setCaptureButton(entry.cap, p);
       entry.el.querySelector('.row-name').textContent = p.name;
       entry.el.querySelector('.row-status').textContent = p.status;
       entry.x.hidden = !p.removable;

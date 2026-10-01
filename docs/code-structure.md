@@ -60,13 +60,13 @@ settings/dialogs, responsive overrides, and rolling numbers. Keep their order st
 when moving rules. Keyframes stay with their components; responsive overrides remain
 later in the cascade.
 
-`npm run build` uses [esbuild](https://esbuild.github.io/api/#bundle) to combine the
+`pnpm build` uses [esbuild](https://esbuild.github.io/api/#bundle) to combine the
 browser sources into `public/assets/script.js` and `public/assets/style.css`.
 `index.html` loads those two assets. Splitting source files does not add browser requests.
 The Firebase SDK and other existing external resources remain separate.
 
 The bundles are unminified, with external source maps for debugging, and ignored by Git.
-Edit the source modules, not `public/assets/`. `npm run dev` builds first and watches
+Edit the source modules, not `public/assets/`. `pnpm dev` builds first and watches
 source changes while the emulators run. Integration checks, preview CI, and normal
 Hosting deployments build the assets before serving or publishing them.
 
@@ -87,9 +87,9 @@ trigger paths remain unchanged by this organization.
 
 ## Verification
 
-Use Node.js 22 and Java 21 or newer. Run `npm test` for regression tests and
-`npm run lint` for browser/build-script and backend lint. Stop the development emulators
-before running `npm run test:integration`, which builds the site, checks database
+Use Node.js 22 and Java 21 or newer. Run `pnpm test` for regression tests and
+`pnpm lint` for browser/build-script and backend lint. Stop the development emulators
+before running `pnpm test:integration`, which builds the site, checks database
 rules, and exercises the actual callable and triggers through a whole-game scenario.
 
 The unit harness in `functions/test/support/functions.cjs` loads the CommonJS modules

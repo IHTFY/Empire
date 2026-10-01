@@ -174,3 +174,19 @@ test('members can remove a watcher with connection entries but cannot remove a c
   await alice.ref('games/watchers/presence/alice').update({ version: 2, lastSeen: Date.now(), connections: { tab: { away: false, name: 'Alice' } } });
   await assert.rejects(outsider.ref('games/watchers/presence/alice').remove(), /permission/i);
 });
+
+test('members capture humans into an uncaptured leader\'s empire after the reveal', async () => {
+  await seed('capture', { locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), bot: { ...player('Bot'), fakeBadge: true } } });
+  const claim = (key, leader, via = key) => alice.ref(`games/capture/captures/${key}`).set({ leader, via });
+  await assert.rejects(outsider.ref('games/capture/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
+  await assert.rejects(claim('bot', 'alice'), /permission/i);
+  await assert.rejects(claim('bob', 'bot'), /permission/i);
+  await assert.rejects(claim('bob', 'bob'), /permission/i);
+  await claim('bob', 'alice');
+  await assert.rejects(claim('cara', 'bob'), /permission/i);
+  await alice.ref('games/capture').update({ 'captures/alice': { leader: 'cara', via: 'alice' }, 'captures/bob': { leader: 'cara', via: 'alice', back: 'bob' } });
+  await alice.ref('games/capture').update({ 'captures/alice': null, 'captures/bob': { leader: 'alice', via: 'bob' } });
+  await assert.rejects(alice.ref('games/capture/captures/bob/extra').set('x'), /permission/i);
+  await seed('capture-early', { locked: false });
+  await assert.rejects(alice.ref('games/capture-early/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
+});
