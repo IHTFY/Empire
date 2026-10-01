@@ -1,7 +1,7 @@
 import { $ } from './dom.js';
 import { openSheet } from './sheets.js';
 import { createCrestCarousel } from './crest-carousel.js';
-import { initialOf, SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+import { initialOf, SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, EMBLEM_CHOICES, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
 
 // Owns the editable crest and its device persistence; crest.js remains the drawing library.
 export function createCrestPicker({ getRoom, getUid }) {
@@ -28,10 +28,10 @@ export function createCrestPicker({ getRoom, getUid }) {
 
   // Each group lists its choices; tiles preview the choice on your current crest.
   const crestGroups = [
-    { part: 'shape', label: 'Shape', options: SHAPES, order: ['scutum', 'boeotian', 'vexillum', 'hoplon', 'heater', 'kite', 'standard', 'tablet', 'peltast', 'octagon', 'hexagon', 'banner', 'oval', 'round', 'lozenge', 'pennon'] },
+    { part: 'shape', label: 'Shape', options: SHAPES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'targe', 'pavise', 'vesica', 'crescent', 'scutum', 'boeotian', 'vexillum', 'hoplon', 'heater', 'kite', 'standard', 'tablet', 'peltast', 'octagon', 'hexagon', 'banner', 'oval', 'round', 'lozenge', 'pennon'] },
     { part: 'color', label: 'Color', options: COLORS, swatch: true },
     { part: 'pattern', label: 'Pattern', options: PATTERNS },
-    { part: 'emblem', label: 'Emblem', options: EMBLEMS, order: ['spartan', 'eagle', 'gladius', 'legion', 'wolf', 'lion', 'spears', 'trident', 'victory', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'column', 'tower', 'amphora', 'lambda', 'star', 'moon', 'cross', 'oak', 'letter'] }
+    { part: 'emblem', label: 'Emblem', options: EMBLEM_CHOICES, order: ['dragon', 'griffin', 'phoenix', 'hydra', 'spartan', 'eagle', 'gladius', 'legion', 'wolf', 'lion', 'spears', 'trident', 'victory', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'column', 'amphora', 'star', 'moon', 'cross', 'letter'] }
   ];
   let activePart = 'emblem';
   let displayedCrest = '';
@@ -104,7 +104,13 @@ export function createCrestPicker({ getRoom, getUid }) {
       grid.className = 'crest-grid';
       grid.setAttribute('role', 'group');
       grid.setAttribute('aria-label', `${group.label} options`);
-      const keys = group.order || Object.keys(group.options);
+      let keys = group.order || Object.keys(group.options);
+      const options = { ...group.options };
+      // Preserve a retired mark already worn by this player when centering the row.
+      if (group.part === 'emblem' && !options[crest.emblem]) {
+        options[crest.emblem] = EMBLEMS[crest.emblem];
+        keys = [...keys, crest.emblem];
+      }
       const rail = document.createElement('div');
       rail.className = 'crest-rail';
       rail.appendChild(grid);
@@ -112,11 +118,11 @@ export function createCrestPicker({ getRoom, getUid }) {
       const carousel = createCrestCarousel({
         grid, keys,
         createTile: key => {
-          const option = group.options[key];
+          const option = options[key];
           return crestTile(group.part, key, option.label, group.swatch && option.hex);
         },
         onActivate: () => activateRow(section),
-        onBrowse: key => { selection.textContent = group.options[key].label; },
+        onBrowse: key => { selection.textContent = options[key].label; },
         onSelect: key => {
           if (crest[group.part] === key) return;
           crest[group.part] = key;
@@ -166,7 +172,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     $('crestNote').textContent = taken ? 'Someone in this room already bears this crest. Change a part to stand apart.' : 'Swipe to choose. Center is selected.';
     crestGroups.forEach(group => {
       const section = $('crestOptions').querySelector(`[data-part="${group.part}"]`);
-      section.querySelector('.crest-selection').textContent = group.options[crest[group.part]].label;
+      section.querySelector('.crest-selection').textContent = (group.part === 'emblem' ? EMBLEMS : group.options)[crest[group.part]].label;
     });
     document.querySelectorAll('#crestOptions .crest-tile').forEach(tile => {
       const { part, value } = tile.dataset;
@@ -185,7 +191,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     requestAnimationFrame(() => centerRows());
   });
   $('crestShuffle').addEventListener('click', () => {
-    const emblems = Object.keys(EMBLEMS);
+    const emblems = Object.keys(EMBLEM_CHOICES);
     crest = { ...randomCrest(), emblem: emblems[Math.floor(Math.random() * emblems.length)] };
     saveCrest();
     renderCrest();
