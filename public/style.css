@@ -229,8 +229,10 @@ a:hover { color: var(--gold-hi); }
 
 /* ---------- Home ---------- */
 
-.screen-home {
-  background: radial-gradient(420px 360px at 50% 210px, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+/* Paint the glow across the viewport so the app's width cap cannot cut it off. */
+body:has(.screen-home:not([hidden])) {
+  background-image: radial-gradient(420px 360px at 50% 210px, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+  background-repeat: no-repeat;
 }
 .hero { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
 .hero-logo { position: relative; width: 168px; height: 168px; display: flex; align-items: center; justify-content: center; }
@@ -263,6 +265,15 @@ a:hover { color: var(--gold-hi); }
 .mode-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .field-row { display: flex; align-items: center; gap: 10px; }
 .field-row .field { flex: 1; min-width: 0; }
+.room-name-field { position: relative; flex: 1; min-width: 0; }
+.room-name-field.is-rolling .field { color: transparent; }
+.room-name-roll { position: absolute; inset: 1.5px 19.5px; overflow: hidden; pointer-events: none; font-size: 17px; perspective: 240px; }
+.room-name-roll-track { position: absolute; inset: 0; display: flex; align-items: center; white-space: pre; }
+.room-name-roll-track span { display: inline-block; flex: none; animation-duration: .32s; animation-timing-function: var(--ease); animation-fill-mode: both; animation-delay: var(--d); }
+.room-name-roll-out span { animation-name: room-name-out; }
+.room-name-roll-in span { animation-name: room-name-in; animation-delay: calc(var(--d) + .12s); }
+@keyframes room-name-out { to { opacity: 0; transform: translateY(-16px) rotateX(90deg); } }
+@keyframes room-name-in { from { opacity: 0; transform: translateY(16px) rotateX(-90deg); } to { opacity: 1; transform: none; } }
 .reroll-btn { flex: none; width: 56px; height: 56px; border-radius: 16px; color: var(--muted); }
 .reroll-btn:hover { color: var(--ink); }
 .reroll-btn:disabled, .field[readonly] { opacity: .6; pointer-events: none; }
@@ -359,6 +370,8 @@ a:hover { color: var(--gold-hi); }
 /* While the view switches, players fly between layouts as copies in this layer. */
 .morph-layer { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
 .morph-layer > * { margin: 0; pointer-events: none; }
+.morph-player { position: absolute; isolation: isolate; }
+.morph-player, .morph-player * { transition: none !important; animation: none !important; }
 .lobby-body.morphing > .table, .lobby-body.morphing > .list-view { animation: none; }
 
 .lobby-body { position: relative; margin: 0 -24px; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
@@ -372,14 +385,14 @@ a:hover { color: var(--gold-hi); }
 .ring-guide, .table-center, .seat, .seat-bubble, .seat-label {
   transition-timing-function: var(--glide);
 }
-.ring-guide { position: absolute; border-radius: 50%; border: 1px dashed rgba(255, 122, 26, .28); transition: all .7s var(--glide); }
+.ring-guide { position: absolute; border-radius: 50%; border: 1px dashed rgba(255, 122, 26, .28); transition: left .7s var(--glide), top .7s var(--glide), width .7s var(--glide), height .7s var(--glide), opacity .7s var(--glide), transform .7s var(--glide); }
 .table-center {
   position: absolute; border-radius: 50%; background: var(--surface);
   box-shadow: 0 0 0 6px rgba(21, 24, 56, .6);
   display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1px;
-  transition: all .7s var(--glide);
+  transition: left .7s var(--glide), top .7s var(--glide), width .7s var(--glide), height .7s var(--glide), opacity .7s var(--glide), transform .7s var(--glide);
 }
-.table-center > * { transition: font-size .6s var(--glide); }
+.table-center > * { transition: font-size .7s var(--glide), max-width .7s var(--glide); }
 .measuring { visibility: hidden; pointer-events: none; }
 .measuring, .measuring * { transition: none !important; animation: none !important; }
 .tc-count { line-height: 1; }
@@ -388,7 +401,7 @@ a:hover { color: var(--gold-hi); }
 
 .seat {
   position: absolute; left: 159px; top: 0; width: 72px;
-  transition: transform .85s var(--glide), top .6s var(--glide), height .6s var(--glide), opacity .5s ease;
+  transition: transform .7s var(--glide), top .7s var(--glide), height .7s var(--glide), opacity .5s ease;
 }
 .seat-inner { position: relative; width: 72px; height: 100%; display: flex; justify-content: center; }
 .seat.pop .seat-inner { animation: pop .5s var(--ease) both; }
@@ -402,7 +415,7 @@ a:hover { color: var(--gold-hi); }
   display: flex; align-items: center; justify-content: center;
   font-family: var(--display); font-style: italic; font-weight: 800; color: var(--ink);
   border: 2px solid rgba(244, 241, 232, .25);
-  transition: width .6s var(--glide), height .6s var(--glide), font-size .6s var(--glide), background-color .5s, border-color .5s;
+  transition: width .7s var(--glide), height .7s var(--glide), font-size .7s var(--glide), background-color .5s, border-color .5s;
 }
 .avatar .icon { width: 55%; height: 55%; color: #C9D0FF; }
 .avatar.is-bot, .avatar.is-offline { border-style: dashed; }
@@ -422,20 +435,25 @@ a:hover { color: var(--gold-hi); }
 
 .seat-label {
   position: absolute; text-align: center; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: top .6s var(--glide), left .6s var(--glide), width .6s var(--glide), font-size .6s var(--glide);
+  transition: top .7s var(--glide), left .7s var(--glide), width .7s var(--glide), font-size .7s var(--glide), line-height .7s var(--glide);
 }
 .seat-label.you { color: var(--gold); }
 .seat-x {
-  position: absolute; top: -6px; width: 22px; height: 22px; padding: 0; border-radius: 11px;
+  z-index: 2; position: absolute; top: -6px; width: 22px; height: 22px; padding: 0; border-radius: 11px;
   border: 2px solid var(--bg); background: var(--ink); color: var(--bg);
   display: flex; align-items: center; justify-content: center;
 }
+.seat-x { transition: left .7s var(--glide); }
 .seat-x::before { content: ''; position: absolute; inset: -11px; }
 .seat-x .icon { width: 10px; height: 10px; }
 
 .list-view { display: flex; flex-direction: column; gap: 10px; min-height: 0; animation: fade .35s ease both; }
 .list-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .list-room { font-size: 34px; min-width: 0; line-height: 1.1; }
+.invite { font-size: 14px; }
+.invite-share-choice { display: inline-block; white-space: nowrap; }
+.invite-share { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; vertical-align: middle; }
+.invite-share .icon { width: 16px; height: 16px; }
 
 /* Text that doesn't fit glides to its end and back instead of being cut off. */
 .marquee { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
@@ -692,7 +710,10 @@ dialog.sheet.dragging { animation: none; }
   /* Home: the crest and title on the left, the room card on the right. */
   .screen-home {
     grid-template: "bar bar" auto "hero card" 1fr / minmax(0, 1.1fr) minmax(0, 1fr);
-    background: radial-gradient(min(60vw, 720px) min(60vh, 600px) at 30% 50%, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+  }
+  body:has(.screen-home:not([hidden])) {
+    /* Keep the glow behind the hero, 30% across the centered app. */
+    background-image: radial-gradient(min(60vw, 720px) min(60vh, 600px) at calc(50% - min(20vw, clamp(256px, 30vh, 360px))) 50%, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
   }
   .hero { grid-area: hero; }
   .hero-logo { width: clamp(120px, 30vh, 280px); height: clamp(120px, 30vh, 280px); }
@@ -730,13 +751,14 @@ dialog.sheet.dragging { animation: none; }
       "stage lock" auto
       "stage add" auto
       "stage go" auto
-      "stage ." 1fr / minmax(0, 1fr) clamp(280px, 30vw, 400px);
+      "stage ." 1fr / minmax(0, 1fr) minmax(0, 1fr);
   }
   .screen-lobby > .bar { margin-bottom: 16px; }
   .wide-only { display: block; }
   .list-head { grid-area: head; gap: 8px; }
-  .list-room { font-size: clamp(40px, 8vh, 72px); }
+  .list-room { font-size: clamp(34px, 3vw, 56px); }
   .invite { margin-top: 4px; font-size: 15px; }
+  .invite .wide-only { display: inline; }
   .invite strong { color: var(--ink); }
   .lobby-body { grid-area: stage; margin: 0; }
   .list-view { width: min(100%, 560px); }
