@@ -102,7 +102,7 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
     } else if (badChars.length) {
       secretBox.classList.add('invalid');
       secretNameHelper.textContent =
-        `Secret names can only use letters A-Z, numbers and spaces. Remove: ${badChars.join(' ')}`;
+        'Secret names can only use letters A-Z, numbers and spaces.';
       ok = false;
     }
 
