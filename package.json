@@ -5,12 +5,19 @@
     "node": "22"
   },
   "scripts": {
-    "dev": "firebase emulators:start --project demo-empire-local --only hosting,auth,database,functions",
+    "dev": "node scripts/dev.mjs",
     "test": "npm test --prefix functions",
-    "test:integration": "firebase emulators:exec --project demo-empire-local --only hosting,auth,database,functions \"npm run test:rules --prefix functions && node scripts/smoke.cjs\""
+    "test:integration": "firebase emulators:exec --project demo-empire-local --only hosting,auth,database,functions \"npm run test:rules --prefix functions && node scripts/smoke.cjs\"",
+    "build": "node scripts/build.mjs",
+    "pretest:integration": "npm run build",
+    "lint": "eslint public scripts eslint.config.js && npm run lint --prefix functions"
   },
   "devDependencies": {
-    "firebase-tools": "15.32.0"
+    "@eslint/js": "10.0.1",
+    "esbuild": "0.28.2",
+    "eslint": "10.11.0",
+    "firebase-tools": "15.32.0",
+    "globals": "17.12.0"
   },
   "type": "module"
 }
