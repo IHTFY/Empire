@@ -109,7 +109,7 @@
         },
         // Players captured into an empire once the round has started: captures/<captured> is
         // { leader, via }, where via is the player who was claimed directly (a leader's followers
-        // move with them and share the via, keeping their old via in back, so one undo returns them). Humans only; the leader
+        // move with them and share the via, keeping their earlier vias in back, newest first and joined by "/", so each undo returns them one step). Humans only; the leader
         // must be an uncaptured human. Anyone in the room can claim or undo.
         "captures": {
           ".read": true,
@@ -118,7 +118,7 @@
             ".validate": "newData.hasChildren(['leader', 'via']) && newData.parent().parent().child('users').child($userId).exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() !== true",
             "leader": { ".validate": "newData.isString() && newData.val() !== $userId && newData.parent().parent().parent().child('users').child(newData.val()).exists() && newData.parent().parent().parent().child('users').child(newData.val()).child('fakeBadge').val() !== true && !newData.parent().parent().child(newData.val()).exists()" },
             "via": { ".validate": "newData.isString() && newData.parent().parent().parent().child('users').child(newData.val()).exists()" },
-            "back": { ".validate": "newData.isString()" },
+            "back": { ".validate": "newData.isString() && newData.val().length <= 2000" },
             "$other": { ".validate": false }
           }
         },
