@@ -44,8 +44,8 @@
             "clan": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "game": { ".validate": "newData.isString() && newData.val() === $gameId" },
             "fakeBadge": { ".validate": "newData.isBoolean()" },
-            // Avatar crest: "shape.color.pattern.emblem.metal" (see public/crest.js).
-            "crest": { ".validate": "newData.isString() && newData.val().matches(/^[a-z]{2,12}(\\.[a-z]{2,12}){4}$/)" },
+            // Avatar crest: "shape.color.pattern.emblem.metal[.trim]" (see public/crest.js).
+            "crest": { ".validate": "newData.isString() && newData.val().matches(/^[a-z]{2,12}(\\.[a-z]{2,12}){4,5}$/)" },
             // Legacy: pages loaded before secrets moved to /secrets still send this.
             "fake": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24" },
             "$other": { ".validate": false }
