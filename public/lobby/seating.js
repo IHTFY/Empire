@@ -114,5 +114,11 @@ export function createSeating() {
     });
     return { L, seats };
   }
-  return { assign: assignSeats, reset: () => { seatRing.clear(); seatAngle.clear(); } };
+  // Seat a captured player right after their leader (the even spacing is recomputed on assign).
+  function attach(id, leader) {
+    if (!seatAngle.has(leader)) return;
+    seatAngle.set(id, seatAngle.get(leader) + 0.001);
+    if (seatRing.has(leader)) seatRing.set(id, seatRing.get(leader));
+  }
+  return { assign: assignSeats, attach, reset: () => { seatRing.clear(); seatAngle.clear(); } };
 }

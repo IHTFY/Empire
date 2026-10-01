@@ -157,3 +157,34 @@
 .row.you .row-status { color: var(--gold); }
 .row-x { width: 44px; height: 44px; flex-shrink: 0; margin: -4px -6px -4px 0; border-radius: 12px; border: none; background: rgba(255, 255, 255, .06); display: flex; align-items: center; justify-content: center; }
 .row-x .icon { width: 16px; height: 16px; }
+
+/* Capturing: the flag claims a player for a leader's empire; the undo arrow restores them. */
+.seat-cap {
+  z-index: 2; position: absolute; top: -6px; width: 22px; height: 22px; padding: 0; border-radius: 11px;
+  border: 2px solid var(--bg); background: var(--gold); color: var(--bg);
+  display: flex; align-items: center; justify-content: center; transition: left .7s var(--glide);
+}
+.seat-cap::before { content: ''; position: absolute; inset: -11px; }
+.seat-cap .icon { width: 11px; height: 11px; }
+.row-cap { width: 44px; height: 44px; flex-shrink: 0; margin: -4px 0; border-radius: 12px; border: none; background: rgba(255, 255, 255, .06); color: var(--gold); display: flex; align-items: center; justify-content: center; }
+.row-cap .icon { width: 16px; height: 16px; }
+.row-cap[hidden], .seat-cap[hidden] { display: none; }
+.empire-badge {
+  position: absolute; left: -3px; bottom: -3px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 9px; border: 2px solid var(--bg); background: var(--gold); color: var(--bg);
+  font: 800 11px/14px var(--display); text-align: center; font-style: normal;
+}
+.empire-badge[hidden] { display: none; }
+.seat.captured, .row.captured { opacity: .6; }
+.row.captured { margin-left: 18px; background: transparent; }
+.row.captured .row-name { font-weight: 600; }
+/* A captured avatar flashes hot and snaps into its leader's look, like the burn of a removed bot. */
+.avatar.captured-in { animation: captured-in .9s var(--ease) both; }
+@keyframes captured-in {
+  0% { transform: scale(1); filter: none; }
+  35% { transform: scale(.7) rotate(-8deg); filter: brightness(2.2) saturate(2) drop-shadow(0 0 10px #FF5A0A); }
+  70% { transform: scale(1.18); filter: brightness(1.4) drop-shadow(0 0 8px var(--gold-hi)); }
+  100% { transform: scale(1); filter: none; }
+}
+.capture-leaders { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; max-height: 40vh; overflow-y: auto; }
+@media (prefers-reduced-motion: reduce) { .avatar.captured-in { animation: none; } }
