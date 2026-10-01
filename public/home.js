@@ -244,17 +244,38 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
     await enterRoom(id);
   }
 
+  // Rooms from before passwords are looked up by their key; false when it has closed.
+  async function roomExists(code) {
+    return code.length <= 128 && !/[.#$[\]/]/.test(code) &&
+      Boolean((await db.ref(`games/${code}/state`).once('value').catch(() => null))?.exists());
+  }
+
   // Links from before rooms had passwords: ?code=<room key>.
   async function joinOldLink(code) {
     await signedIn;
-    const exists = code.length <= 128 && !/[.#$[\]/]/.test(code) &&
-      (await db.ref(`games/${code}/state`).once('value').catch(() => null))?.exists();
-    if (exists) {
+    if (await roomExists(code)) {
       await enterRoom(code);
     } else {
       setRoomInUrl(null);
       show('home');
       toast('That room has closed.');
+    }
+  }
+
+  // Reopening the app goes back to the last room, quietly landing on home if it has closed.
+  async function resume(saved) {
+    await signedIn;
+    let id = null;
+    if (typeof saved.room === 'string' && typeof saved.pass === 'string') {
+      id = await findRoom(slugify(saved.room), cleanPass(saved.pass));
+    } else if (typeof saved.code === 'string' && await roomExists(saved.code)) {
+      id = saved.code;
+    }
+    if (id) {
+      await enterRoom(id);
+    } else {
+      setRoomInUrl(null);
+      show('home');
     }
   }
 
@@ -276,5 +297,5 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
     }
   });
 
-  return { reset: resetHomeForm, join: tryJoining, joinOldLink };
+  return { reset: resetHomeForm, join: tryJoining, joinOldLink, resume };
 }
