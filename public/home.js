@@ -112,8 +112,8 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
     $('roomForm').dataset.mode = mode;
     $('modeCreate').setAttribute('aria-pressed', String(!joining));
     $('modeJoin').setAttribute('aria-pressed', String(joining));
-    $('passField').hidden = !joining;
-    $('createHint').hidden = joining;
+    $('passField').inert = !joining;
+    $('createHint').inert = joining;
     $('roomSubmitLabel').textContent = joining ? 'Join' : 'Create';
     userGameCode.placeholder = joining ? 'Room name' : '';
     clearCodeError();
