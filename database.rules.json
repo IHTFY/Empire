@@ -107,6 +107,21 @@
             ".write": "auth != null && data.parent().parent().child('users').child(auth.uid).exists() && !data.exists() && newData.val() === true && data.parent().parent().child('locked').val() === true && data.parent().parent().child('users').child($userId).child('fakeBadge').val() === true"
           }
         },
+        // Players captured into an empire once the round has started: captures/<captured> is
+        // { leader, via }, where via is the player who was claimed directly (a leader's followers
+        // move with them and share the via, keeping their old via in back, so one undo returns them). Humans only; the leader
+        // must be an uncaptured human. Anyone in the room can claim or undo.
+        "captures": {
+          ".read": true,
+          "$userId": {
+            ".write": "auth != null && data.parent().parent().child('users').child(auth.uid).exists() && (!newData.exists() || data.parent().parent().child('locked').val() === true)",
+            ".validate": "newData.hasChildren(['leader', 'via']) && newData.parent().parent().child('users').child($userId).exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() !== true",
+            "leader": { ".validate": "newData.isString() && newData.val() !== $userId && newData.parent().parent().parent().child('users').child(newData.val()).exists() && newData.parent().parent().parent().child('users').child(newData.val()).child('fakeBadge').val() !== true && !newData.parent().parent().child(newData.val()).exists()" },
+            "via": { ".validate": "newData.isString() && newData.parent().parent().parent().child('users').child(newData.val()).exists()" },
+            "back": { ".validate": "newData.isString()" },
+            "$other": { ".validate": false }
+          }
+        },
         // The room's public name and its password, set once when the room is created. Anyone
         // who reached the room can read them (the lobby shows both so players can invite others).
         "name": { ".read": true, ".validate": "newData.isString() && newData.val().length <= 32 && newData.val().matches(/^[a-z0-9]+(-[a-z0-9]+)*$/)" },

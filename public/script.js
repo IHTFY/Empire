@@ -73,7 +73,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     getRoom, getUid, ui,
     isRevealing: () => reveal.isRevealing(),
     removePlayer: rooms.removePlayer,
-    removeWatcher: rooms.removeWatcher
+    removeWatcher: rooms.removeWatcher,
+    capturePlayer: rooms.capturePlayer,
+    releasePlayer: rooms.releasePlayer
   });
   createLobbyTransitions({ lobby });
   // Refresh offline durations and removal eligibility as time passes.

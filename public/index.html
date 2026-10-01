@@ -77,6 +77,7 @@
       <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor" /></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" /></symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5" /></g></symbol>
       <symbol id="i-bot" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="3" /><path d="M12 4v4M9 13h.01M15 13h.01" /></g></symbol>
       <symbol id="i-dice" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4" /></g><g fill="currentColor"><circle cx="8.5" cy="8.5" r="1.5" /><circle cx="15.5" cy="8.5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="8.5" cy="15.5" r="1.5" /><circle cx="15.5" cy="15.5" r="1.5" /></g></symbol>
       <symbol id="i-eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></g></symbol>
@@ -349,6 +350,14 @@
         <button type="button" class="btn btn-ghost" data-close>Cancel</button>
         <button type="button" id="removeBotButton" class="btn btn-danger" data-close>Remove bot</button>
       </div>
+    </dialog>
+
+    <dialog id="confirmCapture" class="sheet" aria-labelledby="captureTitle">
+      <div class="sheet-grip"></div>
+      <h2 id="captureTitle" class="display sheet-title"><span id="captureName"></span> was captured?</h2>
+      <p class="muted">Whose empire have they joined? Their avatar will take on that leader's crest.<span id="captureMore"> Their whole empire goes with them.</span></p>
+      <div id="captureLeaders" class="capture-leaders"></div>
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
     </dialog>
 
     <dialog id="rulesDialog" class="sheet sheet-tall" aria-labelledby="rulesTitle">

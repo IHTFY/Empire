@@ -41,13 +41,13 @@ controller interactions, styles, and the browser build.
 Use Node.js 22 and Java 21 or newer. Install both sets of dependencies once:
 
 ```sh
-npm ci
-npm ci --prefix functions
-npm run dev
+pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --dir functions
+pnpm dev
 ```
 
-`npm run dev` builds the browser JavaScript and CSS, watches source changes, and starts
-the emulator suite. For a one-time build, run `npm run build`. Generated files in
+`pnpm dev` builds the browser JavaScript and CSS, watches source changes, and starts
+the emulator suite. For a one-time build, run `pnpm build`. Generated files in
 `public/assets/` are ignored by Git.
 
 Open http://localhost:15000 (or the development machine's LAN address on port 15000 for
@@ -60,8 +60,8 @@ is made. Emulator data is temporary and is discarded when the suite stops.
 For verification, stop the development suite first, then run:
 
 ```sh
-npm test
-npm run test:integration
+pnpm test
+pnpm test:integration
 ```
 
 The integration command starts the suite, checks the actual database rules in an isolated
@@ -90,10 +90,10 @@ The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy t
 
 ### Manual deploy (fallback)
 ```sh
-npm install -g firebase-tools
+pnpm add -g firebase-tools
 firebase login
-npm ci
-npm ci --prefix functions
+pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --dir functions
 firebase deploy --project empire-ihtfy --only hosting,functions,database
 ```
 

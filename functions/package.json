@@ -3,16 +3,17 @@
   "description": "Cloud Functions for Firebase",
   "scripts": {
     "lint": "eslint .",
-    "serve": "npm --prefix .. run dev",
+    "serve": "pnpm --dir .. dev",
     "shell": "firebase functions:shell",
-    "start": "npm run shell",
+    "start": "pnpm shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "test": "node --test test/room-state.test.cjs test/rounds.test.cjs test/bot-rereads.test.cjs test/presence.test.cjs test/emulators.test.cjs",
     "test:rules": "node --test test/rules.test.cjs"
   },
   "engines": {
-    "node": "22"
+    "node": "22",
+    "pnpm": "12.8.1"
   },
   "main": "index.js",
   "dependencies": {
@@ -25,8 +26,5 @@
     "eslint-plugin-promise": "^7.3.0",
     "globals": "^17.0.0"
   },
-  "private": true,
-  "overrides": {
-    "uuid": "^11.1.1"
-  }
+  "private": true
 }
