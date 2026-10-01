@@ -65,7 +65,8 @@ browser sources into `public/assets/script.js` and `public/assets/style.css`.
 `index.html` loads those two assets. Splitting source files does not add browser requests.
 The Firebase SDK and other existing external resources remain separate.
 
-The bundles are unminified, with external source maps for debugging, and ignored by Git.
+`pnpm build` (used by deployment) minifies the bundles; `pnpm dev` leaves them readable. Both write
+external source maps for debugging, and Git ignores the output.
 Edit the source modules, not `public/assets/`. `pnpm dev` builds first and watches
 source changes while the emulators run. Integration checks, preview CI, and normal
 Hosting deployments build the assets before serving or publishing them.
