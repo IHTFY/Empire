@@ -21,3 +21,7 @@ Medusa adapts [Medusa head by Cathelineau](https://github.com/game-icons/icons/b
 Spartan and Helm adapt Delapouite’s [Spartan helmet](https://github.com/game-icons/icons/blob/master/delapouite/spartan-helmet.svg) and [Centurion helmet](https://github.com/game-icons/icons/blob/master/delapouite/centurion-helmet.svg), CC BY 3.0. Backgrounds removed; metal inherited; scaled to the crest grid.
 
 Serpent adapts Cobra by Delapouite, CC BY 3.0 https://creativecommons.org/licenses/by/3.0/. Source: https://github.com/game-icons/icons/blob/master/delapouite/cobra.svg . Adaptations remove the background, inherit crest metal, and scale to the 24-unit grid. Wolf is original project-native filled SVG with curved mane and cheek cutouts.
+
+Ouroboros adapts [Lorc’s Ouroboros](https://github.com/game-icons/icons/blob/master/lorc/ouroboros.svg), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Background removed; metal inherited; scaled to the crest grid.
+
+Roman eagle (aquila) is original project-native filled SVG inspired by historical Roman standard motifs: a profile eagle with spread wings, lightning bolts, and laurel. No source artwork or lettering is embedded.
