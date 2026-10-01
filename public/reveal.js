@@ -152,10 +152,34 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
     }).catch(() => { $('captureScreen').hidden = true; });
   }
 
+  // Releases everything one playback holds. Safe to repeat; only the attempt that set
+  // `revealing` ever calls it, and no newer attempt can start until it has.
+  function releasePlayback(held) {
+    if (held.voiceRef) held.voiceRef.off('value', held.onVoice);
+    held.voiceRef = null;
+    audio.clearClips();
+    revealing = false;
+    $('revealScreen').hidden = true;
+    $('revealStage').innerHTML = '';
+    $('revealBar').classList.remove('run');
+  }
+
   async function displaySecrets() {
     if (revealing) return;
     revealing = true;
     const run = ++revealRun;
+    const held = { voiceRef: null, onVoice: null };
+    try {
+      await playReveal(run, held);
+    } catch (err) {
+      // A failed read or listener must not leave the lobby thinking a reveal is still running.
+      releasePlayback(held);
+      refreshLobby();
+      throw err;
+    }
+  }
+
+  async function playReveal(run, held) {
     const code = getRoom().id;
     const [namesSnap, startSnap, replaySnap] = await Promise.all([
       db.ref(`games/${code}/names`).once('value'),
@@ -191,6 +215,8 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       });
     };
     voiceRef.on('value', onVoice, () => {});
+    held.voiceRef = voiceRef;
+    held.onVoice = onVoice;
 
     let shown = -1;
     let spoken = -1;
@@ -219,12 +245,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       await sleep(60);
     }
 
-    voiceRef.off('value', onVoice);
-    audio.clearClips();
-    revealing = false;
-    reveal.hidden = true;
-    stage.innerHTML = '';
-    bar.classList.remove('run');
+    releasePlayback(held);
     // The reveal is over (or was already over when this player arrived).
     // The rules check the server's clock, which can be slightly behind this device's estimate,
     // so retry briefly instead of leaving the room stuck in playing.

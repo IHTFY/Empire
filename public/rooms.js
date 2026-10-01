@@ -25,7 +25,7 @@ export function rememberedRoom() {
 
 // Owns room state, database subscriptions, and entry/exit. The entry point supplies screen and playback callbacks.
 export function createRooms({
-  db, signedIn, getUid, ui, audio,
+  db, ensureSignedIn, getUid, ui, audio,
   onChange, onDetach, onEnter, onUsers, onEliminated,
   onPlaybackStart, onPlaybackStop, openSetup, setSecret
 }) {
@@ -100,7 +100,7 @@ export function createRooms({
   }
 
   async function enterRoom(code) {
-    await signedIn;
+    await ensureSignedIn();
     if (gameID && gameID !== code) {
       await leaveRoom({ goHome: false });
     }

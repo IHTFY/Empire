@@ -2,7 +2,7 @@ import { $ } from './dom.js';
 import { suggestRoomName } from './room-names.js';
 
 // Owns the create/join form and credential lookup; room entry and exit belong to rooms.js.
-export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
+export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) {
   const userGameCode = $('userGameCode');
   const userGameCodeHelper = $('userGameCodeHelper');
   const { show, toast } = ui;
@@ -228,7 +228,7 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
     }
     // Show exactly the name being created, and keep it there until the room opens.
     userGameCode.value = name;
-    await signedIn;
+    await ensureSignedIn();
     const id = await claimRoom(name);
     if (!id) {
       codeError(`A room called ${name} is already open. Pick another name, or join it with its password.`);
@@ -269,7 +269,7 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
       passError('Enter the 6-letter password.');
       return;
     }
-    await signedIn;
+    await ensureSignedIn();
     const id = await findRoom(name, pass);
     if (!id) {
       backHome();
@@ -287,7 +287,7 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
 
   // Links from before rooms had passwords: ?code=<room key>.
   async function joinOldLink(code) {
-    await signedIn;
+    await ensureSignedIn();
     if (await roomExists(code)) {
       await enterRoom(code);
     } else {
@@ -299,7 +299,7 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
 
   // Reopening the app goes back to the last room, quietly landing on home if it has closed.
   async function resume(saved) {
-    await signedIn;
+    await ensureSignedIn();
     let id = null;
     if (typeof saved.room === 'string' && typeof saved.pass === 'string') {
       id = await findRoom(slugify(saved.room), cleanPass(saved.pass));
