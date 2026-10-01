@@ -103,7 +103,7 @@ Empire is a static browser app backed by Firebase Realtime Database and Cloud Fu
 
 | Trigger | Result after checks pass |
 | --- | --- |
-| Pull request opened or reopened | Eligible same-repository PRs get a site preview link in a PR comment, valid for seven days. Fork and Dependabot PRs run checks without a preview. |
+| Pull request opened or reopened | Eligible same-repository PRs get a site preview link in a PR comment, valid for 24 hours. Fork and Dependabot PRs run checks without a preview. |
 | PR update whose latest commit contains `[preview]` | Refreshes the PR's existing site preview after checks pass. Other updates run checks without redeploying the preview. |
 | Push to `master` | Deploys Hosting, Functions, and database rules. |
 | Manual workflow run on `master` | Runs the same deployment through Actions > Firebase > Run workflow. |
@@ -118,6 +118,8 @@ git push
 ```
 
 The preview keeps the same URL. Wait for the `preview` job to finish, then reload the page. These PR preview controls do not change deployments from `master`.
+
+Each deployment sets the preview to expire after 24 hours; existing channels retain their prior expiration until redeployed or edited. Manage old previews in [Firebase Hosting](https://console.firebase.google.com/project/empire-ihtfy/hosting): in **Preview channels**, use **⋮ → Delete channel** for a merged or closed PR, or **Channel settings** to edit its expiration.
 
 <details>
 <summary>One-time deployment setup</summary>
