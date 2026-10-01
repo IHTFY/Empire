@@ -17,3 +17,7 @@ Phoenix is an original SVG. Lion and War horse are vector contours derived from 
 Additional filled crest silhouettes: Pegasus by Skoll; Minotaur by Lorc; Unicorn by Delapouite. Source: https://github.com/game-icons/icons (skoll/pegasus.svg, lorc/minotaur.svg, delapouite/unicorn.svg). Licensed CC BY 3.0 https://creativecommons.org/licenses/by/3.0/. Adaptations remove the background, inherit crest metal, and scale to the 24-unit emblem grid. Double-headed eagle is original project-native SVG with symmetric curved wings, paired hooked-beak heads, talons, and fan tail.
 
 Medusa adapts [Medusa head by Cathelineau](https://github.com/game-icons/icons/blob/master/cathelineau/medusa-head.svg), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Background removed; metal inherited; scaled to the crest grid.
+
+Spartan and Helm adapt Delapouite’s [Spartan helmet](https://github.com/game-icons/icons/blob/master/delapouite/spartan-helmet.svg) and [Centurion helmet](https://github.com/game-icons/icons/blob/master/delapouite/centurion-helmet.svg), CC BY 3.0. Backgrounds removed; metal inherited; scaled to the crest grid.
+
+Serpent adapts Cobra by Delapouite, CC BY 3.0 https://creativecommons.org/licenses/by/3.0/. Source: https://github.com/game-icons/icons/blob/master/delapouite/cobra.svg . Adaptations remove the background, inherit crest metal, and scale to the 24-unit grid. Wolf is original project-native filled SVG with curved mane and cheek cutouts.
