@@ -109,4 +109,4 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: empire-ihtfy
-          expires: 7d
+          expires: 24h
