@@ -1,7 +1,7 @@
 import { $ } from './dom.js';
 import { openSheet } from './sheets.js';
 import { createCrestCarousel } from './crest-carousel.js';
-import { initialOf, SHAPES, COLORS, METALS, PATTERNS, EMBLEMS, EMBLEM_CHOICES, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+import { initialOf, SHAPES, SHAPE_CHOICES, COLORS, METALS, TRIMS, PATTERNS, EMBLEMS, EMBLEM_CHOICES, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
 
 // Owns the editable crest and its device persistence; crest.js remains the drawing library.
 export function createCrestPicker({ getRoom, getUid }) {
@@ -28,10 +28,10 @@ export function createCrestPicker({ getRoom, getUid }) {
 
   // Each group lists its choices; tiles preview the choice on your current crest.
   const crestGroups = [
-    { part: 'shape', label: 'Shape', options: SHAPES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'targe', 'pavise', 'vesica', 'crescent', 'scutum', 'boeotian', 'vexillum', 'hoplon', 'heater', 'kite', 'standard', 'tablet', 'peltast', 'octagon', 'hexagon', 'banner', 'oval', 'round', 'lozenge', 'pennon'] },
+    { part: 'shape', label: 'Shape', options: SHAPE_CHOICES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'pavise', 'vesica', 'crescent', 'scutum', 'boeotian', 'vexillum', 'hoplon', 'heater', 'kite', 'standard', 'tablet', 'peltast', 'banner', 'oval', 'pennon'] },
     { part: 'color', label: 'Color', options: COLORS, swatch: true },
     { part: 'pattern', label: 'Pattern', options: PATTERNS },
-    { part: 'emblem', label: 'Emblem', options: EMBLEM_CHOICES, order: ['dragon', 'griffin', 'phoenix', 'hydra', 'spartan', 'eagle', 'gladius', 'legion', 'wolf', 'lion', 'spears', 'trident', 'victory', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'column', 'amphora', 'star', 'moon', 'cross', 'letter'] }
+    { part: 'emblem', label: 'Emblem', options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'doubleeagle', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'legion', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'letter'] }
   ];
   let activePart = 'emblem';
   let displayedCrest = '';
@@ -96,8 +96,21 @@ export function createCrestPicker({ getRoom, getUid }) {
       if (group.part === 'color') {
         const metals = document.createElement('div');
         metals.className = 'crest-metals';
-        metals.innerHTML = '<span class="eyebrow">Trim</span><span class="crest-metal-name"></span>';
-        Object.entries(METALS).forEach(([key, metal]) => metals.appendChild(crestTile('metal', key, `${metal.label} trim`, metal.hex)));
+        metals.innerHTML = '<span class="eyebrow">Trim</span>';
+        const controls = document.createElement('div');
+        controls.className = 'crest-trim-controls';
+        const styles = document.createElement('div');
+        styles.className = 'crest-trim-styles';
+        styles.setAttribute('role', 'group');
+        styles.setAttribute('aria-label', 'Trim style');
+        Object.entries(TRIMS).forEach(([key, style]) => styles.appendChild(crestTile('trim', key, `${style.label} trim`)));
+        const swatches = document.createElement('div');
+        swatches.className = 'crest-trim-metals';
+        swatches.setAttribute('role', 'group');
+        swatches.setAttribute('aria-label', 'Trim metal');
+        Object.entries(METALS).forEach(([key, metal]) => swatches.appendChild(crestTile('metal', key, `${metal.label} trim`, metal.hex)));
+        controls.append(styles, swatches);
+        metals.appendChild(controls);
         section.appendChild(metals);
       }
       const grid = document.createElement('div');
@@ -107,9 +120,10 @@ export function createCrestPicker({ getRoom, getUid }) {
       let keys = group.order || Object.keys(group.options);
       const options = { ...group.options };
       // Preserve a retired mark already worn by this player when centering the row.
-      if (group.part === 'emblem' && !options[crest.emblem]) {
-        options[crest.emblem] = EMBLEMS[crest.emblem];
-        keys = [...keys, crest.emblem];
+      if (!options[crest[group.part]]) {
+        const allOptions = group.part === 'shape' ? SHAPES : EMBLEMS;
+        options[crest[group.part]] = allOptions[crest[group.part]];
+        keys = [...keys, crest[group.part]];
       }
       const rail = document.createElement('div');
       rail.className = 'crest-rail';
@@ -135,7 +149,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     });
     box.addEventListener('click', event => {
       const tile = event.target.closest('.crest-tile');
-      if (!tile || tile.dataset.part !== 'metal') return;
+      if (!tile || !['metal', 'trim'].includes(tile.dataset.part)) return;
       activateRow(tile.closest('.crest-group'));
       crest[tile.dataset.part] = tile.dataset.value;
       saveCrest();
@@ -166,18 +180,21 @@ export function createCrestPicker({ getRoom, getUid }) {
     if (!$('crestDialog').open) return;
     $('crestBig').innerHTML = crestSvg(crest, { letter });
     animateCrest($('crestBig'));
-    $('crestOptions').querySelector('.crest-metal-name').textContent = METALS[crest.metal].label;
     const taken = crestTaken();
     $('crestNote').classList.toggle('taken', taken);
     $('crestNote').textContent = taken ? 'Someone in this room already bears this crest. Change a part to stand apart.' : 'Swipe to choose. Center is selected.';
     crestGroups.forEach(group => {
       const section = $('crestOptions').querySelector(`[data-part="${group.part}"]`);
-      section.querySelector('.crest-selection').textContent = (group.part === 'emblem' ? EMBLEMS : group.options)[crest[group.part]].label;
+      section.querySelector('.crest-selection').textContent = (group.part === 'emblem' ? EMBLEMS : group.part === 'shape' ? SHAPES : group.options)[crest[group.part]].label;
     });
     document.querySelectorAll('#crestOptions .crest-tile').forEach(tile => {
       const { part, value } = tile.dataset;
       tile.setAttribute('aria-pressed', String(crest[part] === value));
       if (part === 'color' || part === 'metal') return;
+      if (part === 'trim') {
+        tile.innerHTML = crestSvg({ ...crest, shape: 'hoplon', pattern: 'plain', emblem: 'letter', trim: value });
+        return;
+      }
       // Patterns are shown without the emblem so the division is easy to see.
       const preview = { ...crest, [part]: value, ...(part === 'pattern' ? { emblem: 'letter' } : {}) };
       tile.innerHTML = crestSvg(preview, { letter: part === 'pattern' ? '' : letter });
