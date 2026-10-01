@@ -64,13 +64,23 @@
 .crest-tile:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .crest-swatch { padding: 0; background: var(--c); border-radius: 50%; border: 2px solid rgba(244, 241, 232, .14); }
 .crest-swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 3px var(--gold); background-color: var(--c); }
-.crest-metals { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 3px 4px 4px; }
-.crest-metals .eyebrow { margin-right: 2px; }
-.crest-metal-name { font-size: 11px; color: var(--muted); margin-right: auto; }
-.crest-metals .crest-swatch { width: 26px; height: 26px; aspect-ratio: auto; }
+.crest-metals { display: flex; gap: 10px; align-items: center; padding: 3px 4px 4px; }
+.crest-metals .eyebrow { flex-shrink: 0; }
+.crest-trim-controls { display: flex; flex: 1; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; min-width: 0; }
+.crest-trim-styles, .crest-trim-metals { display: flex; align-items: center; gap: 5px; }
+.crest-trim-styles .crest-tile { flex-shrink: 0; width: 30px; height: 30px; padding: 2px; border-radius: 50%; }
+.crest-trim-metals { margin-left: auto; }
+.crest-metals .crest-swatch { flex-shrink: 0; width: 22px; height: 22px; aspect-ratio: auto; }
 #crestDialog .crest-head { flex-shrink: 0; }
 #crestDialog .row-2 { margin-top: 8px; flex-shrink: 0; }
 #crestDialog .btn { height: 48px; min-height: 48px; padding-top: 10px; padding-bottom: 10px; font-size: 24px; }
+@media (max-width: 420px) {
+  .crest-metals { gap: 8px; }
+  .crest-trim-controls { column-gap: 8px; }
+  .crest-trim-styles, .crest-trim-metals { gap: 4px; }
+  .crest-trim-styles .crest-tile { width: 28px; height: 28px; }
+  .crest-metals .crest-swatch { width: 20px; height: 20px; }
+}
 @media (max-width: 360px) {
-  .crest-metal-name { display: none; }
+  .crest-metals .eyebrow { align-self: flex-start; margin-top: 8px; }
 }
