@@ -1,0 +1,48 @@
+/* ---------- Home ---------- */
+
+.screen-home {
+  background: radial-gradient(420px 360px at 50% 210px, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+}
+.hero { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+.hero-logo { position: relative; width: 168px; height: 168px; display: flex; align-items: center; justify-content: center; }
+.hero-logo img { width: 150px; height: 150px; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .45)); animation: float 3s cubic-bezier(.37, 0, .63, 1) infinite alternate; will-change: transform; }
+.halo { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 122, 26, .5); animation: halo 3.2s cubic-bezier(.2, .7, .3, 1) infinite; }
+.halo-2 { animation-delay: 1.6s; }
+@keyframes float { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -8px, 0); } }
+@keyframes halo { 0% { transform: scale(.85); opacity: .55; } 100% { transform: scale(1.35); opacity: 0; } }
+.hero-title { margin: 0; font-size: 64px; letter-spacing: 1px; }
+.hero-tagline { margin: 0; max-width: 280px; font-size: 16px; line-height: 1.5; color: var(--muted); }
+
+.card {
+  display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 28px;
+  background: rgba(29, 33, 80, .72); border: 1px solid rgba(244, 241, 232, .10);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, .35);
+}
+
+/* Create / join switch: the lit half slides between the two choices. */
+.mode-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 16px; background: var(--field); border: 1px solid var(--line); }
+.mode-switch::before {
+  content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 12px;
+  background: var(--surface-2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 8px rgba(0, 0, 0, .3);
+  transition: transform .35s var(--ease);
+}
+#roomForm[data-mode="join"] .mode-switch::before { transform: translateX(100%); }
+/* The lit half can also be dragged like a slider; --drag-x follows the finger. */
+.mode-switch { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.mode-switch.is-dragging { cursor: grabbing; }
+#roomForm .mode-switch.is-dragging::before { transition: none; transform: translateX(var(--drag-x, 0px)); }
+.mode-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.field-row { display: flex; align-items: center; gap: 10px; }
+.field-row .field { flex: 1; min-width: 0; }
+.reroll-btn { flex: none; width: 56px; height: 56px; border-radius: 16px; color: var(--muted); }
+.reroll-btn:hover { color: var(--ink); }
+.reroll-btn:disabled, .field[readonly] { opacity: .6; pointer-events: none; }
+#roomForm[data-mode="join"] .reroll-btn { display: none; }
+.mode-switch button { position: relative; height: 40px; border: none; background: none; border-radius: 12px; font-size: 15px; font-weight: 700; color: var(--muted); transition: color .2s; }
+.mode-switch button[aria-pressed="true"] { color: var(--ink); }
+#passField:not([hidden]) { animation: rise .35s var(--ease) both; }
+.field-pass { font-family: var(--mono); font-size: 20px; letter-spacing: .3em; text-transform: uppercase; }
+.field-pass::placeholder { letter-spacing: .3em; }
+.btn.is-busy { pointer-events: none; opacity: .7; }
+.room-pass { font-size: 14px; color: var(--muted); }
+.room-pass strong { margin-left: 6px; font-family: var(--mono); font-size: 17px; letter-spacing: .18em; color: var(--gold-hi); user-select: all; }

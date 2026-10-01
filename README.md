@@ -31,6 +31,11 @@
 - All member of each empire should cooperate to guess the remaining leaders' secret names and protect the secret name of their leader
 - Only the leader of an empire can make official guesses; other members can talk, but any guesses don't count as a turn for their empire
 
+## Code organization
+
+See [the code structure guide](docs/code-structure.md) for module responsibilities,
+controller interactions, styles, and the browser build.
+
 ## Local development and verification
 
 Use Node.js 22 and Java 21 or newer. Install both sets of dependencies once:
@@ -40,6 +45,10 @@ npm ci
 npm ci --prefix functions
 npm run dev
 ```
+
+`npm run dev` builds the browser JavaScript and CSS, watches source changes, and starts
+the emulator suite. For a one-time build, run `npm run build`. Generated files in
+`public/assets/` are ignored by Git.
 
 Open http://localhost:15000 (or the development machine's LAN address on port 15000 for
 another device). The browser on this port connects to local Authentication (19099),
@@ -83,6 +92,7 @@ The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy t
 ```sh
 npm install -g firebase-tools
 firebase login
+npm ci
 npm ci --prefix functions
 firebase deploy --project empire-ihtfy --only hosting,functions,database
 ```
