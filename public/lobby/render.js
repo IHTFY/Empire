@@ -16,11 +16,11 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
   const seatEls = new Map();
   const rowEls = new Map();
 
-  let seenVias = null;
+  let seenCaptured = null;
 
   function resetLobby() {
     order = [];
-    seenVias = null;
+    seenCaptured = null;
     attached.clear();
     seating.reset();
     seatEls.forEach(({ el }) => el.remove());
@@ -72,7 +72,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       key, bot, you, offline, away, leader,
       captured: Boolean(leader),
       direct: Boolean(leader) && room.captures[key].via === key,
-      size: leader || !room.locked ? 0 : empires.size[key],
+      size: leader || empires.size[key] < 2 ? 0 : empires.size[key],
       capturable: room.locked && !bot && !leader && Boolean(room.users[getUid()]),
       name: user.real,
       status,
@@ -278,16 +278,17 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
 
   function announceCaptures(room) {
     if (!room.capturesReady) return;
-    const vias = new Set(Object.values(room.captures).filter(Boolean).map(c => c.via));
-    if (seenVias) {
-      vias.forEach(via => {
-        const c = room.captures[via];
-        if (!seenVias.has(via) && c && room.users[via] && room.users[c.leader]) {
-          toast(`${room.users[via].real} was captured by ${room.users[c.leader].real}`);
+    // Only a player who was free is announced; their followers and undo restorations stay quiet.
+    const captured = new Set(Object.keys(room.captures).filter(key => room.captures[key]));
+    if (seenCaptured) {
+      captured.forEach(key => {
+        const c = room.captures[key];
+        if (!seenCaptured.has(key) && c.via === key && room.users[key] && room.users[c.leader]) {
+          toast(`${room.users[key].real} was captured by ${room.users[c.leader].real}`);
         }
       });
     }
-    seenVias = vias;
+    seenCaptured = captured;
   }
 
   // The status line sits low in the disc, where the circle narrows: pick the largest
