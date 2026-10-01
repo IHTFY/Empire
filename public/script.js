@@ -2,7 +2,7 @@ import { $ } from './dom.js';
 import { createUI } from './ui.js';
 import { initializeSheets } from './sheets.js';
 import { createAudio } from './audio.js';
-import { createRooms } from './rooms.js';
+import { createRooms, rememberRoom, rememberedRoom } from './rooms.js';
 import { createHome } from './home.js';
 import { createCrestPicker } from './crest-picker.js';
 import { createPlayerSetup } from './player-setup.js';
@@ -81,11 +81,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   createBots({ db, getRoom, toast: ui.toast });
   reveal = createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby: lobby.render });
 
+  // Open the room from a link (a reload keeps it in the address bar), or go back to the
+  // room this device was last in.
   const params = new URL(document.location).searchParams;
+  const lastRoom = rememberedRoom();
   if (params.get('room')) {
     home.join(params.get('room'), params.get('pass') || '');
   } else if (params.get('code')) {
     home.joinOldLink(params.get('code'));
+  } else if (lastRoom) {
+    home.resume(lastRoom).catch(err => {
+      console.error(err);
+      rememberRoom(null);
+      ui.show('home');
+    });
   } else {
     ui.show('home');
   }

@@ -3,6 +3,26 @@ import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
 import { createRoomPresence } from './room-presence.js';
 
+// The room in the address bar is also remembered on this device, so closing the app (or
+// the tab) and opening it again from the home screen goes straight back to the room.
+const LAST_ROOM_KEY = 'lastRoom';
+
+export function rememberRoom(name, pass) {
+  try {
+    if (name) localStorage.setItem(LAST_ROOM_KEY, JSON.stringify(pass ? { room: name, pass } : { code: name }));
+    else localStorage.removeItem(LAST_ROOM_KEY);
+  } catch (err) { /* private mode */ }
+}
+
+export function rememberedRoom() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_ROOM_KEY));
+    return saved && typeof saved === 'object' ? saved : null;
+  } catch (err) {
+    return null;
+  }
+}
+
 // Owns room state, database subscriptions, and entry/exit. The entry point supplies screen and playback callbacks.
 export function createRooms({
   db, signedIn, getUid, ui, audio,
@@ -28,6 +48,7 @@ export function createRooms({
   const roomPresence = createRoomPresence({ db, getRoom: getSnapshot, getUid, listen });
 
   function setRoomInUrl(name, pass) {
+    rememberRoom(name, pass);
     const url = new URL(document.location);
     url.searchParams.delete('code');
     url.searchParams.delete('room');
@@ -147,7 +168,7 @@ export function createRooms({
       show('lobby');
     } else if (users[getUid()]) {
       realName.value = users[getUid()].real;
-      setSecret(sessionStorage.getItem(`secret:${gameID}`) || '');
+      setSecret(localStorage.getItem(`secret:${gameID}`) || '');
       show('lobby');
     } else {
       openSetup();
@@ -165,7 +186,7 @@ export function createRooms({
       [`secrets/${getUid()}`]: null,
       [`presence/${getUid()}`]: null
     }).catch(err => console.error(err));
-    sessionStorage.removeItem(`secret:${code}`);
+    localStorage.removeItem(`secret:${code}`);
     if (goHome) {
       setRoomInUrl(null);
       show('home');
@@ -215,14 +236,15 @@ export function createRooms({
       const gone = { [`games/${code}`]: null };
       if (pass) gone[`roomNames/${name}/${pass}`] = null;
       await db.ref().update(gone).catch(() => {});
-      sessionStorage.removeItem(`secret:${code}`);
+      localStorage.removeItem(`secret:${code}`);
+      rememberRoom(null);
       window.location.replace('/');
     }
     if (state === 'resetting' && previous !== 'resetting') {
       // Forget membership before the server's roster/state callbacks arrive in either order.
       users = {};
       setSecret('');
-      sessionStorage.removeItem(`secret:${code}`);
+      localStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
       $('submitLabel').textContent = 'Enter the lobby';
       show('setup');
