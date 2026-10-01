@@ -178,7 +178,7 @@ const pick = obj => { const keys = Object.keys(obj); return keys[Math.floor(Math
 export function parseCrest(text) {
   const parts = typeof text === 'string' ? text.split('.') : [];
   const crest = {};
-  PARTS.forEach((part, i) => { crest[part] = KEYS[part][parts[i]] ? parts[i] : Object.keys(KEYS[part])[0]; });
+  PARTS.forEach((part, i) => { crest[part] = KEYS[part][parts[i]] ? parts[i] : part === 'emblem' ? 'letter' : Object.keys(KEYS[part])[0]; });
   crest.trim = TRIMS[parts[5]] ? parts[5] : defaultTrim(crest.shape);
   // Circular shields share one silhouette; their decoration remains independent.
   if (crest.shape === 'round' || crest.shape === 'targe') crest.shape = 'hoplon';
