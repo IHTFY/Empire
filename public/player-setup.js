@@ -120,7 +120,7 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
     }
     if (getRoom().id !== code) return;
     localStorage.setItem('realName', userRealName);
-    sessionStorage.setItem(`secret:${code}`, userFakeName);
+    localStorage.setItem(`secret:${code}`, userFakeName);
     savePresenceName(userRealName);
     // Written on its own so a database without crest support still accepts the names.
     db.ref(`games/${getRoom().id}/users/${getUid()}/crest`).set(crestPicker.value()).catch(() => {});
@@ -139,7 +139,7 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
     if (room.users[uid]) {
       realName.value = room.users[uid].real;
     }
-    setSecret(sessionStorage.getItem(`secret:${room.id}`) || '');
+    setSecret(localStorage.getItem(`secret:${room.id}`) || '');
     openSetup();
   });
 
