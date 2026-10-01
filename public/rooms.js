@@ -2,6 +2,7 @@ import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
 import { createRoomPresence } from './room-presence.js';
+import { capturePlan, releasePlan } from './captures.js';
 
 // The room in the address bar is also remembered on this device, so closing the app (or
 // the tab) and opening it again from the home screen goes straight back to the room.
@@ -284,11 +285,7 @@ export function createRooms({
 
   // Claim a player for a leader's empire. A captured leader brings their followers along.
   function capturePlayer(key, leader, onFail) {
-    const update = { [`captures/${key}`]: { leader, via: key } };
-    // Followers remember how they joined (back), so undoing returns them to this player.
-    Object.entries(captures).forEach(([id, c]) => {
-      if (c && c.leader === key) update[`captures/${id}`] = { leader, via: key, back: c.via };
-    });
+    const update = capturePlan(captures, key, leader);
     db.ref(`games/${gameID}`).update(update).catch(() => {
       toast('Could not capture that player');
       if (onFail) onFail();
@@ -297,10 +294,7 @@ export function createRooms({
 
   // Undo a capture: the player goes free and their followers come back to them.
   function releasePlayer(key) {
-    const update = {};
-    Object.entries(captures).forEach(([id, c]) => {
-      if (c && c.via === key) update[`captures/${id}`] = id === key || !c.back ? null : { leader: key, via: c.back };
-    });
+    const update = releasePlan(captures, key);
     db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not undo that capture'));
   }
 
