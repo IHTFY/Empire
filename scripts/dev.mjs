@@ -1,10 +1,10 @@
 import { context } from 'esbuild';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildOptions } from './build.mjs';
+import { buildOptions, developmentBuildOptions } from './build.mjs';
 
 // Build before Hosting starts, then rebuild modules and styles as they are edited.
-const builder = await context(buildOptions);
+const builder = await context(developmentBuildOptions);
 await builder.rebuild();
 await builder.watch();
 const firebaseCLI = fileURLToPath(new URL('../node_modules/firebase-tools/lib/bin/firebase.js', import.meta.url));
