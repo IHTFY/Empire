@@ -15,23 +15,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
           cache-dependency-path: |
-            package-lock.json
-            functions/package-lock.json
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
-      - run: npm ci
-      - run: npm ci --prefix functions
-      - run: npm run lint
-      - run: npm audit --prefix functions --omit=dev
-      - run: npm test
-      - run: npm run test:integration
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --dir functions
+      - run: pnpm lint
+      - run: pnpm --dir functions audit --prod
+      - run: pnpm test
+      - run: pnpm test:integration
 
   deploy:
     needs: check
@@ -39,19 +40,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
           cache-dependency-path: |
-            package-lock.json
-            functions/package-lock.json
-      - run: npm ci
-      - run: npm ci --prefix functions
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --dir functions
       - uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - run: npx firebase deploy --project empire-ihtfy --only hosting,functions,database --non-interactive --force
+      - run: pnpm exec firebase deploy --project empire-ihtfy --only hosting,functions,database --non-interactive --force
 
   # Each pull request gets its own temporary copy of the site (a Firebase Hosting preview
   # channel) and a comment with the link. Only the site is previewed: it talks to the same
@@ -66,12 +68,13 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

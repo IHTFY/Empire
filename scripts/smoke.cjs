@@ -9,7 +9,7 @@ const project = 'demo-empire-local';
 const namespace = `${project}-default-rtdb`;
 const dbHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST;
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
-if (!dbHost || !authHost) throw new Error('Run this scenario with npm run test:integration.');
+if (!dbHost || !authHost) throw new Error('Run this scenario with pnpm test:integration.');
 const apps = [];
 async function signIn(name) {
   const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key`, {

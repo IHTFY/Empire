@@ -22,5 +22,5 @@ Client ignores entries whose player/leader is gone.
 - [x] lobby/seating.js `attach` seats a captured player beside the leader
 - [x] index.html sheet + `i-flag` icon + styles + `captured-in` avatar animation
 - [x] rules test (passes), lint, build
-- [ ] Manual check in a browser (`npm run dev`): seat adjacency, animation look, narrow screens, sheet
+- [ ] Manual check in a browser (`pnpm dev`): seat adjacency, animation look, narrow screens, sheet
 - [ ] Possible polish: README note; tune badge/button placement on 3-ring tables
