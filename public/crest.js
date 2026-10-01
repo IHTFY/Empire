@@ -65,7 +65,7 @@ export const METALS = {
 };
 
 export const TRIMS = {
-  none: { label: 'None' },
+  basic: { label: 'Basic' },
   inset: { label: 'Inset' },
   double: { label: 'Double' },
   riveted: { label: 'Riveted' }
@@ -179,14 +179,14 @@ export function parseCrest(text) {
   const parts = typeof text === 'string' ? text.split('.') : [];
   const crest = {};
   PARTS.forEach((part, i) => { crest[part] = KEYS[part][parts[i]] ? parts[i] : part === 'emblem' ? 'letter' : Object.keys(KEYS[part])[0]; });
-  crest.trim = TRIMS[parts[5]] ? parts[5] : defaultTrim(crest.shape);
+  crest.trim = parts[5] === 'none' ? 'basic' : TRIMS[parts[5]] ? parts[5] : defaultTrim(crest.shape);
   // Circular shields share one silhouette; their decoration remains independent.
   if (crest.shape === 'round' || crest.shape === 'targe') crest.shape = 'hoplon';
   return crest;
 }
 
 const defaultTrim = shape => SHAPES[shape]?.studs ? 'riveted' : shape === 'hoplon' ? 'double' : 'inset';
-export const crestString = crest => PARTS.map(part => part === 'trim' ? (crest.trim || defaultTrim(crest.shape)) : crest[part]).join('.');
+export const crestString = crest => PARTS.map(part => part === 'trim' ? (crest.trim === 'none' ? 'basic' : crest.trim || defaultTrim(crest.shape)) : crest[part]).join('.');
 
 export function randomCrest() {
   return { shape: pick(SHAPE_CHOICES), color: pick(COLORS), pattern: pick(PATTERNS), emblem: 'letter', metal: pick(METALS), trim: pick(TRIMS) };
@@ -239,12 +239,12 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
   const field = COLORS[crest.color].hex;
   const metal = METALS[crest.metal].hex;
   const shade = crest.color === 'sable' ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.3)';
-  const trim = crest.trim || defaultTrim(crest.shape);
+  const trim = crest.trim === 'none' ? 'basic' : crest.trim || defaultTrim(crest.shape);
   const { cx, cy } = shape;
   const circle = shape.d === SHAPES.hoplon.d;
   const s = circle ? (trim === 'double' ? .88 : trim === 'riveted' ? .85 : 1.1) : shape.s;
   const inset = shape.rims?.[0] || .85;
-  const rims = trim === 'none' ? [] : trim === 'double' ? (circle ? [.86, .76] : [inset, inset - .1]) : [trim === 'riveted' && circle ? .74 : inset];
+  const rims = trim === 'basic' ? [] : trim === 'double' ? (circle ? [.86, .76] : [inset, inset - .1]) : [trim === 'riveted' && circle ? .74 : inset];
   const studs = trim === 'riveted' ? (shape.studs || RIVETS[crest.shape] || SHAPES.targe.studs) : [];
   let emblem;
   if (crest.emblem === 'letter') {
@@ -262,7 +262,7 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
     + rims.map(inset => `<path d="${shape.d}" transform="translate(24 24) scale(${inset}) translate(-24 -24)" fill="none" stroke="${metal}" stroke-opacity=".8" stroke-width="1"/>`).join('')
     + studs.map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="${metal}"/>`).join('')
     + emblem
-    + (trim !== 'none' ? `<path d="${shape.d}" fill="none" stroke="${metal}" stroke-opacity=".85" stroke-width="1.6" stroke-linejoin="round"/>` : '')
+    + `<path d="${shape.d}" fill="none" stroke="${metal}" stroke-opacity=".85" stroke-width="1.6" stroke-linejoin="round"/>`
     + '</svg>';
 }
 
