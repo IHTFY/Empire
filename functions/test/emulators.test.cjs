@@ -45,6 +45,6 @@ test('emulated speech uses fallback without contacting the external speech servi
     process: { env: { FUNCTIONS_EMULATOR: 'true', GCLOUD_PROJECT: 'demo-empire-local' } },
     fetch: () => { throw new Error('External speech request was attempted'); }
   });
-  assert.equal(await h.evaluate("recording('otter')"), null);
+  assert.equal(await h.voice.recording('otter'), null);
   assert.deepEqual(h.data, {});
 });

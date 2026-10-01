@@ -50,7 +50,15 @@ async function join(user, id, name, secret) {
 async function run() {
   const hosting = await fetch('http://127.0.0.1:15000');
   assert.equal(hosting.status, 200);
-  assert.match(await hosting.text(), /firebase-emulators\.js/);
+  const html = await hosting.text();
+  assert.match(html, /firebase-emulators\.js/);
+  // Check the actual bundles, since Hosting rewrites missing assets to index.html.
+  for (const [asset, type] of [['script.js', 'javascript'], ['style.css', 'css']]) {
+    assert.ok(html.includes(`assets/${asset}`));
+    const response = await fetch(`http://127.0.0.1:15000/assets/${asset}`);
+    assert.equal(response.status, 200);
+    assert.ok(response.headers.get('content-type')?.includes(type), `Missing built asset: ${asset}`);
+  }
   const [alice, bob, outsider] = await Promise.all(['alice', 'bob', 'outsider'].map(signIn));
   const id = alice.db.ref('games').push().key;
   const name = `smoke-${Date.now()}`;

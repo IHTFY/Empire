@@ -34,17 +34,40 @@ function harness(initial = {}, overrides = {}, globals = {}) {
     database: { instance: () => ({ ref: () => ({ onWrite: callback => callback, onDelete: callback => callback }) }) },
     pubsub: { schedule: () => ({ onRun: callback => callback }) }, logger: { warn: () => {} }
   };
-  const context = vm.createContext({ exports: {}, process: { env: {} }, console, setTimeout, clearTimeout, fetch, AbortSignal, require: name => {
-    if (name === 'firebase-functions/v1') return functions;
-    if (name === 'firebase-admin/app') return { initializeApp: () => ({}), applicationDefault: () => ({}) };
-    if (name === 'firebase-admin/database') return { getDatabase: () => globals.database || { ref }, ServerValue: { TIMESTAMP: Date.now() } };
-    return require(name);
-  }, ...globals });
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '../../index.js'), 'utf8'), context);
-  Object.entries(overrides).forEach(([name, callback]) => {
-    context.override = callback;
-    vm.runInContext(`${name} = override`, context);
-  });
-  return { data, ref, snapshot, exports: context.exports, evaluate: expression => vm.runInContext(expression, context) };
+  // Load each CommonJS module in its own scope, just as Node does, while sharing the
+  // Firebase fakes. Overrides are installed before importers capture handler references.
+  const contexts = new Map();
+  const root = path.resolve(__dirname, '../..');
+  function loadModule(filename) {
+    if (contexts.has(filename)) return contexts.get(filename).module.exports;
+    const module = { exports: {} };
+    const context = vm.createContext({ module, exports: module.exports,
+      process: { env: {} }, console, setTimeout, clearTimeout, fetch, AbortSignal,
+      ...globals,
+      require: name => {
+        if (name === 'firebase-functions/v1') return functions;
+        if (name === 'firebase-admin/app') return { initializeApp: () => ({}), applicationDefault: () => ({}) };
+        if (name === 'firebase-admin/database') return { getDatabase: () => globals.database || { ref }, ServerValue: { TIMESTAMP: Date.now() } };
+        if (name.startsWith('.')) return loadModule(path.resolve(path.dirname(filename), name + '.js'));
+        return require(name);
+      }
+    });
+    contexts.set(filename, context);
+    vm.runInContext(fs.readFileSync(filename, 'utf8'), context, { filename });
+    for (const [name, callback] of Object.entries(overrides)) {
+      if (!Object.hasOwn(module.exports, name)) continue;
+      context.override = callback;
+      vm.runInContext(`${name} = override`, context);
+      module.exports[name] = callback;
+      delete context.override;
+    }
+    return module.exports;
+  }
+  const exports = loadModule(path.join(root, 'index.js'));
+  return {
+    data, ref, snapshot, exports,
+    voice: loadModule(path.join(root, 'voice.js')),
+    updateReveal: loadModule(path.join(root, 'reveal-state.js')).updateReveal
+  };
 }
 module.exports = { harness };
