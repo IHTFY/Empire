@@ -23,6 +23,7 @@ Client ignores entries whose player/leader is gone.
 - [x] index.html sheet + `i-flag` icon + styles + `captured-in` avatar animation
 - [x] rules test (passes), lint, build
 - [x] Browser check with headless Chromium (390px and 1280px): claim sheet, morph, seats beside leader, whole-empire move, list grouping, toast, undo returning followers
+- [x] Full-screen capture announcement (`#captureScreen`, `reveal.announceCapture`): captive crest burns into the captor's, member counts transfer one by one with ticks, chime; queued with bot announcements
 - [ ] Possible polish: README note; check badge/button crowding on 2-3 ring tables (12+ players); captured crest keeps the captive's initial, so verify it reads well with custom crests
 
 ## Notes

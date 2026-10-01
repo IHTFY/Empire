@@ -75,7 +75,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     removePlayer: rooms.removePlayer,
     removeWatcher: rooms.removeWatcher,
     capturePlayer: rooms.capturePlayer,
-    releasePlayer: rooms.releasePlayer
+    releasePlayer: rooms.releasePlayer,
+    onCapture: capture => reveal.announceCapture(capture)
   });
   createLobbyTransitions({ lobby });
   // Refresh offline durations and removal eligibility as time passes.
