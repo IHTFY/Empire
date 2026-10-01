@@ -7,12 +7,12 @@ by empire size (captured rows dimmed), empire size shown.
 ## Decisions (from user)
 - Any room member can claim; a sheet asks which leader captured the player (default: tapper's own leader). Humans only, bots excluded as captor and captive. Only after reveal (`locked`).
 - Capturing a leader moves their whole empire; announce only the leader (one toast/animation event).
-- Undo available on the directly captured player (restores their followers too). Cleared each new round.
-- Captured avatar = same crest as leader, own initial kept.
+- Undo available on the directly captured player; followers who moved with them come back to them. Cleared each new round.
+- Captured avatar = same crest as leader, own initial kept. Size badge shows on leaders of 2+.
 
 ## Data model
-`games/$id/captures/$uid = { leader, via }` (`via` = directly claimed player; groups undo).
-Followers of a captured leader are rewritten to the new leader with the same `via`.
+`games/$id/captures/$uid = { leader, via, back? }` (`via` = directly claimed player; groups undo).
+Followers of a captured leader are rewritten to the new leader with that `via`, keeping their old via in `back`; undo returns them to the released player.
 Client ignores entries whose player/leader is gone.
 
 ## Status
@@ -22,8 +22,8 @@ Client ignores entries whose player/leader is gone.
 - [x] lobby/seating.js `attach` seats a captured player beside the leader
 - [x] index.html sheet + `i-flag` icon + styles + `captured-in` avatar animation
 - [x] rules test (passes), lint, build
-- [ ] Manual check in a browser (`pnpm dev`): seat adjacency, animation look, narrow screens, sheet
-- [ ] Possible polish: README note; tune badge/button placement on 3-ring tables
+- [x] Browser check with headless Chromium (390px and 1280px): claim sheet, morph, seats beside leader, whole-empire move, list grouping, toast, undo returning followers
+- [ ] Possible polish: README note; check badge/button crowding on 2-3 ring tables (12+ players); captured crest keeps the captive's initial, so verify it reads well with custom crests
 
 ## Notes
 - Package manager is pnpm (`pnpm install`, `pnpm dev`, `pnpm lint`, `pnpm test`). The uuid override lives in `functions/pnpm-workspace.yaml`.

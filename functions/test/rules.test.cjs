@@ -184,8 +184,9 @@ test('members capture humans into an uncaptured leader\'s empire after the revea
   await assert.rejects(claim('bob', 'bob'), /permission/i);
   await claim('bob', 'alice');
   await assert.rejects(claim('cara', 'bob'), /permission/i);
-  await alice.ref('games/capture').update({ 'captures/alice': { leader: 'cara', via: 'alice' }, 'captures/bob': { leader: 'cara', via: 'alice' } });
-  await alice.ref('games/capture').update({ 'captures/alice': null, 'captures/bob': null });
+  await alice.ref('games/capture').update({ 'captures/alice': { leader: 'cara', via: 'alice' }, 'captures/bob': { leader: 'cara', via: 'alice', back: 'bob' } });
+  await alice.ref('games/capture').update({ 'captures/alice': null, 'captures/bob': { leader: 'alice', via: 'bob' } });
+  await assert.rejects(alice.ref('games/capture/captures/bob/extra').set('x'), /permission/i);
   await seed('capture-early', { locked: false });
   await assert.rejects(alice.ref('games/capture-early/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
 });

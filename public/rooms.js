@@ -285,8 +285,9 @@ export function createRooms({
   // Claim a player for a leader's empire. A captured leader brings their followers along.
   function capturePlayer(key, leader, onFail) {
     const update = { [`captures/${key}`]: { leader, via: key } };
+    // Followers remember how they joined (back), so undoing returns them to this player.
     Object.entries(captures).forEach(([id, c]) => {
-      if (c && c.leader === key) update[`captures/${id}`] = { leader, via: key };
+      if (c && c.leader === key) update[`captures/${id}`] = { leader, via: key, back: c.via };
     });
     db.ref(`games/${gameID}`).update(update).catch(() => {
       toast('Could not capture that player');
@@ -294,11 +295,11 @@ export function createRooms({
     });
   }
 
-  // Undo a capture, releasing everyone who moved with that player.
+  // Undo a capture: the player goes free and their followers come back to them.
   function releasePlayer(key) {
     const update = {};
     Object.entries(captures).forEach(([id, c]) => {
-      if (c && c.via === key) update[`captures/${id}`] = null;
+      if (c && c.via === key) update[`captures/${id}`] = id === key || !c.back ? null : { leader: key, via: c.back };
     });
     db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not undo that capture'));
   }
