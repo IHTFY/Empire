@@ -18,28 +18,59 @@
   background: var(--foil); border: 2px solid var(--bg); color: var(--gold-ink);
 }
 .crest-edit .icon { width: 14px; height: 14px; }
-.crest-head { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+.crest-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
 .crest-head .sheet-title { margin: 0; }
-.crest-big { position: relative; inset: auto; width: 84px; height: 84px; flex-shrink: 0; }
-.crest-big .crest { animation: crest-in .35s var(--spring); }
-@keyframes crest-in { from { transform: scale(.9); } to { transform: none; } }
+.crest-big { position: relative; inset: auto; width: 64px; height: 64px; flex-shrink: 0; }
 #crestNote.taken { color: #FFB23D; font-weight: 700; }
-.crest-options { overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 5px 2px; margin: 0 -5px; }
-.crest-group { display: flex; flex-direction: column; gap: 8px; }
+.crest-options { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 4px 5px 2px; margin: 0 -5px; }
+.crest-group { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-shrink: 0; }
 .crest-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .crest-group-head .eyebrow { font-size: 12px; }
-.crest-grid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 48px)); justify-content: space-between; gap: 6px; }
+.crest-row-controls { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.crest-selection { color: var(--muted); font-size: 11px; margin-right: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crest-row-arrow { display: flex; align-items: center; justify-content: center; width: 26px; height: 24px; padding: 4px; flex-shrink: 0; border: none; border-radius: 8px; color: var(--muted); background: transparent; }
+.crest-row-arrow svg { width: 16px; height: 16px; }
+.crest-row-arrow:hover:not(:disabled) { color: var(--gold-hi); background: var(--field); }
+.crest-row-arrow:disabled { opacity: .25; cursor: default; }
+.crest-row-arrow:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 1px; }
+.crest-rail { position: relative; min-width: 0; isolation: isolate; }
+.crest-rail::after { content: ''; position: absolute; inset: 0; z-index: 101; pointer-events: none; background: linear-gradient(90deg, var(--surface), transparent 14%, transparent 86%, var(--surface)); }
+.crest-grid { --cover-step: 44px; --cover-size: 50px; position: relative; display: flex; align-items: center; gap: 0; overflow-x: auto; overflow-y: hidden; height: 58px; padding: 4px 0; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; transition: height .24s var(--ease); }
+.crest-grid::-webkit-scrollbar { display: none; }
+.crest-group.is-active .crest-grid { --cover-size: 74px; height: 82px; }
+.crest-group[data-part="color"] .crest-grid { --cover-step: 34px; --cover-size: 34px; height: 48px; }
+.crest-group[data-part="color"].is-active .crest-grid { --cover-size: 44px; height: 56px; }
+.crest-carousel-item { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 var(--cover-step); width: var(--cover-step); height: 100%; scroll-snap-align: center; }
+/* Keep native row swipes and vertical overflow scrolling; the sheet grip still drags. */
+#crestDialog, #crestDialog .crest-options, #crestDialog .crest-grid { touch-action: pan-x pan-y; }
+#crestDialog .sheet-grip, #crestDialog .crest-head, #crestDialog > .row-2 { touch-action: none; }
+.crest-grid .crest-tile { width: var(--cover-size); height: var(--cover-size); flex: 0 0 var(--cover-size); opacity: var(--cover-opacity, 1); transform: perspective(400px) rotateY(var(--cover-angle, 0deg)) scale(var(--cover-scale, 1)); }
+.crest-grid .is-centered .crest-tile { border-color: var(--gold); background-color: color-mix(in srgb, var(--surface) 86%, var(--gold) 14%); box-shadow: 0 5px 16px rgba(0, 0, 0, .4); }
+.crest-grid .is-centered .crest-swatch { background-color: var(--c); border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold); }
+/* While browsing, only the centered cover carries the selection treatment. */
+.crest-grid .crest-carousel-item:not(.is-centered) .crest-tile { border-color: transparent; background-color: var(--field); box-shadow: none; }
+.crest-grid .crest-carousel-item:not(.is-centered) .crest-swatch { border-color: rgba(244, 241, 232, .14); background-color: var(--c); }
+.crest-group.is-active .crest-group-head > .eyebrow { color: var(--gold-hi); }
+.crest-grid .crest-swatch { margin: 0; }
 .crest-tile {
   position: relative; aspect-ratio: 1; padding: 4px; border-radius: 12px;
   border: 1.5px solid transparent; background: var(--field);
-  transition: transform .14s cubic-bezier(.3, .7, .4, 1), border-color .2s, background-color .2s;
+  transition: width .24s var(--ease), height .24s var(--ease), flex-basis .24s var(--ease), margin .24s var(--ease), transform .14s cubic-bezier(.3, .7, .4, 1), border-color .2s, background-color .2s;
 }
 .crest-tile .crest { filter: none; }
 .crest-tile:active { transform: scale(.92); }
+.crest-grid .crest-tile:active { transform: perspective(400px) rotateY(var(--cover-angle, 0deg)) scale(calc(var(--cover-scale, 1) * .96)); }
 .crest-tile[aria-pressed="true"] { border-color: var(--gold); background: rgba(255, 122, 26, .14); }
 .crest-tile:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .crest-swatch { padding: 0; background: var(--c); border-radius: 50%; border: 2px solid rgba(244, 241, 232, .14); }
 .crest-swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 3px var(--gold); background-color: var(--c); }
-.crest-metals { display: flex; gap: 8px; align-items: center; }
+.crest-metals { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 3px 4px 4px; }
 .crest-metals .eyebrow { margin-right: 2px; }
+.crest-metal-name { font-size: 11px; color: var(--muted); margin-right: auto; }
 .crest-metals .crest-swatch { width: 26px; height: 26px; aspect-ratio: auto; }
+#crestDialog .crest-head { flex-shrink: 0; }
+#crestDialog .row-2 { margin-top: 8px; flex-shrink: 0; }
+#crestDialog .btn { height: 48px; min-height: 48px; padding-top: 10px; padding-bottom: 10px; font-size: 24px; }
+@media (max-width: 360px) {
+  .crest-metal-name { display: none; }
+}
