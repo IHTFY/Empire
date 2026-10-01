@@ -59,14 +59,14 @@ test('late clips cannot enter a different reveal, a reset, or a deleted room', a
   const h = harness({ games: { room: { ...game(), locked: true, roundId: 'round', revealId: 'first', state: 'playing' } } }, {
     recording: () => recording, recordSample: async () => null
   }, { setTimeout: callback => { deadline = callback; return 1; }, clearTimeout: () => {} });
-  const clips = h.evaluate("recordNames(db.ref('games/room'), ['otter'], 'first')");
+  const clips = h.voice.recordNames(h.ref('games/room'), ['otter'], 'first');
   deadline();
   await clips.ready;
   await h.ref('games/room').update({ revealId: 'second', voice: { 0: 'new-clip' } });
   release('old-clip');
   await clips.done;
   assert.equal(h.data.games.room.voice[0], 'new-clip');
-  const update = h.evaluate('updateReveal');
+  const update = h.updateReveal;
   const modify = current => { current.voice = { 0: 'bad' }; return current; };
   await h.ref('games/room/state').set('resetting');
   assert.equal((await update(h.ref('games/room'), 'second', modify)).committed, false);
