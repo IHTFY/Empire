@@ -1,6 +1,6 @@
 import { $ } from './dom.js';
 import { COUNTDOWN_MS, NAME_MS } from './config.js';
-import { crestSvg, botCrest } from './crest.js';
+import { crestSvg, botCrest, initialOf } from './crest.js';
 
 // Owns synchronized playback, its cancellation token, and the bot announcement queue.
 export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby }) {
@@ -92,6 +92,64 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       await sleep(3200);
       screen.hidden = true;
     }).catch(() => { $('eliminatedScreen').hidden = true; });
+  }
+
+  // A captured player's empire changes hands: their crest burns into the captor's and
+  // the members move across one at a time. Shares the bot queue, so screens never overlap.
+  function announceCapture({ name, crest, captor, captorCrest, moved, captorSize }) {
+    const code = getRoom().id;
+    announceQueue = announceQueue.then(async () => {
+      if (getRoom().id !== code) return;
+      while (revealing) await sleep(300);
+      const screen = $('captureScreen');
+      const lost = $('captureLostCrest');
+      const lostCount = $('captureLostCount');
+      const wonCount = $('captureWonCount');
+      const word = $('captureBy');
+      const total = moved + 1;
+      let left = total;
+      let won = captorSize - total;
+      const resetCount = (el, value) => {
+        el.replaceChildren();
+        delete el.dataset.value;
+        delete el.dataset.mode;
+        ui.rollNumber(el, value);
+      };
+      lost.className = 'crest-slot capture-crest';
+      lost.innerHTML = crestSvg(crest, { letter: initialOf(name) });
+      $('captureWonCrest').innerHTML = crestSvg(captorCrest, { letter: initialOf(captor) });
+      resetCount(lostCount, left);
+      resetCount(wonCount, won);
+      lostCount.classList.remove('is-empty');
+      $('captureWho').textContent = name;
+      word.textContent = captor;
+      word.style.fontSize = '';
+      word.classList.remove('wrap');
+      screen.hidden = false;
+      fitWord(word, screen);
+      await sleep(1100);
+      // The crest flares, then snaps into the captor's colors at the height of the burn.
+      lost.classList.add('burning');
+      await sleep(380);
+      lost.innerHTML = crestSvg(captorCrest, { letter: initialOf(name) });
+      await sleep(520);
+      const step = Math.max(110, Math.min(420, 1400 / total));
+      while (left > 0) {
+        left--;
+        won++;
+        ui.rollNumber(lostCount, left);
+        ui.rollNumber(wonCount, won);
+        $('captureWonCrest').classList.remove('gain');
+        void $('captureWonCrest').offsetWidth;
+        $('captureWonCrest').classList.add('gain');
+        audio.tick(520 + 40 * Math.min(won, 12));
+        await sleep(step);
+      }
+      lostCount.classList.add('is-empty');
+      audio.chime();
+      await sleep(1500);
+      screen.hidden = true;
+    }).catch(() => { $('captureScreen').hidden = true; });
   }
 
   async function displaySecrets() {
@@ -212,6 +270,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
     isRevealing: () => revealing,
     resetAnnouncements,
     rememberBots,
-    observeEliminated
+    observeEliminated,
+    announceCapture
   };
 }
