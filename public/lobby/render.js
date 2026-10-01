@@ -5,7 +5,7 @@ import { initialOf, botCrest, defaultCrest, parseCrest, crestString, crestSvg } 
 import { createSeating } from './seating.js';
 
 // Owns the stable roster order and player DOM elements. It renders snapshots and delegates database actions.
-export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher, capturePlayer, releasePlayer }) {
+export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher, capturePlayer, releasePlayer, onCapture }) {
   const startButton = $('revealSecrets');
   const colors = ['#4F63D9', '#0E8A74', '#B5487A', '#C0662B', '#6D4FC2', '#2E7FB8', '#8A7A12', '#A8433F'];
   const { rollNumber, toast } = ui;
@@ -284,7 +284,12 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       captured.forEach(key => {
         const c = room.captures[key];
         if (!seenCaptured.has(key) && c.via === key && room.users[key] && room.users[c.leader]) {
-          toast(`${room.users[key].real} was captured by ${room.users[c.leader].real}`);
+          const moved = Object.keys(room.captures).filter(id => id !== key && room.captures[id] && room.captures[id].via === key && room.users[id]).length;
+          onCapture({
+            name: room.users[key].real, crest: crestFor(key, room.users[key]),
+            captor: room.users[c.leader].real, captorCrest: crestFor(c.leader, room.users[c.leader]),
+            moved, captorSize: empiresOf(room).size[c.leader]
+          });
         }
       });
     }

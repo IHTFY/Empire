@@ -12,6 +12,26 @@
 .eliminated-who { max-width: 100%; font-size: 40px; text-align: center; overflow-wrap: anywhere; animation: rise .5s var(--ease) .1s both; }
 .eliminated-label { margin-bottom: 4px; font-size: 15px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); text-align: center; animation: rise .5s var(--ease) .2s both; }
 #eliminatedName { animation-delay: .3s; }
+
+/* A capture: the captive's crest burns into the captor's, then members cross one by one. */
+#captureScreen { z-index: 21; }
+#captureBy { animation-delay: .3s; }
+.capture-crests { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.capture-side { display: flex; flex-direction: column; align-items: center; gap: 8px; animation: pop .6s var(--ease) both; }
+.capture-side + .capture-arrow + .capture-side { animation-delay: .12s; }
+.eliminated-stage .capture-crest { position: relative; inset: auto; display: block; width: 112px; height: 112px; filter: drop-shadow(0 16px 28px rgba(0, 0, 0, .5)); }
+.eliminated-stage .capture-crest.burning { animation: capture-burn .9s cubic-bezier(.3, 0, .2, 1) both; }
+.eliminated-stage .capture-crest.gain { animation: capture-gain .35s var(--ease) both; }
+@keyframes capture-burn {
+  0% { transform: none; filter: drop-shadow(0 16px 28px rgba(0, 0, 0, .5)); }
+  40% { transform: scale(.78) rotate(-10deg); filter: brightness(2.6) saturate(2.2) drop-shadow(0 0 26px #FF5A0A) drop-shadow(0 0 8px var(--gold-hi)); }
+  75% { transform: scale(1.16) rotate(3deg); filter: brightness(1.4) drop-shadow(0 0 18px var(--gold-hi)); }
+  100% { transform: none; filter: drop-shadow(0 16px 28px rgba(0, 0, 0, .5)); }
+}
+@keyframes capture-gain { 50% { transform: scale(1.1); filter: brightness(1.3) drop-shadow(0 0 14px var(--gold-hi)); } }
+.capture-arrow { width: 34px; height: 34px; color: var(--gold); animation: rise .5s var(--ease) .25s both; }
+.capture-count { font-size: 34px; line-height: 1; color: var(--gold); transition: opacity .5s ease, color .5s ease; }
+.capture-count.is-empty { opacity: .35; color: var(--muted); }
 .reveal-stage { position: relative; width: 100%; padding: 0 28px; display: flex; align-items: center; justify-content: center; }
 .count { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
 .count-burst { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(255, 122, 26, .7); animation: burst 1s cubic-bezier(.1, .7, .3, 1) both; }
