@@ -62,8 +62,39 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
   userGameCode.value = drafts.create;
   userGameCode.placeholder = '';
 
+  const roomNameField = $('roomNameField');
+  const roomNameRoll = $('roomNameRoll');
+  let roomNameRollTimer;
+  function stopRoomNameRoll() {
+    clearTimeout(roomNameRollTimer);
+    roomNameField.classList.remove('is-rolling');
+    roomNameRoll.replaceChildren();
+  }
+  function rollRoomName(previous, next) {
+    stopRoomNameRoll();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // The real input already holds the new suggestion. Only its decorative letters roll.
+    for (const [name, direction] of [[previous, 'out'], [next, 'in']]) {
+      const track = document.createElement('span');
+      track.className = `room-name-roll-track room-name-roll-${direction}`;
+      [...name].forEach((letter, index) => {
+        const glyph = document.createElement('span');
+        glyph.textContent = letter;
+        glyph.style.setProperty('--d', `${Math.min(index * 14, 180)}ms`);
+        track.appendChild(glyph);
+      });
+      roomNameRoll.appendChild(track);
+    }
+    roomNameField.classList.add('is-rolling');
+    roomNameRollTimer = setTimeout(stopRoomNameRoll, 620);
+  }
+  userGameCode.addEventListener('input', stopRoomNameRoll);
+  userGameCode.addEventListener('focus', stopRoomNameRoll);
+  userGameCode.addEventListener('pointerdown', stopRoomNameRoll);
+
   let formLocked = false;
   function lockForm(locked) {
+    stopRoomNameRoll();
     formLocked = locked;
     userGameCode.readOnly = locked;
     roomPassInput.readOnly = locked;
@@ -71,6 +102,7 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
   }
 
   function setRoomMode(mode) {
+    stopRoomNameRoll();
     if (mode !== roomMode) {
       drafts[roomMode] = userGameCode.value;
       userGameCode.value = drafts[mode];
@@ -99,7 +131,10 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
 
   $('rerollName').addEventListener('click', () => {
     if (formLocked) return;
+    const previous = userGameCode.value;
     userGameCode.value = suggestRoomName();
+    userGameCode.scrollLeft = 0;
+    rollRoomName(previous, userGameCode.value);
     clearCodeError();
   });
 
@@ -188,7 +223,7 @@ export function createHome({ db, signedIn, enterRoom, setRoomInUrl, ui }) {
     const typed = userGameCode.value.trim();
     const name = slugify(typed);
     if (!name) {
-      codeError(typed ? 'Use letters or numbers in the room name.' : 'Enter a room name, or tap the dice for a suggestion.');
+      codeError(typed ? 'Use letters or numbers in the room name.' : 'Enter a room name, or tap the circular arrow for a suggestion.');
       return;
     }
     // Show exactly the name being created, and keep it there until the room opens.

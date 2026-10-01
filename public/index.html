@@ -122,9 +122,12 @@
           <div class="stack-sm">
             <label for="userGameCode" class="eyebrow">Room name</label>
             <div class="field-row">
-              <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
+              <div class="room-name-field" id="roomNameField">
+                <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
+                <div class="room-name-roll" id="roomNameRoll" aria-hidden="true"></div>
+              </div>
               <button type="button" id="rerollName" class="icon-btn reroll-btn" aria-label="Suggest another room name" title="Suggest another room name">
-                <svg class="icon"><use href="#i-dice" /></svg>
+                <svg class="icon"><use href="#i-refresh" /></svg>
               </button>
             </div>
             <p id="userGameCodeHelper" class="field-error" role="alert"></p>
@@ -208,9 +211,6 @@
             <span class="vt-roll" aria-hidden="true"><span class="vt-words"><span>Table</span><span>List</span></span></span>
           </button>
           <div class="bar-group">
-            <button type="button" class="icon-btn icon-btn-gold share-btn" aria-label="Share game link">
-              <svg class="icon"><use href="#i-share" /></svg>
-            </button>
             <button type="button" class="icon-btn" data-open="optionsDialog" aria-label="Room options">
               <svg class="icon"><use href="#i-more" /></svg>
             </button>
@@ -222,7 +222,7 @@
           <span class="display list-room marquee"><span class="marquee-text room-name"></span></span>
           <span class="room-pass" id="roomPassRow" hidden>Password <strong id="roomPassText"></strong></span>
           <span class="muted small" id="listSummary" hidden></span>
-          <p class="muted invite wide-only">Friends join at <strong>empire.ihtfy.com</strong> <span id="inviteText">with this room name and password</span>, or share the link with them.</p>
+          <p class="muted invite"><span class="wide-only">Friends join at <strong>empire.ihtfy.com</strong> <span id="inviteText">with this room name and password</span>, </span><span class="invite-share-choice"><span class="wide-only">or </span><button type="button" class="link-btn share-btn invite-share"><svg class="icon"><use href="#i-share" /></svg>Share link</button></span></p>
         </div>
 
         <div class="lobby-body">

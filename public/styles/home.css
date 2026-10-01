@@ -1,7 +1,9 @@
 /* ---------- Home ---------- */
 
-.screen-home {
-  background: radial-gradient(420px 360px at 50% 210px, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+/* Paint the glow across the viewport so the app's width cap cannot cut it off. */
+body:has(.screen-home:not([hidden])) {
+  background-image: radial-gradient(420px 360px at 50% 210px, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+  background-repeat: no-repeat;
 }
 .hero { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
 .hero-logo { position: relative; width: 168px; height: 168px; display: flex; align-items: center; justify-content: center; }
@@ -34,6 +36,15 @@
 .mode-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .field-row { display: flex; align-items: center; gap: 10px; }
 .field-row .field { flex: 1; min-width: 0; }
+.room-name-field { position: relative; flex: 1; min-width: 0; }
+.room-name-field.is-rolling .field { color: transparent; }
+.room-name-roll { position: absolute; inset: 1.5px 19.5px; overflow: hidden; pointer-events: none; font-size: 17px; perspective: 240px; }
+.room-name-roll-track { position: absolute; inset: 0; display: flex; align-items: center; white-space: pre; }
+.room-name-roll-track span { display: inline-block; flex: none; animation-duration: .32s; animation-timing-function: var(--ease); animation-fill-mode: both; animation-delay: var(--d); }
+.room-name-roll-out span { animation-name: room-name-out; }
+.room-name-roll-in span { animation-name: room-name-in; animation-delay: calc(var(--d) + .12s); }
+@keyframes room-name-out { to { opacity: 0; transform: translateY(-16px) rotateX(90deg); } }
+@keyframes room-name-in { from { opacity: 0; transform: translateY(16px) rotateX(-90deg); } to { opacity: 1; transform: none; } }
 .reroll-btn { flex: none; width: 56px; height: 56px; border-radius: 16px; color: var(--muted); }
 .reroll-btn:hover { color: var(--ink); }
 .reroll-btn:disabled, .field[readonly] { opacity: .6; pointer-events: none; }

@@ -42,7 +42,10 @@
   /* Home: the crest and title on the left, the room card on the right. */
   .screen-home {
     grid-template: "bar bar" auto "hero card" 1fr / minmax(0, 1.1fr) minmax(0, 1fr);
-    background: radial-gradient(min(60vw, 720px) min(60vh, 600px) at 30% 50%, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
+  }
+  body:has(.screen-home:not([hidden])) {
+    /* Keep the glow behind the hero, 30% across the centered app. */
+    background-image: radial-gradient(min(60vw, 720px) min(60vh, 600px) at calc(50% - min(20vw, clamp(256px, 30vh, 360px))) 50%, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
   }
   .hero { grid-area: hero; }
   .hero-logo { width: clamp(120px, 30vh, 280px); height: clamp(120px, 30vh, 280px); }
@@ -80,13 +83,14 @@
       "stage lock" auto
       "stage add" auto
       "stage go" auto
-      "stage ." 1fr / minmax(0, 1fr) clamp(280px, 30vw, 400px);
+      "stage ." 1fr / minmax(0, 1fr) minmax(0, 1fr);
   }
   .screen-lobby > .bar { margin-bottom: 16px; }
   .wide-only { display: block; }
   .list-head { grid-area: head; gap: 8px; }
-  .list-room { font-size: clamp(40px, 8vh, 72px); }
+  .list-room { font-size: clamp(34px, 3vw, 56px); }
   .invite { margin-top: 4px; font-size: 15px; }
+  .invite .wide-only { display: inline; }
   .invite strong { color: var(--ink); }
   .lobby-body { grid-area: stage; margin: 0; }
   .list-view { width: min(100%, 560px); }
