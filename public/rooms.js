@@ -35,6 +35,8 @@ export function createRooms({
   let gameID = null;
   let listeners = [];
   let users = {};
+  let captures = {};
+  let capturesReady = false;
   let presence = {};
   let state = null;
   let locked = false;
@@ -43,7 +45,7 @@ export function createRooms({
 
   // Snapshots expose room data without giving another controller ownership of it.
   function getSnapshot() {
-    return { id: gameID, name: roomName, pass: roomPass, users, presence, state, locked };
+    return { id: gameID, name: roomName, pass: roomPass, users, captures, capturesReady, presence, state, locked };
   }
   const roomPresence = createRoomPresence({ db, getRoom: getSnapshot, getUid, listen });
 
@@ -87,6 +89,8 @@ export function createRooms({
     roomName = null;
     roomPass = null;
     users = {};
+    captures = {};
+    capturesReady = false;
     presence = {};
     state = null;
     locked = false;
@@ -152,6 +156,11 @@ export function createRooms({
         leaveRoom();
         return;
       }
+      onChange();
+    });
+    listen(db.ref(`games/${gameID}/captures`), snapshot => {
+      captures = snapshot.val() || {};
+      capturesReady = true;
       onChange();
     });
     listen(db.ref(`games/${gameID}/state`), onStateChange);
@@ -243,6 +252,7 @@ export function createRooms({
     if (state === 'resetting' && previous !== 'resetting') {
       // Forget membership before the server's roster/state callbacks arrive in either order.
       users = {};
+      captures = {};
       setSecret('');
       localStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
@@ -272,6 +282,27 @@ export function createRooms({
     });
   }
 
+  // Claim a player for a leader's empire. A captured leader brings their followers along.
+  function capturePlayer(key, leader, onFail) {
+    const update = { [`captures/${key}`]: { leader, via: key } };
+    Object.entries(captures).forEach(([id, c]) => {
+      if (c && c.leader === key) update[`captures/${id}`] = { leader, via: key };
+    });
+    db.ref(`games/${gameID}`).update(update).catch(() => {
+      toast('Could not capture that player');
+      if (onFail) onFail();
+    });
+  }
+
+  // Undo a capture, releasing everyone who moved with that player.
+  function releasePlayer(key) {
+    const update = {};
+    Object.entries(captures).forEach(([id, c]) => {
+      if (c && c.via === key) update[`captures/${id}`] = null;
+    });
+    db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not undo that capture'));
+  }
+
   function removeWatcher(key) {
     return db.ref(`games/${gameID}/presence/${key}`).remove();
   }
@@ -286,6 +317,8 @@ export function createRooms({
     roomLink,
     removePlayer,
     removeWatcher,
+    capturePlayer,
+    releasePlayer,
     savePresenceName
   };
 }
