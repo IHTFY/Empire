@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
   pull_request:
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
 
 concurrency:
@@ -11,6 +12,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Open/reopen creates the first preview. Later updates opt in with [preview] in
+  # the latest commit message, so intermediate commits still run checks cheaply.
+  preview-request:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      requested: ${{ steps.request.outputs.requested }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The PR event's default checkout is a generated merge commit; inspect
+          # the author's head commit instead, without executing any PR scripts.
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Check preview request
+        id: request
+        env:
+          PR_ACTION: ${{ github.event.action }}
+        run: |
+          message=$(git log -1 --format=%B)
+          if [[ "$PR_ACTION" == "opened" || "$PR_ACTION" == "reopened" || "$message" == *"[preview]"* ]]; then
+            echo "requested=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "requested=false" >> "$GITHUB_OUTPUT"
+          fi
+
   check:
     runs-on: ubuntu-latest
     steps:
@@ -57,10 +85,11 @@ jobs:
 
   # Each pull request gets its own temporary copy of the site (a Firebase Hosting preview
   # channel) and a comment with the link. Only the site is previewed: it talks to the same
-  # database and flashNames function as the live game.
+  # database and flashNames function as the live game. Reuse that preview on explicit
+  # requests rather than deploying every intermediate commit.
   preview:
-    needs: check
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+    needs: [check, preview-request]
+    if: needs.preview-request.outputs.requested == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
