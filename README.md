@@ -68,8 +68,8 @@ Open [localhost:15000](http://localhost:15000). To test on another device, use t
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Builds the browser JavaScript and CSS, watches source changes, and starts the Firebase emulators. |
-| `pnpm build` | Builds once into `public/assets/`. Git ignores these generated files. |
+| `pnpm dev` | Builds readable browser JavaScript and CSS, watches source changes, and starts the Firebase emulators. |
+| `pnpm build` | Builds minified production assets once into `public/assets/`, as preview and live deployment do. Git ignores these generated files. |
 | `pnpm lint` | Lints the browser code, build scripts, and Cloud Functions. |
 | `pnpm test` | Runs regression tests. |
 | `pnpm test:integration` | Builds the site, starts the emulators, checks database rules, and runs a whole-game scenario. Stop `pnpm dev` first. |
