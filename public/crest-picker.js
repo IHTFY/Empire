@@ -31,7 +31,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     { part: 'shape', label: 'Shape', options: SHAPE_CHOICES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'pavise', 'vesica', 'crescent', 'scutum', 'boeotian', 'vexillum', 'hoplon', 'heater', 'kite', 'standard', 'tablet', 'peltast', 'banner', 'oval', 'pennon'] },
     { part: 'color', label: 'Color', options: COLORS, swatch: true },
     { part: 'pattern', label: 'Pattern', options: PATTERNS },
-    { part: 'emblem', label: 'Emblem', options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'doubleeagle', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'legion', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'letter'] }
+    { part: 'emblem', label: 'Emblem', options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'aquila', 'doubleeagle', 'ouroboros', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'legion', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'letter'] }
   ];
   let activePart = 'emblem';
   let displayedCrest = '';
