@@ -12,9 +12,13 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
 
   const SECRET_MAX = 24; // keep in sync with maxlength in index.html and database.rules.json
 
-  function sanitizeName(raw) {
-    //TODO different rules for allowed characters etc.
-    return raw.toLowerCase().replace(/[^ A-Za-z0-9]/g, '').replace(/\s+/g, ' ').trim();
+  // Case and spacing are normalized; any other unsupported character is rejected, never dropped.
+  function normalizeName(raw) {
+    return raw.toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  function unsupportedChars(name) {
+    return [...new Set(name.match(/[^ a-z0-9]/g))];
   }
 
   // The secret field draws its own dots and letters over a transparent input, so
@@ -75,7 +79,7 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
     if (!getRoom().id) return;
 
     const userRealName = realName.value.trim().slice(0, 100);
-    const userFakeName = sanitizeName(secretName.value).slice(0, SECRET_MAX);
+    const userFakeName = normalizeName(secretName.value).slice(0, SECRET_MAX);
     let ok = true;
 
     const taken = Object.entries(getRoom().users).some(([key, user]) =>
@@ -90,9 +94,15 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
       ok = false;
     }
 
+    const badChars = unsupportedChars(userFakeName);
     if (userFakeName === '') {
       secretBox.classList.add('invalid');
       secretNameHelper.textContent = 'Pick a secret name (letters and numbers)';
+      ok = false;
+    } else if (badChars.length) {
+      secretBox.classList.add('invalid');
+      secretNameHelper.textContent =
+        'Secret names can only use letters A-Z, numbers and spaces.';
       ok = false;
     }
 
