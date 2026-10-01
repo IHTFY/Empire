@@ -136,7 +136,7 @@ export const EMBLEMS = {
   spartan: { label: 'Spartan', svg: CREATURES.spartan },
   spears: { label: 'Spears', svg: lineArt('<path d="M5 21 17 7M19 21 7 7M16 8Q14 4 21 2Q20 9 16 8zM8 8Q10 4 3 2Q4 9 8 8zM6 18l2 1.5M16 19.5l2-1.5"/>') },
   axe:{label:'Axe',svg:'<path d="M11 2h2v21h-2zM13 4q6 0 9-3v10q-4-4-9-4zM11 4Q5 4 2 1v10q4-4 9-4z"/>'},
-  wolf: { label: 'Wolf', svg: BEASTS.wolf },
+  wolf: { label: 'Wolf', svg: BEASTS.wolf.svg },
   lion: { label: 'Lion', svg: CREATURES.lion },
   sun:{label:'Sun',svg:'<circle cx="12" cy="12" r="5"/><path d="m12 1 2 5h-4zM12 23l-2-5h4zM1 12l5-2v4zM23 12l-5 2v-4zM4 4l5 2-3 3zM20 4l-2 5-3-3zM4 20l2-5 3 3zM20 20l-5-2 3-3z"/>'},
   oak:{retired:true,label:'Oak',svg:'<path d="M11 14h2v8h-2zM8 19h8v2H8z"/><path d="M12 2c3 0 4 2 4 4 4-1 6 3 4 5 4 4-1 8-5 5-1 3-5 3-6 0-4 3-9-1-5-5-2-2 0-6 4-5 0-2 1-4 4-4z"/>'},
@@ -155,7 +155,7 @@ export const EMBLEMS = {
   wyvern: { label: 'Wyvern', svg: CREATURES.wyvern },
   twinwyrm: { label: 'Twin hydra', svg: CREATURES.twinwyrm },
   dragon: { label: 'Dragon', svg: CREATURES.dragon },
-  serpent: { label: 'Serpent', svg: BEASTS.serpent },
+  serpent: { label: 'Serpent', svg: BEASTS.serpent.svg },
 };
 
 // Bots wear a robot instead of an emblem. It isn't offered in the picker, so people can't
