@@ -66,3 +66,6 @@ node_modules/
 
 # test data
 example data.json
+
+# Generated browser bundles and source maps
+public/assets/
