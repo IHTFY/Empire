@@ -33,3 +33,28 @@ test('room cleanup respects active connections and ignores stale legacy online f
   assert.equal(h.data.games.gone, undefined);
   assert.equal(h.data.games.legacy.state, 'waiting');
 });
+
+test('undoing nested captures restores each earlier empire', async () => {
+  const { capturePlan, releasePlan } = await import(pathToFileURL(path.join(__dirname, '../../public/captures.js')).href);
+  let captures = {};
+  const apply = update => Object.entries(update).forEach(([k, v]) => {
+    const id = k.replace('captures/', '');
+    if (v === null) delete captures[id]; else captures[id] = v;
+  });
+  const capture = (key, leader) => apply(capturePlan(captures, key, leader));
+  const release = key => apply(releasePlan(captures, key));
+  capture('A', 'B'); capture('B', 'C'); capture('C', 'D');
+  release('C');
+  assert.deepEqual(captures, { A: { leader: 'C', via: 'B', back: 'A' }, B: { leader: 'C', via: 'B' } });
+  release('B');
+  assert.deepEqual(captures, { A: { leader: 'B', via: 'A' } });
+  // Single capture/undo, independent merges, and legacy records without history.
+  captures = {};
+  capture('A', 'B'); release('A');
+  assert.deepEqual(captures, {});
+  capture('A', 'B'); capture('C', 'D');
+  assert.deepEqual(captures, { A: { leader: 'B', via: 'A' }, C: { leader: 'D', via: 'C' } });
+  captures = { A: { leader: 'C', via: 'B' }, B: { leader: 'C', via: 'B' } };
+  release('B');
+  assert.deepEqual(captures, {});
+});
