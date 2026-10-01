@@ -26,5 +26,5 @@ Client ignores entries whose player/leader is gone.
 - [ ] Possible polish: README note; check badge/button crowding on 2-3 ring tables (12+ players); captured crest keeps the captive's initial, so verify it reads well with custom crests
 
 ## Notes
-- Package manager is pnpm (`pnpm install`, `pnpm dev`, `pnpm lint`, `pnpm test`). The uuid override lives in `functions/pnpm-workspace.yaml`.
+- Package manager is pnpm (`pnpm install`, `pnpm dev`, `pnpm lint`, `pnpm test`). pnpm 12 needs dependency build scripts approved in `pnpm-workspace.yaml` (`allowBuilds`, root and `functions/`); the uuid override lives in `functions/pnpm-workspace.yaml`. Cloud Functions builds use pnpm because of `functions/pnpm-lock.yaml`, pinned by `engines.pnpm`.
 - A stray database emulator holds port 19000 here; stop it before `pnpm dev`. Rules tests can run against it: `FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:19000 pnpm --dir functions test:rules`.
