@@ -226,11 +226,23 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     const cx = 195, cy = 195, S = L.S;
 
     const guides = $('ringGuides');
-    while (guides.children.length > L.R.length) guides.lastChild.remove();
+    // Keep guides mounted so adding or removing a ring fades from its current size.
+    [...guides.children].forEach((guide, r) => {
+      if (r >= L.R.length) {
+        guide.style.opacity = '0';
+        guide.style.transform = 'scale(.85)';
+      }
+    });
     L.R.forEach((R, r) => {
       let g = guides.children[r];
-      if (!g) { g = document.createElement('div'); g.className = 'ring-guide'; guides.appendChild(g); }
-      Object.assign(g.style, { left: `${cx - R}px`, top: `${cy - R}px`, width: `${2 * R}px`, height: `${2 * R}px`, opacity: String(1 - r * 0.25) });
+      if (!g) {
+        g = document.createElement('div');
+        g.className = 'ring-guide';
+        Object.assign(g.style, { left: `${cx - R}px`, top: `${cy - R}px`, width: `${2 * R}px`, height: `${2 * R}px`, opacity: '0', transform: 'scale(.85)' });
+        guides.appendChild(g);
+        void g.offsetWidth; // Establish the entrance state before transitioning.
+      }
+      Object.assign(g.style, { left: `${cx - R}px`, top: `${cy - R}px`, width: `${2 * R}px`, height: `${2 * R}px`, opacity: String(1 - r * 0.25), transform: 'none' });
     });
 
     const center = $('tableCenter');
