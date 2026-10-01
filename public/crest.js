@@ -1,6 +1,7 @@
 import { CREATURES } from './crest-creatures.js';
 import { MYTHICALS } from './crest-mythicals.js';
 import { BEASTS } from './crest-beasts.js';
+import { ROMAN } from './crest-roman.js';
 
 // Crests: each player's avatar is a small coat of arms built from six choices.
 // A crest is stored as "shape.color.pattern.emblem.metal.trim". The last component
@@ -122,6 +123,7 @@ function laurel() {
 const lineArt = art => `<g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">${art}</g>`;
 
 export const EMBLEMS = {
+  ...ROMAN,
   ...MYTHICALS,
   letter: { label: 'Letter' },
   laurel: { label: 'Laurel', svg: laurel() },
