@@ -24,21 +24,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   let uid = null;
-  const signedIn = new Promise(resolve => {
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) {
-        firebase.auth().signInAnonymously().catch(err => {
-          console.error(`Error code ${err.code}: ${err.message}`);
-        });
-      } else {
-        // Anonymous identity persists in this browser, including after a reload.
-        uid = user.uid;
-        if (localStorage.getItem('realName') && !$('realName').value) {
-          $('realName').value = localStorage.getItem('realName');
-        }
-        resolve();
-      }
-    });
+  const adopt = user => {
+    // Anonymous identity persists in this browser, including after a reload.
+    uid = user.uid;
+    if (localStorage.getItem('realName') && !$('realName').value) {
+      $('realName').value = localStorage.getItem('realName');
+    }
+  };
+  // Resolves once signed in. A failed attempt rejects and is forgotten, so the next
+  // caller (a retry from the form, say) starts a fresh sign-in instead of waiting forever.
+  let signingIn = null;
+  const ensureSignedIn = () => {
+    if (uid) return Promise.resolve();
+    signingIn ??= firebase.auth().signInAnonymously()
+      .then(credential => { adopt(credential.user); })
+      .catch(err => {
+        console.error(`Error code ${err.code}: ${err.message}`);
+        throw err;
+      })
+      .finally(() => { signingIn = null; });
+    return signingIn;
+  };
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      adopt(user);
+    } else {
+      uid = null;
+      ensureSignedIn().catch(() => {});
+    }
   });
 
   const db = firebase.database();
@@ -53,19 +66,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeSheets();
   const audio = createAudio({ db, rollNumber: ui.rollNumber });
   const rooms = createRooms({
-    db, signedIn, getUid, ui, audio,
+    db, ensureSignedIn, getUid, ui, audio,
     onChange: () => lobby.render(),
     onDetach: () => lobby.reset(),
     onEnter: () => reveal.resetAnnouncements(),
     onUsers: users => reveal.rememberBots(users),
     onEliminated: snapshot => reveal.observeEliminated(snapshot),
-    onPlaybackStart: () => reveal.play(),
+    onPlaybackStart: () => reveal.play().catch(err => {
+      console.error(err);
+      ui.toast('Could not load the reveal.');
+    }),
     onPlaybackStop: () => reveal.cancel(),
     openSetup: () => setup.open(),
     setSecret: value => setup.setSecret(value)
   });
   const getRoom = rooms.getSnapshot;
-  home = createHome({ db, signedIn, enterRoom: rooms.enter, setRoomInUrl: rooms.setRoomInUrl, ui });
+  home = createHome({ db, ensureSignedIn, enterRoom: rooms.enter, setRoomInUrl: rooms.setRoomInUrl, ui });
   initializeSharing({ getRoom, roomLink: rooms.roomLink, toast: ui.toast });
   const crestPicker = createCrestPicker({ getRoom, getUid });
   setup = createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePresenceName: rooms.savePresenceName });
@@ -88,10 +104,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // room this device was last in.
   const params = new URL(document.location).searchParams;
   const lastRoom = rememberedRoom();
+  const failedToOpen = err => {
+    console.error(err);
+    ui.show('home');
+    ui.toast('Could not open that room. Try again.');
+  };
   if (params.get('room')) {
-    home.join(params.get('room'), params.get('pass') || '');
+    home.join(params.get('room'), params.get('pass') || '').catch(failedToOpen);
   } else if (params.get('code')) {
-    home.joinOldLink(params.get('code'));
+    home.joinOldLink(params.get('code')).catch(failedToOpen);
   } else if (lastRoom) {
     home.resume(lastRoom).catch(err => {
       console.error(err);
