@@ -24,3 +24,7 @@ Client ignores entries whose player/leader is gone.
 - [x] rules test (passes), lint, build
 - [ ] Manual check in a browser (`pnpm dev`): seat adjacency, animation look, narrow screens, sheet
 - [ ] Possible polish: README note; tune badge/button placement on 3-ring tables
+
+## Notes
+- Package manager is pnpm (`pnpm install`, `pnpm dev`, `pnpm lint`, `pnpm test`). The uuid override lives in `functions/pnpm-workspace.yaml`.
+- A stray database emulator holds port 19000 here; stop it before `pnpm dev`. Rules tests can run against it: `FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:19000 pnpm --dir functions test:rules`.
