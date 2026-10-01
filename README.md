@@ -1,44 +1,62 @@
-# [Play Empire](https://empire.ihtfy.com)
+<p align="center">
+  <img src="logo.png" alt="Empire logo" width="128" height="128" />
+</p>
 
-## Setup
-1. Create a new room at [empire.ihtfy.com](https://empire.ihtfy.com)
-   * Keep the suggested room name or type your own; the room gets a password
-2. Click `GET GAME LINK` and share with your friends
-   * Or simply have them go to [empire.ihtfy.com](https://empire.ihtfy.com) and enter the room name and password shown in the lobby
-3. Enter your display name and secret name, then `SUBMIT`
-4. You will see who has entered the lobby
-5. If you have a small party, you can add fake names under the `OPTIONS` menu
-6. Once everybody is ready to play, have someone press "START" to reveal the secret names
+<h1 align="center">Empire</h1>
 
-## How to Play
+<p align="center">A party game of secret names. Guess who is who and build the last empire standing.</p>
 
-**Objective**: Be the leader of the final empire.
+<p align="center">
+  <a href="https://empire.ihtfy.com"><strong>Play Empire</strong></a>
+  · <a href="#start-a-game">Start a game</a>
+  · <a href="#how-to-play">How to play</a>
+  · <a href="#local-development">Local development</a>
+  · <a href="#deploying">Deploying</a>
+</p>
 
-### Rules:
-1. Each player picks a secret name (any word that they hope won't be associated with them)
-2. The list of secret names is read twice in random order, and players are meant to memorize as many names as they can
-	- No recording of any information is allowed
-	- The name list can be read again at any point if unanimously agreed by all the remaining leaders
-3. Turns are taken clockwise around the circle of players
-	- Only leaders of empires take turns
-4. The first leader chooses another leader and guesses their secret word
-	- If they are wrong, their turn is over, and the next leader can guess
-	- If they are right, the other player is now part of their empire and the leader gets to guess again
-5. The winner is the last leader standing; the one whose secret name is never guessed
+## Start a game
 
-#### Notes:
-- When a leader is conquered by another leader, their whole empire goes along with them
-- All member of each empire should cooperate to guess the remaining leaders' secret names and protect the secret name of their leader
-- Only the leader of an empire can make official guesses; other members can talk, but any guesses don't count as a turn for their empire
+1. Open [empire.ihtfy.com](https://empire.ihtfy.com), choose **Create a room**, and keep the suggested room name or enter your own. Tap **Create**.
+2. Enter your name and a secret name, then tap **Enter the lobby**. You can also tap your crest to customize it.
+3. Tap **Share link** in the lobby. It opens your device's share menu or copies the room link. Friends can also choose **Join a room** on the home screen and enter the room name and password shown in the lobby.
+4. For a smaller group, tap **Add a bot player** to add extra secret names.
+5. Once everyone is in, tap **Reveal the names**. The app shows and reads the names in random order. Use **Read the names again** for the second reading, then start guessing aloud.
 
-## Code organization
+Names lock after the first reveal. Anyone who joins after that can watch and play in the next round.
 
-See [the code structure guide](docs/code-structure.md) for module responsibilities,
-controller interactions, styles, and the browser build.
+## How to play
 
-## Local development and verification
+Be the leader of the last empire standing. Everyone starts as the leader of their own empire.
 
-Use Node.js 22 and Java 21 or newer. Install both sets of dependencies once:
+1. Pick a secret name you hope nobody will associate with you.
+2. Memorize the names during the two readings. Do not write them down or record them. After that, only reread the list if all remaining leaders agree.
+3. Take turns clockwise around your group. Only empire leaders take turns.
+4. On your turn, choose another leader and guess their secret name.
+
+| Your guess | What happens |
+| --- | --- |
+| Wrong | Your turn ends. The next leader takes a turn. |
+| Right | That leader and their whole empire join yours. You guess again. |
+
+Empire members can discuss guesses and help protect their leader's secret name. Only the leader makes official guesses. The last leader whose secret name has never been guessed wins.
+
+### At the table
+
+The group makes and judges guesses aloud. Use the app to keep track of the round.
+
+| Control | What it does |
+| --- | --- |
+| Table / List | Switches between seats around a table and a roster grouped by empire. |
+| Flag beside a player | Records a capture. Choose the leader whose empire they joined. Their whole empire moves with them. Tap their undo control to reverse a capture. |
+| Remove a bot | Reveals its secret name to everyone after the round starts and removes that name from future readings. |
+| Read the names again | Replays the list. Get agreement from every remaining leader first. |
+| Room options | Lets you change your names before the reveal, adjust sound, open the rules, or leave. |
+| New round | Sends everyone back to pick new names. The room and its link stay the same. |
+| End room | Removes everyone and returns them to the home screen. |
+
+## Local development
+
+Use **Node.js 22**, **pnpm 12.8.1**, and **Java 21 or newer**.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -46,58 +64,87 @@ pnpm install --frozen-lockfile --dir functions
 pnpm dev
 ```
 
-`pnpm dev` builds the browser JavaScript and CSS, watches source changes, and starts
-the emulator suite. For a one-time build, run `pnpm build`. Generated files in
-`public/assets/` are ignored by Git.
+Open [localhost:15000](http://localhost:15000). To test on another device, use the development machine's LAN address on port 15000.
 
-Open http://localhost:15000 (or the development machine's LAN address on port 15000 for
-another device). The browser on this port connects to local Authentication (19099),
-Realtime Database (19000), and Functions (15001); the emulator UI is at http://localhost:14000.
-The game uses the demo project `demo-empire-local` and its `demo-empire-local-default-rtdb`
-database instance. Local name reads use the device voice; no Cloud Text-to-Speech request
-is made. Emulator data is temporary and is discarded when the suite stops.
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Builds the browser JavaScript and CSS, watches source changes, and starts the Firebase emulators. |
+| `pnpm build` | Builds once into `public/assets/`. Git ignores these generated files. |
+| `pnpm lint` | Lints the browser code, build scripts, and Cloud Functions. |
+| `pnpm test` | Runs regression tests. |
+| `pnpm test:integration` | Builds the site, starts the emulators, checks database rules, and runs a whole-game scenario. Stop `pnpm dev` first. |
 
-For verification, stop the development suite first, then run:
+The integration scenario covers create, join, reveal, reset, a new round, and ending the room. It also checks outsider denial and private reveal ownership. These checks need no deploy credentials.
 
-```sh
-pnpm test
-pnpm test:integration
-```
+<details>
+<summary>Emulator ports and local behavior</summary>
 
-The integration command starts the suite, checks the actual database rules in an isolated
-rules-test namespace, then runs a synthetic create/join/reveal/reset/new-round/end scenario
-against the local callable and database triggers. It also checks outsider denial and private
-reveal ownership. Emulator checks need no deploy credentials. Only use these development
-ports on a trusted local network: the emulator's admin API is intentionally unauthenticated.
+| Service | Port |
+| --- | --- |
+| Hosting | 15000 |
+| Authentication | 19099 |
+| Realtime Database | 19000 |
+| Functions | 15001 |
+| Emulator UI | [14000](http://localhost:14000) |
+
+The local browser connects to the emulators using the demo project `demo-empire-local` and database instance `demo-empire-local-default-rtdb`. Name readings use the device's voice without Cloud Text-to-Speech requests. Emulator data is temporary and disappears when the suite stops.
+
+Use these ports only on a trusted local network. The emulator admin API is unauthenticated.
+
+</details>
+
+### Code organization
+
+Empire is a static browser app backed by Firebase Realtime Database and Cloud Functions. The [code structure guide](docs/code-structure.md) explains the modules, controller interactions, styles, and browser build.
 
 ## Deploying
 
-The site (`public/`) and the `flashNames` Cloud Function (`functions/`) deploy to the `empire-ihtfy` Firebase project through GitHub Actions (`.github/workflows/firebase-deploy.yml`):
+[GitHub Actions](.github/workflows/firebase-deploy.yml) deploys the site, Cloud Functions, and database rules to the Firebase project `empire-ihtfy`.
 
-- **Pull requests:** install, lint and audit `functions/`, run regression and whole-game emulator checks, then deploy the site to a temporary preview link (posted as a comment on the PR, valid 7 days). The preview uses the live database and function, so only site changes can be tried there.
-- **Push to `master`** (or **Actions → Firebase → Run workflow**): the checks run, then `firebase deploy --only hosting,functions,database`.
+| Trigger | Result after checks pass |
+| --- | --- |
+| Pull request | Eligible same-repository PRs get a site preview link in a PR comment, valid for seven days. Fork and Dependabot PRs run checks without a preview. |
+| Push to `master` | Deploys Hosting, Functions, and database rules. |
+| Manual workflow run on `master` | Runs the same deployment through Actions > Firebase > Run workflow. |
 
-### One-time setup
-1. In the [Google Cloud console](https://console.cloud.google.com/iam-admin/serviceaccounts?project=empire-ihtfy), create a service account (for example `github-deploy`).
+Checks include lint, a production dependency audit for `functions/`, regression tests, and integration tests. **Preview sites use the live database and functions.** They preview site changes only.
+
+<details>
+<summary>One-time deployment setup</summary>
+
+1. In the [Google Cloud console](https://console.cloud.google.com/iam-admin/serviceaccounts?project=empire-ihtfy), create a service account such as `github-deploy`.
 2. Grant it these roles:
    - Firebase Admin
    - Cloud Functions Admin
    - Service Account User
    - Artifact Registry Administrator
    - Cloud Build Editor
-3. Create a JSON key for it: Keys → Add key → JSON.
-4. In GitHub, go to Settings → Secrets and variables → Actions → New repository secret. Name it `FIREBASE_SERVICE_ACCOUNT` and paste the whole JSON file as the value.
+3. Create a JSON key under Keys > Add key > JSON.
+4. In GitHub, open Settings > Secrets and variables > Actions > New repository secret. Name it `FIREBASE_SERVICE_ACCOUNT` and paste the whole JSON file as the value.
 
-### Manual deploy (fallback)
+</details>
+
+<details>
+<summary>Manual deployment</summary>
+
+Install dependencies, sign in, and deploy with the repository's Firebase CLI. Hosting's predeploy step builds the browser assets.
+
 ```sh
-pnpm add -g firebase-tools
-firebase login
 pnpm install --frozen-lockfile
 pnpm install --frozen-lockfile --dir functions
-firebase deploy --project empire-ihtfy --only hosting,functions,database
+pnpm exec firebase login
+pnpm exec firebase deploy --project empire-ihtfy --only hosting,functions,database
 ```
 
-### Rolling back
-- **Site:** Firebase console → Hosting → Release history → pick an earlier release → Rollback.
-- **Function:** check out an earlier commit and deploy it with `firebase deploy --only functions`.
-- **Database rules:** they live in `database.rules.json`. Firebase console → Realtime Database → Rules keeps a version history you can restore from.
+</details>
+
+<details>
+<summary>Rolling back</summary>
+
+| Component | How to restore an earlier version |
+| --- | --- |
+| Site | In the Firebase console, open Hosting > Release history, choose an earlier release, and select Rollback. |
+| Functions | Check out an earlier commit, install its dependencies, and run `pnpm exec firebase deploy --project empire-ihtfy --only functions`. |
+| Database rules | Restore a version from Firebase console > Realtime Database > Rules. Update `database.rules.json` to match before the next deployment. |
+
+</details>
