@@ -268,9 +268,11 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     startButton.classList.toggle('is-disabled', (!room.locked && count < 2) || isRevealing() || preparing);
     $('generateName').disabled = count >= MAX_PLAYERS;
 
-    // The list ranks empires by size, each leader followed by their captured players.
+    // Rank humans by empire population (including themselves), with bots below them at zero.
+    // Each leader is followed by their captured players; ties keep the stable roster order.
     const rank = key => order.indexOf(key);
-    const listed = players.filter(p => !p.captured).sort((a, b) => empires.size[b.key] - empires.size[a.key] || rank(a.key) - rank(b.key))
+    const population = player => player.bot ? 0 : empires.size[player.key];
+    const listed = players.filter(p => !p.captured).sort((a, b) => population(b) - population(a) || rank(a.key) - rank(b.key))
       .flatMap(leader => [leader, ...players.filter(p => p.leader === leader.key).sort((a, b) => rank(a.key) - rank(b.key))]);
     renderTable(players);
     renderList(listed);
