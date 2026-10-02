@@ -3,6 +3,7 @@ import { MAX_PLAYERS, OFFLINE_KICK_MS } from '../config.js';
 import { openSheet, closeSheet } from '../sheets.js';
 import { initialOf, botCrest, defaultCrest, parseCrest, crestString, crestSvg } from '../crest.js';
 import { createSeating } from './seating.js';
+import { tableAvatarSizes } from './crest-sizing.js';
 
 // Owns the stable roster order and player DOM elements. It renders snapshots and delegates database actions.
 export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher, capturePlayer, claimCapture, dropClaim, releasePlayer, onCapture }) {
@@ -104,6 +105,11 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
 
   function avatarHtml() {
     return '<span class="avatar"><span class="crest-slot"></span><span class="initial"></span><svg class="icon bot-icon"><use href="#i-bot" /></svg><span class="dot"></span><span class="empire-badge" hidden></span></span>';
+  }
+
+  function avatarSize(p, base, growth) {
+    // Growth tapers as the empire expands so crowded tables still have room.
+    return Math.round(base * (1 + growth * (1 - 1 / Math.sqrt(p.size || 1))));
   }
 
   function paintAvatar(avatar, p, size) {
@@ -444,7 +450,8 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       else if (attached.get(p.key) !== p.leader) { seating.attach(p.key, p.leader); attached.set(p.key, p.leader); }
     });
     const { L, seats } = seating.assign(players.map(p => p.key));
-    const cx = 195, cy = 195, S = L.S;
+    const sizes = tableAvatarSizes(players, seats, L, p => avatarSize(p, L.S, 0.8));
+    const cx = 195, cy = 195;
 
     const guides = $('ringGuides');
     // Keep guides mounted so adding or removing a ring fades from its current size.
@@ -485,6 +492,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
 
     const lh = Math.round(L.f * 1.3);
     players.forEach(p => {
+      const S = sizes.get(p.key);
       let entry = seatEls.get(p.key);
       if (entry && entry.leaving) { entry.el.remove(); seatEls.delete(p.key); entry = null; }
       if (!entry) {
@@ -586,7 +594,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       entry.el.classList.toggle('offline', p.offline);
       entry.el.classList.toggle('dim', p.away || p.offline);
       entry.el.classList.toggle('captured', p.captured);
-      paintAvatar(entry.avatar, p);
+      paintAvatar(entry.avatar, p, avatarSize(p, 38, 0.25));
       setCaptureButton(entry.cap, p);
       entry.el.querySelector('.row-name').textContent = p.name;
       entry.el.querySelector('.row-status').textContent = p.status;
