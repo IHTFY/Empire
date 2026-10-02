@@ -116,7 +116,8 @@
 .list-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .list-room { font-size: 34px; min-width: 0; line-height: 1.1; }
 .invite { font-size: 14px; }
-.invite-share-choice { display: inline-block; white-space: nowrap; }
+.invite-share-choice { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 14px; vertical-align: middle; white-space: nowrap; }
+.invite-share.is-disabled { opacity: .55; }
 .invite-share { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; vertical-align: middle; }
 .invite-share .icon { width: 16px; height: 16px; }
 

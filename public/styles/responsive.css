@@ -83,8 +83,6 @@
       "stage ." 1fr
       "stage head" auto
       "stage watch" auto
-      "stage lock" auto
-      "stage add" auto
       "stage go" auto
       "stage ." 1fr / minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -98,18 +96,16 @@
   .lobby-body { grid-area: stage; margin: 0; }
   .list-view { width: min(100%, 560px); }
   .watching { grid-area: watch; margin-top: 20px; }
-  .notice { grid-area: lock; margin-top: 16px; }
-  #generateName { grid-area: add; margin-top: 28px; }
   #revealSecrets { grid-area: go; margin-top: 12px; }
 }
 
 /* Big, high-resolution screens: the controls and text around the stage grow in steps so
    they stay in proportion with the table and hero, which already scale with the viewport. */
 @media (min-width: 1600px) and (min-height: 1000px) {
-  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, .notice, #generateName, #revealSecrets, dialog.sheet, .toast { zoom: 1.2; }
+  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, #revealSecrets, dialog.sheet, .toast { zoom: 1.2; }
 }
 @media (min-width: 2200px) and (min-height: 1300px) {
-  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, .notice, #generateName, #revealSecrets, dialog.sheet, .toast { zoom: 1.45; }
+  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, #revealSecrets, dialog.sheet, .toast { zoom: 1.45; }
 }
 
 @media (prefers-reduced-motion: reduce) {
