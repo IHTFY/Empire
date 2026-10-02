@@ -156,7 +156,8 @@
 .row-name { flex-grow: 1; min-width: 0; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-status { font-size: 13px; font-weight: 600; color: var(--muted); }
 .row.you .row-status { color: var(--gold); }
-.row-x { width: 44px; height: 44px; flex-shrink: 0; margin: -4px -6px -4px 0; border-radius: 12px; border: none; background: rgba(255, 255, 255, .06); display: flex; align-items: center; justify-content: center; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 44px; flex-shrink: 0; }
+.row-x { width: 44px; height: 44px; flex-shrink: 0; margin: -4px 0; border-radius: 12px; border: none; background: rgba(255, 255, 255, .06); display: flex; align-items: center; justify-content: center; }
 .row-x .icon { width: 16px; height: 16px; }
 
 /* Capturing: the flag claims a player for a leader's empire; the undo arrow restores them. */
