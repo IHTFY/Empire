@@ -283,17 +283,28 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     // Only a player who was free is announced; their followers and undo restorations stay quiet.
     const captured = new Set(Object.keys(room.captures).filter(key => room.captures[key]));
     if (seenCaptured) {
+      const live = id => room.users[id] && room.captures[id];
+      const announce = (key, leader, moved, size) => onCapture({
+        name: room.users[key].real, crest: crestFor(key, room.users[key]),
+        captor: room.users[leader].real, captorCrest: crestFor(leader, room.users[leader]),
+        moved, captorSize: size
+      });
+      const events = [];
       captured.forEach(key => {
         const c = room.captures[key];
-        if (!seenCaptured.has(key) && c.via === key && room.users[key] && room.users[c.leader]) {
+        if (seenCaptured.has(key) || !room.users[key] || !room.users[c.leader]) return;
+        if (c.via === key) {
           const moved = Object.keys(room.captures).filter(id => id !== key && room.captures[id] && room.captures[id].via === key && room.users[id]).length;
-          onCapture({
-            name: room.users[key].real, crest: crestFor(key, room.users[key]),
-            captor: room.users[c.leader].real, captorCrest: crestFor(c.leader, room.users[c.leader]),
-            moved, captorSize: empiresOf(room).size[c.leader]
-          });
+          events.push({ key, leader: c.leader, moved, size: empiresOf(room).size[c.leader] });
+        } else if (c.back === key && !seenCaptured.has(c.via) && live(c.via)) {
+          // Several captures arrived in one update (A to B, then B to C): the record only keeps the
+          // final leader, so replay the earlier claim of A by B ahead of B's own.
+          events.push({ key, leader: c.via, moved: 0, size: 2, earlier: c.via });
         }
       });
+      // Earlier claims play first so the chain reads in the order it happened.
+      events.sort((a, b) => Boolean(b.earlier) - Boolean(a.earlier));
+      events.forEach(e => announce(e.key, e.leader, e.moved, e.size));
     }
     seenCaptured = captured;
   }
