@@ -5,7 +5,7 @@ import { initialOf, botCrest, defaultCrest, parseCrest, crestString, crestSvg } 
 import { createSeating } from './seating.js';
 
 // Owns the stable roster order and player DOM elements. It renders snapshots and delegates database actions.
-export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher, capturePlayer, releasePlayer, onCapture }) {
+export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, removeWatcher, capturePlayer, claimCapture, dropClaim, releasePlayer, onCapture }) {
   const startButton = $('revealSecrets');
   const colors = ['#4F63D9', '#0E8A74', '#B5487A', '#C0662B', '#6D4FC2', '#2E7FB8', '#8A7A12', '#A8433F'];
   const { rollNumber, toast } = ui;
@@ -21,6 +21,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
   function resetLobby() {
     order = [];
     seenCaptured = null;
+    promptedClaims.clear();
     attached.clear();
     seating.reset();
     seatEls.forEach(({ el }) => el.remove());
@@ -56,6 +57,22 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     return { leaderOf, size };
   }
 
+  // A claim counts while the player is still free and the claimed leader can still lead.
+  function claimOn(room, key) {
+    const claim = (room.claims || {})[key];
+    if (!claim || !room.users[key] || room.users[key].fakeBadge || (room.captures || {})[key]) return null;
+    const leader = room.users[claim.leader];
+    if (!leader || leader.fakeBadge || claim.leader === key || (room.captures || {})[claim.leader]) return null;
+    return claim;
+  }
+
+  // The captured player and their followers decide whether the capture stands (as the rules do).
+  function onLosingSide(room, key) {
+    const uid = getUid();
+    const mine = (room.captures || {})[uid];
+    return Boolean(room.users[uid]) && (uid === key || Boolean(mine && mine.leader === key));
+  }
+
   function playerInfo(key, user, empires) {
     const room = getRoom();
     const leader = empires.leaderOf[key] || null;
@@ -67,10 +84,13 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     const away = !bot && !offline && seen && seen.away;
     let status = bot ? 'Bot' : offline ? `Offline · ${minutesAgo(seen.lastSeen)}` : away ? 'Away' : 'Online';
     if (you) status = 'You';
+    const claim = !leader && room.locked ? claimOn(room, key) : null;
+    if (claim) status = `Captured by ${room.users[claim.leader].real}?`;
     if (leader) status = `Captured by ${leaderUser.real}`;
     return {
       key, bot, you, offline, away, leader,
       captured: Boolean(leader),
+      claimed: Boolean(claim),
       direct: Boolean(leader) && room.captures[key].via === key,
       size: leader || empires.size[key] < 2 ? 0 : empires.size[key],
       capturable: room.locked && !bot && !leader && Boolean(room.users[getUid()]),
@@ -152,10 +172,75 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     btn.innerHTML = '<svg class="icon"><use href="#i-flag" /></svg>';
     btn.addEventListener('click', () => {
       const key = btn.dataset.key;
-      if (btn.dataset.mode === 'undo') { releasePlayer(key); return; }
+      if (btn.dataset.mode === 'undo') { openRelease(key); return; }
+      const room = getRoom();
+      if (claimOn(room, key) && onLosingSide(room, key)) { openClaim(key); return; }
       openCapture(key);
     });
     return btn;
+  }
+
+  // Undo is one tap away from the flag, so it asks first.
+  let pendingRelease = null;
+  function openRelease(key) {
+    const room = getRoom();
+    if (!room.users[key]) return;
+    pendingRelease = key;
+    $('releaseName').textContent = room.users[key].real;
+    $('releaseMore').hidden = !Object.entries(room.captures).some(([id, c]) => id !== key && c && c.via === key && room.users[id]);
+    openSheet($('confirmRelease'));
+  }
+  $('releaseButton').addEventListener('click', () => {
+    if (pendingRelease && (getRoom().captures || {})[pendingRelease]) releasePlayer(pendingRelease);
+    pendingRelease = null;
+  });
+  $('confirmRelease').addEventListener('close', () => { pendingRelease = null; });
+
+  // A claim waits for the captured player, or someone in their empire, to confirm it.
+  let shownClaim = null; // the claim on the confirm sheet, as captive|leader|by
+  const promptedClaims = new Set();
+  function claimId(key, claim) { return [key, claim.leader, claim.by].join('|'); }
+
+  function openClaim(key) {
+    const room = getRoom();
+    const claim = claimOn(room, key);
+    if (!claim) return;
+    const you = key === getUid();
+    const leader = room.users[claim.leader].real;
+    const by = claim.by === getUid() ? 'You' : room.users[claim.by] ? room.users[claim.by].real : 'Someone';
+    $('claimTitle').textContent = you ? `Were you captured by ${leader}?` : `Was ${room.users[key].real} captured by ${leader}?`;
+    $('claimBy').textContent = by;
+    $('claimWho').textContent = you ? 'your' : 'their';
+    $('claimMore').hidden = !Object.values(empiresOf(room).leaderOf).includes(key);
+    shownClaim = claimId(key, claim);
+    promptedClaims.add(shownClaim);
+    openSheet($('confirmClaim'));
+  }
+  const shownKey = () => shownClaim && shownClaim.split('|');
+  $('claimConfirm').addEventListener('click', () => {
+    const [key, leader] = shownKey() || [];
+    if (key && claimOn(getRoom(), key)) capturePlayer(key, leader);
+  });
+  $('claimDecline').addEventListener('click', () => {
+    const [key] = shownKey() || [];
+    if (key) dropClaim(key);
+  });
+  $('confirmClaim').addEventListener('close', () => { shownClaim = null; });
+
+  // Ask once per claim; a dismissed prompt can be reopened from the player's flag.
+  function promptClaims(room) {
+    if (!room.locked || !room.users[getUid()]) return;
+    if (shownClaim) {
+      const [key] = shownKey();
+      const claim = claimOn(room, key);
+      if (!claim || claimId(key, claim) !== shownClaim) closeSheet($('confirmClaim'));
+    }
+    Object.keys(room.claims || {}).forEach(key => {
+      const claim = claimOn(room, key);
+      if (!claim || claim.by === getUid() || !onLosingSide(room, key) || promptedClaims.has(claimId(key, claim))) return;
+      if (shownClaim || isRevealing()) return;
+      openClaim(key);
+    });
   }
 
   function openCapture(key) {
@@ -163,8 +248,12 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     const empires = empiresOf(room);
     const captive = room.users[key];
     if (!captive) return;
+    const decides = onLosingSide(room, key);
     $('captureName').textContent = captive.real;
     $('captureMore').hidden = !Object.values(empires.leaderOf).includes(key);
+    $('captureAsk').hidden = decides;
+    $('captureWithdraw').hidden = !claimOn(room, key);
+    pendingWithdraw = key;
     const mine = empires.leaderOf[getUid()] || getUid();
     const options = Object.keys(empires.size)
       .filter(id => id !== key && !room.users[id].fakeBadge)
@@ -176,13 +265,20 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       btn.textContent = `${room.users[id].real}${id === getUid() ? ' (you)' : ''} · ${empires.size[id]}`;
       btn.addEventListener('click', () => {
         closeSheet($('confirmCapture'));
-        capturePlayer(key, id);
+        if (decides) { capturePlayer(key, id); return; }
+        claimCapture(key, id);
+        toast(`Asked ${captive.real} to confirm`);
       });
       return btn;
     }));
     if (options.length === 0) { toast('Nobody else can lead an empire yet'); return; }
     openSheet($('confirmCapture'));
   }
+
+  let pendingWithdraw = null;
+  $('captureWithdraw').addEventListener('click', () => {
+    if (pendingWithdraw) dropClaim(pendingWithdraw);
+  });
 
   let pendingBotRemoval = null;
   $('removeBotButton').addEventListener('click', () => {
@@ -216,6 +312,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     const empires = empiresOf(room);
     const players = order.map(key => playerInfo(key, room.users[key], empires));
     announceCaptures(room);
+    promptClaims(room);
     const count = players.length;
     const waiting = players.filter(p => p.away || p.offline).map(p => p.name);
     const waitingText = waiting.length === 0 ? (count < 2 ? 'Need 2 to start' : 'Everyone is here')
@@ -421,7 +518,8 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     btn.hidden = !(p.capturable || undo);
     btn.dataset.key = p.key;
     btn.dataset.mode = undo ? 'undo' : 'capture';
-    btn.setAttribute('aria-label', undo ? `Undo capture of ${p.name}` : `${p.name} was captured`);
+    btn.classList.toggle('pending', !undo && p.claimed);
+    btn.setAttribute('aria-label', undo ? `Undo capture of ${p.name}` : p.claimed ? `Capture of ${p.name} awaiting confirmation` : `${p.name} was captured`);
     btn.querySelector('use').setAttribute('href', undo ? '#i-refresh' : '#i-flag');
   }
 

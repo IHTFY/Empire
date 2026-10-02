@@ -187,4 +187,9 @@
   100% { transform: scale(1); filter: none; }
 }
 .capture-leaders { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; max-height: 40vh; overflow-y: auto; }
-@media (prefers-reduced-motion: reduce) { .avatar.captured-in { animation: none; } }
+#confirmCapture .row-2:has(#captureWithdraw[hidden]) { grid-template-columns: 1fr; }
+/* A claimed capture waits for the captured empire to confirm it. */
+.seat-cap.pending, .row-cap.pending { animation: claim-pending 1.4s ease-in-out infinite; }
+.seat-cap.pending { background: var(--bg); color: var(--gold); border-color: var(--gold); }
+@keyframes claim-pending { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .avatar.captured-in, .seat-cap.pending, .row-cap.pending { animation: none; } }

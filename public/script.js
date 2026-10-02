@@ -91,6 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     removePlayer: rooms.removePlayer,
     removeWatcher: rooms.removeWatcher,
     capturePlayer: rooms.capturePlayer,
+    claimCapture: rooms.claimCapture,
+    dropClaim: rooms.dropClaim,
     releasePlayer: rooms.releasePlayer,
     onCapture: capture => reveal.announceCapture(capture)
   });

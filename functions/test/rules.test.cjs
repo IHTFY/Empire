@@ -19,6 +19,7 @@ function client(uid, name = uid) {
 }
 const alice = client('alice');
 const outsider = client('outsider');
+const bobCaptures = client('bob', 'bob-captures');
 async function request(target, method, body, admin = false) {
   return fetch(`http://${host}/${target}.json?ns=${namespace}`, {
     method, headers: { 'Content-Type': 'application/json', ...(admin ? { Authorization: 'Bearer owner' } : {}) },
@@ -193,16 +194,40 @@ test('members can remove a watcher with connection entries but cannot remove a c
 
 test('members capture humans into an uncaptured leader\'s empire after the reveal', async () => {
   await seed('capture', { locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), bot: { ...player('Bot'), fakeBadge: true } } });
-  const claim = (key, leader, via = key) => alice.ref(`games/capture/captures/${key}`).set({ leader, via });
+  const bob = bobCaptures;
+  const clients = { alice, bob };
+  const claim = (key, leader, as = clients[key] || alice) => as.ref(`games/capture/captures/${key}`).set({ leader, via: key });
   await assert.rejects(outsider.ref('games/capture/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
   await assert.rejects(claim('bot', 'alice'), /permission/i);
   await assert.rejects(claim('bob', 'bot'), /permission/i);
   await assert.rejects(claim('bob', 'bob'), /permission/i);
+  // Only the captured empire can put a free player in another empire.
+  await assert.rejects(claim('bob', 'alice', alice), /permission/i);
   await claim('bob', 'alice');
   await assert.rejects(claim('cara', 'bob'), /permission/i);
-  await alice.ref('games/capture').update({ 'captures/alice': { leader: 'cara', via: 'alice' }, 'captures/bob': { leader: 'cara', via: 'alice', back: 'bob' } });
+  // Bob follows Alice, so Bob can confirm Alice's capture and move with her.
+  await bob.ref('games/capture').update({ 'captures/alice': { leader: 'cara', via: 'alice' }, 'captures/bob': { leader: 'cara', via: 'alice', back: 'bob' } });
   await alice.ref('games/capture').update({ 'captures/alice': null, 'captures/bob': { leader: 'alice', via: 'bob' } });
   await assert.rejects(alice.ref('games/capture/captures/bob/extra').set('x'), /permission/i);
   await seed('capture-early', { locked: false });
-  await assert.rejects(alice.ref('games/capture-early/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
+  await assert.rejects(bob.ref('games/capture-early/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
+});
+
+test('members claim a capture that the captured empire confirms or declines', async () => {
+  await seed('claims', { locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), bot: { ...player('Bot'), fakeBadge: true } } });
+  const bob = bobCaptures;
+  const ref = key => alice.ref(`games/claims/claims/${key}`);
+  await assert.rejects(outsider.ref('games/claims/claims/bob').set({ leader: 'alice', by: 'outsider' }), /permission/i);
+  await assert.rejects(ref('bob').set({ leader: 'alice', by: 'bob' }), /permission/i);
+  await assert.rejects(ref('bot').set({ leader: 'alice', by: 'alice' }), /permission/i);
+  await assert.rejects(ref('bob').set({ leader: 'bot', by: 'alice' }), /permission/i);
+  await assert.rejects(ref('bob').set({ leader: 'bob', by: 'alice' }), /permission/i);
+  await ref('bob').set({ leader: 'alice', by: 'alice' });
+  await bob.ref('games/claims/claims/bob').remove();
+  await ref('bob').set({ leader: 'alice', by: 'alice' });
+  await bob.ref('games/claims').update({ 'captures/bob': { leader: 'alice', via: 'bob' }, 'claims/bob': null });
+  await assert.rejects(ref('bob').set({ leader: 'cara', by: 'alice' }), /permission/i);
+  await assert.rejects(ref('cara').set({ leader: 'bob', by: 'alice' }), /permission/i);
+  await seed('claims-early', { locked: false });
+  await assert.rejects(alice.ref('games/claims-early/claims/bob').set({ leader: 'alice', by: 'alice' }), /permission/i);
 });
