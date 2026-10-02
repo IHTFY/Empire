@@ -225,7 +225,7 @@
           <span class="display list-room marquee"><span class="marquee-text room-name"></span></span>
           <span class="room-pass" id="roomPassRow" hidden>Password <strong id="roomPassText"></strong></span>
           <span class="muted small" id="listSummary" hidden></span>
-          <p class="muted invite"><span class="wide-only">Friends join at <strong>empire.ihtfy.com</strong> <span id="inviteText">with this room name and password</span>, </span><span class="invite-share-choice"><span class="wide-only">or </span><button type="button" class="link-btn share-btn invite-share"><svg class="icon"><use href="#i-share" /></svg>Share link</button></span></p>
+          <p class="muted invite"><span class="wide-only">Friends join at <strong>empire.ihtfy.com</strong> <span id="inviteText">with this room name and password</span>, </span><span class="invite-share-choice"><span class="wide-only">or </span><button type="button" class="link-btn share-btn invite-share"><svg class="icon"><use href="#i-share" /></svg>Share link</button><button id="generateName" type="button" class="link-btn invite-share"><svg class="icon"><use id="botIcon" href="#i-bot" /></svg>Add bot</button><button id="lockInfo" type="button" class="link-btn invite-share lock-info" aria-label="Names are set for this round" hidden><svg class="icon"><use href="#i-lock" /></svg></button></span></p>
         </div>
 
         <div class="lobby-body">
@@ -247,10 +247,6 @@
         </div>
 
         <div id="watching" class="watching" hidden><span class="eyebrow">Watching</span><span id="watchingNames"></span></div>
-        <p id="lockNote" class="notice" hidden><svg class="icon"><use href="#i-lock" /></svg><span id="lockText"></span></p>
-        <button id="generateName" type="button" class="btn btn-dashed">
-          <svg class="icon"><use href="#i-plus" /></svg>Add a bot player
-        </button>
         <button id="revealSecrets" type="button" class="btn btn-gold btn-xl">
           <svg class="icon"><use id="revealIcon" href="#i-play" /></svg><span id="revealLabel">Reveal the names</span><span class="spinner" hidden></span>
         </button>
