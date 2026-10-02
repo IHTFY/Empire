@@ -6,6 +6,7 @@ by empire size (captured rows dimmed), empire size shown.
 
 ## Decisions (from user)
 - Any room member can claim; a sheet asks which leader captured the player (default: tapper's own leader). Humans only, bots excluded as captor and captive. Only after reveal (`locked`).
+- A claim by anyone else waits for the captured player or someone in their empire to confirm it (they get a prompt; "Not captured" declines). Their own claim applies immediately. Undo asks for confirmation first.
 - Capturing a leader moves their whole empire; announce only the leader (one toast/animation event).
 - Undo available on the directly captured player; followers who moved with them come back to them. Cleared each new round.
 - Captured avatar = same crest as leader, own initial kept. Size badge shows on leaders of 2+.
@@ -14,6 +15,7 @@ by empire size (captured rows dimmed), empire size shown.
 `games/$id/captures/$uid = { leader, via, back? }` (`via` = directly claimed player; groups undo).
 Followers of a captured leader are rewritten to the new leader with that `via`, keeping their old via in `back`; undo returns them to the released player.
 Client ignores entries whose player/leader is gone.
+Pending claims: `games/$id/claims/$uid = { leader, by }`. Rules only let a free player's capture record be created by that player or one of their followers; the confirmer writes the capture and clears the claim together. Anyone in the room can clear a claim.
 
 ## Status
 - [x] database.rules.json `captures` + room-lifecycle reset list

@@ -47,7 +47,7 @@ The group makes and judges guesses aloud. Use the app to keep track of the round
 | Control | What it does |
 | --- | --- |
 | Table / List | Switches between seats around a table and a roster grouped by empire. |
-| Flag beside a player | Records a capture. Choose the leader whose empire they joined. Their whole empire moves with them. Tap their undo control to reverse a capture. |
+| Flag beside a player | Records a capture. Choose the leader whose empire they joined. The captured player, or someone in their empire, confirms it; if they tap it themselves it applies right away. Their whole empire moves with them. Tap their undo control and confirm to reverse a capture. |
 | Remove a bot | Reveals its secret name to everyone after the round starts and removes that name from future readings. |
 | Read the names again | Replays the list. Get agreement from every remaining leader first. |
 | Room options | Lets you change your names before the reveal, adjust sound, open the rules, or leave. |
