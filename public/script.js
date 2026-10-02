@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   createLobbyTransitions({ lobby });
   // Refresh offline durations and removal eligibility as time passes.
   setInterval(lobby.render, 30000);
-  createBots({ db, getRoom, toast: ui.toast });
+  createBots({ db, getRoom, getUid, toast: ui.toast });
   reveal = createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby: lobby.render });
 
   // Open the room from a link (a reload keeps it in the address bar), or go back to the
