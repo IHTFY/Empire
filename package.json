@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "test": "pnpm --dir functions test && node --test scripts/updates.test.cjs scripts/bots.test.cjs scripts/crest-sizing.test.cjs",
+    "test": "pnpm --dir functions test && node --test scripts/updates.test.cjs scripts/bots.test.cjs scripts/announcements.test.cjs scripts/crest-sizing.test.cjs",
     "test:layout": "pnpm build && node --test scripts/layout.test.cjs",
     "test:integration": "firebase emulators:exec --project demo-empire-local --only hosting,auth,database,functions \"pnpm --dir functions test:rules && node scripts/smoke.cjs\"",
     "build": "node scripts/build.mjs",

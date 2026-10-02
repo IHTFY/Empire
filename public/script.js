@@ -73,7 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const rooms = createRooms({
     db, ensureSignedIn, getUid, ui, audio,
     onChange: () => lobby.render(),
-    onDetach: () => lobby.reset(),
+    onDetach: () => { lobby.reset(); reveal.cancelAnnouncements(); },
+    onRoundReset: () => reveal.cancelAnnouncements(),
     onEnter: () => reveal.resetAnnouncements(),
     onUsers: users => reveal.rememberBots(users),
     onEliminated: snapshot => reveal.observeEliminated(snapshot),
