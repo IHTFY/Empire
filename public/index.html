@@ -373,9 +373,32 @@
     <dialog id="confirmCapture" class="sheet" aria-labelledby="captureTitle">
       <div class="sheet-grip"></div>
       <h2 id="captureTitle" class="display sheet-title"><span id="captureName"></span> was captured?</h2>
-      <p class="muted">Whose empire have they joined? Their avatar will take on that leader's crest.<span id="captureMore"> Their whole empire goes with them.</span></p>
+      <p class="muted">Whose empire have they joined? Their avatar will take on that leader's crest.<span id="captureMore"> Their whole empire goes with them.</span><span id="captureAsk"> They or someone in their empire will be asked to confirm.</span></p>
       <div id="captureLeaders" class="capture-leaders"></div>
-      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <div class="row-2">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" id="captureWithdraw" class="btn btn-ghost" data-close>Not captured</button>
+      </div>
+    </dialog>
+
+    <dialog id="confirmClaim" class="sheet" aria-labelledby="claimTitle">
+      <div class="sheet-grip"></div>
+      <h2 id="claimTitle" class="display sheet-title"></h2>
+      <p class="muted"><span id="claimBy"></span> marked this capture. Confirm it to join that empire.<span id="claimMore"> The whole of <span id="claimWho"></span> empire goes too.</span></p>
+      <div class="row-2">
+        <button type="button" id="claimDecline" class="btn btn-ghost" data-close>Not captured</button>
+        <button type="button" id="claimConfirm" class="btn btn-gold" data-close>Confirm</button>
+      </div>
+    </dialog>
+
+    <dialog id="confirmRelease" class="sheet" aria-labelledby="releaseTitle">
+      <div class="sheet-grip"></div>
+      <h2 id="releaseTitle" class="display sheet-title">Undo capture of <span id="releaseName"></span>?</h2>
+      <p class="muted">They go free again.<span id="releaseMore"> The players who joined with them come back to their empire.</span></p>
+      <div class="row-2">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" id="releaseButton" class="btn btn-gold" data-close>Undo capture</button>
+      </div>
     </dialog>
 
     <dialog id="rulesDialog" class="sheet sheet-tall" aria-labelledby="rulesTitle">

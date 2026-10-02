@@ -38,6 +38,7 @@ export function createRooms({
   let users = {};
   let captures = {};
   let capturesReady = false;
+  let claims = {};
   let presence = {};
   let state = null;
   let locked = false;
@@ -46,7 +47,7 @@ export function createRooms({
 
   // Snapshots expose room data without giving another controller ownership of it.
   function getSnapshot() {
-    return { id: gameID, name: roomName, pass: roomPass, users, captures, capturesReady, presence, state, locked };
+    return { id: gameID, name: roomName, pass: roomPass, users, captures, capturesReady, claims, presence, state, locked };
   }
   const roomPresence = createRoomPresence({ db, getRoom: getSnapshot, getUid, listen });
 
@@ -92,6 +93,7 @@ export function createRooms({
     users = {};
     captures = {};
     capturesReady = false;
+    claims = {};
     presence = {};
     state = null;
     locked = false;
@@ -162,6 +164,10 @@ export function createRooms({
     listen(db.ref(`games/${gameID}/captures`), snapshot => {
       captures = snapshot.val() || {};
       capturesReady = true;
+      onChange();
+    });
+    listen(db.ref(`games/${gameID}/claims`), snapshot => {
+      claims = snapshot.val() || {};
       onChange();
     });
     listen(db.ref(`games/${gameID}/state`), onStateChange);
@@ -254,6 +260,7 @@ export function createRooms({
       // Forget membership before the server's roster/state callbacks arrive in either order.
       users = {};
       captures = {};
+      claims = {};
       setSecret('');
       localStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
@@ -283,13 +290,21 @@ export function createRooms({
     });
   }
 
-  // Claim a player for a leader's empire. A captured leader brings their followers along.
-  function capturePlayer(key, leader, onFail) {
-    const update = capturePlan(captures, key, leader);
-    db.ref(`games/${gameID}`).update(update).catch(() => {
-      toast('Could not capture that player');
-      if (onFail) onFail();
-    });
+  // Put a player in a leader's empire. A captured leader brings their followers along. Only
+  // the captured player or someone in their empire may do this, which settles any claim.
+  function capturePlayer(key, leader) {
+    const update = { ...capturePlan(captures, key, leader), [`claims/${key}`]: null };
+    db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not capture that player'));
+  }
+
+  // Anyone else says who captured a player; the captured empire confirms or declines it.
+  function claimCapture(key, leader) {
+    db.ref(`games/${gameID}/claims/${key}`).set({ leader, by: getUid() })
+      .catch(() => toast('Could not capture that player'));
+  }
+
+  function dropClaim(key) {
+    db.ref(`games/${gameID}/claims/${key}`).remove().catch(() => {});
   }
 
   // Undo a capture: the player goes free and their followers come back to them.
@@ -313,6 +328,8 @@ export function createRooms({
     removePlayer,
     removeWatcher,
     capturePlayer,
+    claimCapture,
+    dropClaim,
     releasePlayer,
     savePresenceName
   };
