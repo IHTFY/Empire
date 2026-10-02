@@ -27,7 +27,7 @@ export function rememberedRoom() {
 // Owns room state, database subscriptions, and entry/exit. The entry point supplies screen and playback callbacks.
 export function createRooms({
   db, ensureSignedIn, getUid, ui, audio,
-  onChange, onDetach, onEnter, onUsers, onEliminated,
+  onChange, onDetach, onRoundReset, onEnter, onUsers, onEliminated,
   onPlaybackStart, onPlaybackStop, openSetup, setSecret
 }) {
   const { show, toast, fitMarquees } = ui;
@@ -265,6 +265,7 @@ export function createRooms({
       localStorage.removeItem(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
       $('submitLabel').textContent = 'Enter the lobby';
+      onRoundReset();
       show('setup');
       // The server clears the old roster and opens the next round.
     }
