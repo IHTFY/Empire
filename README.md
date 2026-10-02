@@ -74,6 +74,7 @@ Open [localhost:15000](http://localhost:15000). To test on another device, use t
 | `pnpm build` | Builds minified production assets once into `public/assets/`, as preview and live deployment do. Git ignores these generated files. |
 | `pnpm lint` | Lints the browser code, build scripts, and Cloud Functions. |
 | `pnpm test` | Runs regression tests. |
+| `pnpm test:layout` | Checks screen and panel bounds at phone, tablet, and desktop sizes, including short viewports. Run `pnpm exec playwright install chromium` once first. |
 | `pnpm test:integration` | Builds the site, starts the emulators, checks database rules, and runs a whole-game scenario. Stop `pnpm dev` first. |
 
 The integration scenario covers create, join, reveal, reset, a new round, and ending the room. It also checks outsider denial and private reveal ownership. These checks need no deploy credentials.

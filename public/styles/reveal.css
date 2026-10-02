@@ -2,6 +2,7 @@
 
 .reveal {
   position: fixed; inset: 0; z-index: 20;
+  overflow: clip;
   background: radial-gradient(360px 360px at 50% 50%, rgba(79, 99, 217, .26), rgba(7, 8, 25, 0) 70%), var(--bg-deep);
   display: flex; align-items: center; justify-content: center;
   animation: fade .3s ease both;
@@ -48,7 +49,9 @@
 
 /* ---------- Spectators ---------- */
 
-.watching { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.watching { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 0; max-height: 20dvh; overflow-y: auto; font-size: 14px; color: var(--muted); }
+.watch-chip { max-width: 100%; overflow-wrap: anywhere; }
+#watchingNames { min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .watching .eyebrow { font-size: 11px; }
 .watch-chip { padding: 4px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-weight: 700; animation: rise .4s var(--ease) both; }
 .watch-remove { margin: 0 -4px 0 6px; padding: 0 4px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
