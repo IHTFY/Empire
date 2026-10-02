@@ -1,61 +1,32 @@
-/* Keep toolbar, headings, and actions in the same reading order at every size. */
-.screen {
-  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  gap: 12px;
-}
-.bar { min-height: 44px; }
-.screen-home, .screen-setup { width: min(100%, 720px); margin: 0 auto; }
-.screen-home { display: grid; grid-template: "hero bar" auto "card card" minmax(0, 1fr) / minmax(0, 1fr) auto; }
-.screen-home > .bar, .screen-setup > .bar { grid-area: bar; }
-.screen-home > .bar { gap: 4px; }
-.screen-home > .bar .bar-group { gap: 4px; }
-.screen-home > .bar .link-btn { justify-content: center; min-width: 44px; min-height: 44px; }
-.hero {
-  grid-area: hero; container-type: normal; display: grid;
-  grid-template: "logo title" auto "logo tagline" auto / auto minmax(0, 1fr);
-  align-content: center; justify-content: start; text-align: left; gap: 4px 8px;
-}
-.hero-logo { grid-area: logo; display: flex; width: clamp(40px, 12vw, 80px); height: clamp(40px, 12vw, 80px); }
-.hero-title { grid-area: title; display: block; font-size: clamp(28px, 8vw, 56px); }
-.hero-tagline { grid-area: tagline; display: block; max-width: 32em; font-size: 14px; }
-#roomForm { grid-area: card; align-self: start; width: 100%; padding: 20px; gap: 12px; }
-/* Only the active mode takes space. The create hint does not reserve a password field. */
+/* Portrait phones retain the original stacked layouts. */
+.screen-home { display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, auto); }
+.screen-home, .screen-setup { width: 100%; margin: 0 auto; }
+.hero { flex: 1; min-height: 0; container: hero / size; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; }
+.hero-logo { display: flex; width: min(168px, max(48px, calc(100cqh - 164px))); height: min(168px, max(48px, calc(100cqh - 164px))); }
+.hero-title { display: block; font-size: 64px; }
+.hero-tagline { display: block; max-width: 280px; font-size: 16px; }
+#roomForm { width: 100%; padding: 20px; gap: 14px; }
 .mode-extra > [inert] { display: none; }
-.screen-setup { display: grid; grid-template: "bar" auto "intro" auto "form" minmax(0, 1fr) / minmax(0, 1fr); }
-.setup-intro { grid-area: intro; gap: 8px; }
-.setup-head { flex-direction: row; align-items: center; gap: 16px; }
-.setup-title { font-size: clamp(36px, 7vmin, 56px); }
-.setup-intro .muted { font-size: 14px; }
-.crest-btn { width: clamp(64px, 14vmin, 104px); height: clamp(64px, 14vmin, 104px); }
-.names-form { grid-area: form; gap: 12px; }
-.names-form .btn-xl { height: 52px; font-size: 24px; }
-/* Actions remain visible even if enlarged text needs more room than the form panel. */
+.setup-head { flex-direction: row; align-items: center; }
+.setup-title { font-size: 48px; }
+.crest-btn { width: 92px; height: 92px; }
+.names-form { gap: 20px; }
 #roomForm > .btn, .names-form > .btn, .sheet > .sheet-close, .sheet > .row-2 { position: sticky; bottom: 0; z-index: 2; }
 .sheet > .row-2 { background: var(--surface); }
 .names-form:has(.field-error:not(:empty)) #secretHint { display: none; }
 #roomForm:has(.field-error:not(:empty)) #createHint { display: none; }
-
-/* The logo stays top left. Room details stay below it, with the stage next in order. */
-.screen-lobby { gap: 8px; }
 .screen-lobby > .bar { display: grid; grid-template-columns: 1fr auto 1fr; }
 .screen-lobby .bar-logo { justify-self: start; }
 .screen-lobby .bar-group { justify-self: end; }
-.list-head { gap: 4px; overflow: visible; }
-.list-room { font-size: 30px; }
-.invite { margin-top: 0; }
-.lobby-body { margin: 0; }
-.list-view { width: 100%; }
-#revealSecrets { height: 48px; padding: 0 10px; gap: 6px; font-size: 20px; white-space: normal; }
+.list-head { overflow: visible; }
 #revealLabel { min-width: 0; line-height: 1.05; }
 .watching { display: grid; gap: 4px; max-height: min(22dvh, 100px); flex-shrink: 0; }
-@media (max-width: 599px) {
-  .home-help-label, .hero-tagline { display: none; }
-}
 
 @media (min-width: 600px) {
-  .app { max-width: 1600px; }
+  .app { max-width: 640px; }
   .screen { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
-  .screen-home, .screen-setup { width: min(100%, 760px); }
+  .lobby-body { margin: 0 -24px; }
+  .list-view { width: calc(100% - 48px); }
   .list-room { font-size: clamp(30px, 3vw, 48px); }
   dialog.sheet {
     width: min(480px, calc(100% - 48px)); margin: auto; padding: 20px 24px 24px;
@@ -77,13 +48,33 @@
   .reveal-timer { left: max(48px, calc(50% - 360px)); right: max(48px, calc(50% - 360px)); }
 }
 
-/* Wide screens add space to the right without moving the toolbar or room name there. */
+/* Landscape uses two columns without taking height away from the table. */
 @media (min-width: 480px) and (min-aspect-ratio: 5/4) {
   .app { max-width: 1600px; }
+  .screen { display: grid; column-gap: 24px; }
+  .screen-home { grid-template: "bar card" auto "hero card" minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr); }
+  .screen-home > .bar { grid-area: bar; }
+  .hero { grid-area: hero; }
+  .hero-logo { width: min(100cqw, max(64px, calc(100cqh - 120px)), 280px); height: min(100cqw, max(64px, calc(100cqh - 120px)), 280px); }
+  .hero-title { font-size: clamp(40px, 12dvh, 96px); }
+  .hero-tagline { font-size: 14px; }
+  #roomForm { grid-area: card; align-self: center; padding: 20px; gap: 12px; }
+  .screen-setup { grid-template: "bar bar" auto "title crest" auto "form crest" minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr); row-gap: 12px; }
+  .screen-setup > .bar { grid-area: bar; }
+  .setup-intro, .setup-head { display: contents; }
+  .setup-title { grid-area: title; font-size: clamp(28px, 7dvh, 56px); }
+  .setup-title br { display: none; }
+  .setup-intro > .muted { display: none; }
+  .crest-btn { grid-area: crest; align-self: center; justify-self: center; width: min(100%, calc(100dvh - 80px), 360px); height: auto; aspect-ratio: 1; }
+  .crest-edit { width: clamp(30px, 8vmin, 48px); height: clamp(30px, 8vmin, 48px); border-radius: 50%; }
+  .crest-edit .icon { width: 46%; height: 46%; }
+  .names-form { grid-area: form; display: flex; gap: 12px; min-width: 0; }
+  .names-form > .grow { display: none; }
+  .names-form > .btn { margin-top: auto; }
   .screen-lobby {
     display: grid; column-gap: 16px; row-gap: 0;
     grid-template:
-      "bar bar" auto
+      "bar stage" auto
       "head stage" auto
       ". stage" minmax(0, 1fr)
       "watch stage" auto
@@ -91,22 +82,15 @@
   }
   .screen-lobby > .bar { grid-area: bar; margin-bottom: 8px; }
   .screen-lobby .list-head { grid-area: head; }
-  .screen-lobby .lobby-body { grid-area: stage; }
+  .screen-lobby .lobby-body { grid-area: stage; margin: 0; }
+  .screen-lobby .list-view { width: 100%; }
   .screen-lobby .watching { grid-area: watch; margin-bottom: 8px; max-height: min(180px, max(36px, calc(100dvh - 230px))); }
-  .screen-lobby #revealSecrets { grid-area: go; }
-  .names-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
-  .names-form > .stack-sm { align-self: start; }
-  .names-form > .grow { grid-column: 1 / -1; }
-  .names-form > .btn { grid-column: 1 / -1; }
+  .screen-lobby #revealSecrets { grid-area: go; height: 48px; padding: 0 10px; gap: 6px; font-size: 20px; white-space: normal; }
 }
 
 /* Compact spacing and horizontal fields keep ordinary phone forms visible without scrolling. */
 @media (max-height: 600px) {
   .screen { gap: 8px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-  .screen-home { grid-template-rows: auto minmax(0, 1fr); }
-  .hero { gap: 4px 12px; }
-  .hero-logo { width: 40px; height: 40px; }
-  .hero-title { font-size: 28px; }
   .hero-tagline { font-size: 13px; }
   #roomForm { padding: 12px; gap: 8px; }
   .mode-switch button { height: 36px; }
@@ -119,7 +103,6 @@
   .btn, .btn-xl, .names-form .btn-xl { height: 44px; font-size: 22px; }
   .setup-title { font-size: 32px; }
   .setup-title br { display: none; }
-  .crest-btn { width: 48px; height: 48px; }
   .setup-intro { gap: 4px; }
   .setup-intro .muted { font-size: 12px; }
   .names-form { gap: 8px; }
@@ -134,17 +117,11 @@
   #optionsDialog .sheet-item { padding: 0 8px; gap: 8px; font-size: 14px; }
   #optionsDialog .sheet-close { grid-column: 1 / -1; margin: 0; }
 }
-@media (min-width: 480px) and (max-height: 600px) and (min-aspect-ratio: 5/4) {
-  #roomForm { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  #roomForm > .mode-switch, #roomForm > .btn { grid-column: 1 / -1; }
-  #roomForm > .mode-extra { align-self: center; }
-  .names-form { grid-template-rows: auto minmax(0, 1fr) auto; }
-  .screen-lobby { gap: 0 12px; }
-}
 @media (max-height: 400px) {
   .names-form { gap: 4px; }
   .names-form .eyebrow { font-size: 12px; }
   .hero-tagline { display: none; }
+  .screen-home #createHint { display: none; }
   .setup-intro > .muted { display: none; }
   .screen-setup .setup-title { font-size: 28px; }
   dialog.sheet { padding-top: 8px; padding-bottom: 12px; gap: 4px; }
@@ -157,6 +134,29 @@
   #audioDialog .switch-row { padding: 4px; }
   #audioDialog .switch-text .muted { display: none; }
   #audioDialog .sheet-close { margin-top: 0; }
+}
+
+@media (max-height: 600px) and (max-aspect-ratio: 5/4) {
+  .hero { gap: 8px; }
+  .hero-title { font-size: 48px; }
+  .hero-logo { width: min(144px, max(40px, calc(100cqh - 112px))); height: min(144px, max(40px, calc(100cqh - 112px))); }
+}
+@media (min-width: 480px) and (min-aspect-ratio: 5/4) and (max-height: 600px) {
+  .screen { column-gap: 16px; }
+  .hero { gap: 8px; }
+  .hero-logo { width: min(100cqw, max(64px, calc(100cqh - 72px)), 280px); height: min(100cqw, max(64px, calc(100cqh - 72px)), 280px); }
+  .hero-title { font-size: clamp(36px, 12dvh, 64px); }
+  .hero-tagline { display: none; }
+  #roomForm { padding: 12px; gap: 8px; }
+  .screen-setup { row-gap: 8px; }
+  .screen-setup .names-form { gap: 8px; }
+  .screen-setup #secretHint { display: none; }
+  .screen-lobby { gap: 0 12px; }
+}
+@media (min-width: 480px) and (min-aspect-ratio: 5/4) and (max-height: 400px) {
+  .screen-home #roomForm { padding: 8px; }
+  .screen-setup .names-form { gap: 2px; }
+  .screen-setup .stack-sm { gap: 2px; }
 }
 
 /* Announcement artwork and names share the viewport's height budget. */

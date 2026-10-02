@@ -1,4 +1,4 @@
-/* global document, window, requestAnimationFrame, innerWidth, innerHeight, scrollX, scrollY */
+/* global document, window, requestAnimationFrame, innerWidth, innerHeight, scrollX, scrollY, getComputedStyle */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -30,6 +30,8 @@ test('Every game screen contains its panels and scrolls only inside them', async
     await document.fonts.ready;
     const { createLobby } = await import('/lobby/render.js');
     const { fitRevealText } = await import('/reveal.js');
+    const { crestSvg, parseCrest } = await import('/crest.js');
+    document.querySelector('#crestPreview').innerHTML = crestSvg(parseCrest('heater.azure.plain.dragon.gold.riveted'));
     const { initializeFullscreen } = await import('/fullscreen.js');
     window.initializeFullscreen = initializeFullscreen;
     window.messages = [];
@@ -90,10 +92,21 @@ test('Every game screen contains its panels and scrolls only inside them', async
         await page.evaluate(() => document.querySelectorAll('.field-error').forEach(el => el.textContent = 'Please enter a valid name before continuing.'));
         await contains('#' + id, id);
         await contains('#' + id + ' > .bar', id + ' toolbar');
-        if (id === 'setupScreen') await contains('.setup-intro', 'setup introduction');
+        if (id === 'setupScreen') {
+          await contains('.setup-title', 'setup heading');
+          await contains('#crestButton', 'crest editor');
+          const crest = await page.locator('#crestButton').evaluate(el => el.getBoundingClientRect().width);
+          if (width >= 480 && width / height >= 1.25) assert(crest >= Math.min(height - 100, width / 2 - 60, 360), `Landscape crest should fill the right column: ${crest}`);
+        }
         if (id === 'homeScreen') {
           for (const selector of ['.hero-logo', '.hero-title', '.hero-tagline']) {
             if (await page.locator(selector).isVisible()) await contains(selector, selector);
+          }
+          if (width === 390 && height === 844) {
+            const logo = await page.locator('.hero-logo').boundingBox();
+            assert(logo.width >= 160, `Portrait should retain the large logo: ${logo.width}`);
+            const card = await page.locator('#roomForm').boundingBox();
+            assert(card.y + card.height >= height - 32, 'Portrait room form should sit at the bottom');
           }
         }
         await contains(panel, id + ' form');
@@ -119,6 +132,10 @@ test('Every game screen contains its panels and scrolls only inside them', async
           return { size: r.width, expected: Math.min(stage.width,stage.height,1100), y: r.y, bottom: r.bottom, top: stage.y, limit: stage.bottom };
         });
         assert(Math.abs(table.size-table.expected) < 2 && table.y >= table.top-1 && table.bottom <= table.limit+1, JSON.stringify(table));
+        if (width >= 480 && width / height >= 1.25) {
+          const stage = await page.locator('.lobby-body').evaluate(el => ({ height: el.clientHeight, top: el.getBoundingClientRect().y, screen: el.closest('.screen').getBoundingClientRect().y, padding: parseFloat(getComputedStyle(el.closest('.screen')).paddingTop) }));
+          assert(Math.abs(stage.top - stage.screen - stage.padding) < 1 && stage.height >= height - 56, `Landscape table must use the full screen height: ${JSON.stringify(stage)}`);
+        }
         await noPageScroll();
       }
       await page.evaluate(() => { document.querySelector('#tableView').hidden = true; document.querySelector('#listView').hidden = false; document.querySelector('#listSummary').hidden = false; });
@@ -168,7 +185,7 @@ test('Every game screen contains its panels and scrolls only inside them', async
         return { logo: rect('.bar-logo').x, room: rect('.list-room').x, roomY: rect('.list-room').y, toolbarBottom: rect('#lobbyScreen > .bar').bottom, toolbarX: rect('#lobbyScreen > .bar').x, toolbarWidth: rect('#lobbyScreen > .bar').width, toggleCenter: rect('#viewToggle').x + rect('#viewToggle').width / 2 };
       });
       assert(Math.abs(lobby.logo - lobby.room) < 1, JSON.stringify(lobby));
-      assert(lobby.roomY >= lobby.toolbarBottom && lobby.roomY <= lobby.toolbarBottom + 12, JSON.stringify(lobby));
+      assert(lobby.roomY >= lobby.toolbarBottom && lobby.roomY <= lobby.toolbarBottom + 16, JSON.stringify(lobby));
       assert(Math.abs(lobby.toggleCenter - lobby.toolbarX - lobby.toolbarWidth / 2) < 1, JSON.stringify(lobby));
       await page.evaluate(() => window.showScreen('setupScreen'));
       const setup = await page.evaluate(() => ({ title: document.querySelector('.setup-title').getBoundingClientRect().x, crest: document.querySelector('#crestButton').getBoundingClientRect().x, real: document.querySelector('#realName').getBoundingClientRect().x, secret: document.querySelector('#secretName').getBoundingClientRect().x }));
