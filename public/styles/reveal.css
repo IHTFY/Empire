@@ -53,5 +53,3 @@
 .watch-chip { padding: 4px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-weight: 700; animation: rise .4s var(--ease) both; }
 .watch-remove { margin: 0 -4px 0 6px; padding: 0 4px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
 .watch-remove:hover { color: var(--ink); }
-.notice { margin: 0; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 110, 20, .08); border: 1px solid rgba(255, 110, 20, .28); color: #E8E4D8; font-size: 15px; font-weight: 600; line-height: 1.4; }
-.notice .icon { width: 18px; height: 18px; color: var(--gold); }
