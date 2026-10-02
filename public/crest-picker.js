@@ -6,13 +6,29 @@ import { initialOf, SHAPES, SHAPE_CHOICES, COLORS, METALS, TRIMS, PATTERNS, EMBL
 // Owns the editable crest and its device persistence; crest.js remains the drawing library.
 export function createCrestPicker({ getRoom, getUid }) {
   $('crestDefs').innerHTML = crestDefs();
-  let crest = localStorage.getItem('crest') ? parseCrest(localStorage.getItem('crest')) : randomCrest();
+  const stored = localStorage.getItem('crest');
+  let crest = stored ? parseCrest(stored) : randomCrest();
+  // A random crest stands in until a room shows the one this player already wears.
+  let placeholder = !stored;
   const realName = $('realName');
 
   function saveCrest() {
     try { localStorage.setItem('crest', crestString(crest)); } catch (err) { /* private mode */ }
   }
   saveCrest();
+  // Ask the browser not to evict the saved crest and names under storage pressure.
+  navigator.storage?.persist?.().catch(() => {});
+
+  // When this device lost its saved crest, keep the one the room still holds for this
+  // player rather than replacing it with the random stand-in.
+  function restore() {
+    const saved = getRoom().users?.[getUid()]?.crest;
+    if (!placeholder || !saved) return;
+    placeholder = false;
+    crest = parseCrest(saved);
+    saveCrest();
+    if ($('crestDialog').open) requestAnimationFrame(() => centerRows());
+  }
 
   // Another player in this room already bears the same crest (with the same letter, if any).
   function crestTaken() {
@@ -139,6 +155,7 @@ export function createCrestPicker({ getRoom, getUid }) {
         onBrowse: key => { selection.textContent = options[key].label; },
         onSelect: key => {
           if (crest[group.part] === key) return;
+          placeholder = false;
           crest[group.part] = key;
           saveCrest();
           renderCrest();
@@ -151,6 +168,7 @@ export function createCrestPicker({ getRoom, getUid }) {
       const tile = event.target.closest('.crest-tile');
       if (!tile || !['metal', 'trim'].includes(tile.dataset.part)) return;
       activateRow(tile.closest('.crest-group'));
+      placeholder = false;
       crest[tile.dataset.part] = tile.dataset.value;
       saveCrest();
       renderCrest();
@@ -209,6 +227,7 @@ export function createCrestPicker({ getRoom, getUid }) {
   });
   $('crestShuffle').addEventListener('click', () => {
     const emblems = Object.keys(EMBLEM_CHOICES);
+    placeholder = false;
     crest = { ...randomCrest(), emblem: emblems[Math.floor(Math.random() * emblems.length)] };
     saveCrest();
     renderCrest();
@@ -217,5 +236,8 @@ export function createCrestPicker({ getRoom, getUid }) {
   realName.addEventListener('input', renderCrest);
   renderCrest();
 
-  return { render: renderCrest, value: () => crestString(crest) };
+  return {
+    render: () => { restore(); renderCrest(); },
+    value: () => crestString(crest)
+  };
 }
