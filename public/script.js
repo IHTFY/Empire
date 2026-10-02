@@ -11,10 +11,13 @@ import { createLobbyTransitions } from './lobby/transitions.js';
 import { createBots } from './bots.js';
 import { createReveal } from './reveal.js';
 import { initializeSharing } from './share.js';
+import { initializeUpdates } from './updates.js';
+import appVersion from 'empire:version';
 
 // Compose the controllers here. Modules own their state and communicate through these
 // callbacks, so they do not import each other in a cycle or rely on application globals.
 document.addEventListener('DOMContentLoaded', async () => {
+  initializeUpdates(appVersion);
   try {
     await window.empireFirebaseReady;
   } catch (err) {
