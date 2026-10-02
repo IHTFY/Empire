@@ -20,7 +20,7 @@
 2. Enter your name and a secret name, then tap **Enter the lobby**. You can also tap your crest to customize it.
 3. Tap **Share link** in the lobby. It opens your device's share menu or copies the room link. Friends can also choose **Join a room** on the home screen and enter the room name and password shown in the lobby.
 4. For a smaller group, tap **Add a bot player** to add extra secret names.
-5. Once everyone is in, tap **Reveal the names**. The app shows and reads the names in random order. Use **Read the names again** for the second reading, then start guessing aloud.
+5. Once everyone is in, tap **Reveal the names**. The app shows and reads the names in random order. Tap **Reveal the names** again for the second reading, then start guessing aloud.
 
 Names lock after the first reveal. Anyone who joins after that can watch and play in the next round.
 
@@ -51,7 +51,7 @@ The group makes and judges guesses aloud. Use the app to keep track of the round
 | Table / List | Switches between seats around a table and a roster grouped by empire. |
 | Flag beside a player | Records a capture. Choose the leader whose empire they joined. The captured player, or someone in their empire, confirms it; if they tap it themselves it applies right away. Their whole empire moves with them. Tap their undo control and confirm to reverse a capture. |
 | Remove a bot | Reveals its secret name to everyone after the round starts and removes that name from future readings. |
-| Read the names again | Replays the list. Get agreement from every remaining leader first. |
+| Reveal the names | Reveals or replays the list. Get agreement from every remaining leader first. |
 | Room options | Lets you change your names before the reveal, adjust sound, open the rules, or leave. |
 | New round | Sends everyone back to pick new names. The room and its link stay the same. |
 | End room | Removes everyone and returns them to the home screen. |

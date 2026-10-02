@@ -352,12 +352,13 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     $('generateName').classList.toggle('is-disabled', room.locked);
     $('generateName').title = room.locked ? 'Names are set for this round' : '';
     const preparing = room.state === 'shuffling';
-    $('revealLabel').textContent = preparing ? 'Getting voices ready' : room.locked ? 'Read the names again' : 'Reveal the names';
+    $('revealLabel').textContent = preparing ? 'Getting voices ready' : 'Reveal the names';
     if (preparing) startButton.querySelector('.spinner').hidden = false;
     $('revealIcon').setAttribute('href', room.locked ? '#i-refresh' : '#i-play');
     startButton.classList.toggle('btn-quiet', room.locked);
 
     rollNumber($('playerCount'), count);
+    $('tableCenter').querySelector('.tc-unit').textContent = count === 1 ? 'player' : 'players';
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
     startButton.classList.toggle('is-disabled', (!room.locked && count < 2) || isRevealing() || preparing);
