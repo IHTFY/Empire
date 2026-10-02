@@ -110,15 +110,30 @@
         // Players captured into an empire once the round has started: captures/<captured> is
         // { leader, via }, where via is the player who was claimed directly (a leader's followers
         // move with them and share the via, keeping their earlier vias in back, newest first and joined by "/", so each undo returns them one step). Humans only; the leader
-        // must be an uncaptured human. Anyone in the room can claim or undo.
+        // must be an uncaptured human. A free player only enters an empire with the consent of
+        // their own empire: the write must come from them or one of their captured followers.
+        // Anyone in the room can undo.
         "captures": {
           ".read": true,
           "$userId": {
-            ".write": "auth != null && data.parent().parent().child('users').child(auth.uid).exists() && (!newData.exists() || data.parent().parent().child('locked').val() === true)",
+            ".write": "auth != null && data.parent().parent().child('users').child(auth.uid).exists() && (!newData.exists() || (data.parent().parent().child('locked').val() === true && (data.exists() || (newData.child('via').val() === $userId && (auth.uid === $userId || data.parent().child(auth.uid).child('leader').val() === $userId)))))",
             ".validate": "newData.hasChildren(['leader', 'via']) && newData.parent().parent().child('users').child($userId).exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() !== true",
             "leader": { ".validate": "newData.isString() && newData.val() !== $userId && newData.parent().parent().parent().child('users').child(newData.val()).exists() && newData.parent().parent().parent().child('users').child(newData.val()).child('fakeBadge').val() !== true && !newData.parent().parent().child(newData.val()).exists()" },
             "via": { ".validate": "newData.isString() && newData.parent().parent().parent().child('users').child(newData.val()).exists()" },
             "back": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+            "$other": { ".validate": false }
+          }
+        },
+        // A pending capture: claims/<captured> = { leader, by }. Any member can say who captured a
+        // free human; the captured player or someone in their empire confirms it (writing the
+        // capture and clearing the claim) or declines it. Anyone in the room can clear a claim.
+        "claims": {
+          ".read": true,
+          "$userId": {
+            ".write": "auth != null && data.parent().parent().child('users').child(auth.uid).exists() && (!newData.exists() || data.parent().parent().child('locked').val() === true)",
+            ".validate": "newData.hasChildren(['leader', 'by']) && newData.parent().parent().child('users').child($userId).exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() !== true && !newData.parent().parent().child('captures').child($userId).exists()",
+            "leader": { ".validate": "newData.isString() && newData.val() !== $userId && newData.parent().parent().parent().child('users').child(newData.val()).exists() && newData.parent().parent().parent().child('users').child(newData.val()).child('fakeBadge').val() !== true && !newData.parent().parent().parent().child('captures').child(newData.val()).exists()" },
+            "by": { ".validate": "newData.val() === auth.uid" },
             "$other": { ".validate": false }
           }
         },

@@ -19,7 +19,7 @@ async function roomState(change, context) {
       // Ask the server to retry an empty local cache before checking the room state.
       if (game === null) return null;
       if (!game || game.state !== 'resetting') return undefined;
-      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated', 'captures']) delete game[key];
+      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated', 'captures', 'claims']) delete game[key];
       game.state = 'waiting';
       return game;
     });
