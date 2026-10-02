@@ -43,9 +43,20 @@ export function createCrestCarousel({ grid, keys, createTile, onActivate, onBrow
       const magnitude = Math.abs(distance);
       // Fixed slots may overlap visually; the nearest item always paints on top.
       slot.style.zIndex = Math.max(0, 100 - Math.round(magnitude * 10));
-      tile.style.setProperty('--cover-scale', Math.max(.6, 1 - magnitude * .16));
-      tile.style.setProperty('--cover-opacity', Math.max(.32, 1 - magnitude * .18));
-      tile.style.setProperty('--cover-angle', `${reducedMotion() ? 0 : Math.max(-28, Math.min(28, -distance * 13))}deg`);
+      // Depth comes from dimming rather than transparency, so overlapping covers stay
+      // solid; only the outermost ones fade into the rail edges.
+      const reach = Math.min(magnitude, 1);
+      tile.style.setProperty('--cover-scale', Math.max(.58, 1 - magnitude * .14 - reach * .06));
+      tile.style.setProperty('--cover-dim', Math.max(.42, 1 - magnitude * .16 - reach * .12));
+      tile.style.setProperty('--cover-opacity', Math.max(0, Math.min(1, 4.6 - magnitude)));
+      if (reducedMotion()) {
+        tile.style.setProperty('--cover-angle', '0deg');
+        tile.style.setProperty('--cover-shift', '0px');
+      } else {
+        // Neighbors swing in quickly, then hold their angle like a coverflow stack.
+        tile.style.setProperty('--cover-angle', `${-Math.sign(distance) * Math.min(42, magnitude * 42)}deg`);
+        tile.style.setProperty('--cover-shift', `${-Math.sign(distance) * Math.min(magnitude, 3) * slotWidth * .06}px`);
+      }
       slot.classList.toggle('is-centered', index === current);
     });
     onBrowse(keys[items[current].index]);
