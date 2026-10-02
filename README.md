@@ -100,6 +100,8 @@ Use these ports only on a trusted local network. The emulator admin API is unaut
 
 Empire is a static browser app backed by Firebase Realtime Database and Cloud Functions. The [code structure guide](docs/code-structure.md) explains the modules, controller interactions, styles, and browser build.
 
+Read the [responsive layout lessons](docs/responsive-layout.md) before changing screen layouts. They record the phone layout preferences and the checks needed to preserve them.
+
 ## Deploying
 
 [GitHub Actions](.github/workflows/firebase-deploy.yml) deploys the site, Cloud Functions, and database rules to the Firebase project `empire-ihtfy`.
