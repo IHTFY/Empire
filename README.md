@@ -24,6 +24,8 @@
 
 Names lock after the first reveal. Anyone who joins after that can watch and play in the next round.
 
+When a new version is deployed, an open tab or installed app shows an **Update** toast. Tap it to reload and return to your room. The app checks once a minute while visible and when you return to it. Updating keeps your saved names and crest.
+
 ## How to play
 
 Be the leader of the last empire standing. Everyone starts as the leader of their own empire.

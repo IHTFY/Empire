@@ -436,6 +436,11 @@
       <button type="button" class="btn btn-ghost sheet-close" data-close>Close</button>
     </dialog>
 
+    <div id="updateToast" class="update-toast" role="status" aria-live="polite" hidden>
+      <span id="updateMessage">A new version of Empire is ready.</span>
+      <button id="updateApp" type="button">Update</button>
+      <button id="dismissUpdate" type="button" class="update-dismiss" aria-label="Dismiss update"><svg class="icon"><use href="#i-x" /></svg></button>
+    </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

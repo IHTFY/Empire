@@ -52,6 +52,12 @@ async function run() {
   assert.equal(hosting.status, 200);
   const html = await hosting.text();
   assert.match(html, /firebase-emulators\.js/);
+  const versionResponse = await fetch('http://127.0.0.1:15000/version.json');
+  assert.equal(versionResponse.status, 200);
+  const { version } = await versionResponse.json();
+  assert.match(version, /^[a-f0-9]{64}$/);
+  const bundle = await fetch('http://127.0.0.1:15000/assets/script.js').then(response => response.text());
+  assert.ok(bundle.includes(version), 'The bundle must identify the deployed version');
   // Check the actual bundles, since Hosting rewrites missing assets to index.html.
   for (const [asset, type] of [['script.js', 'javascript'], ['style.css', 'css']]) {
     assert.ok(html.includes(`assets/${asset}`));
