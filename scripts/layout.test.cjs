@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { createServer } = require('node:http');
-const { readFile } = require('node:fs/promises');
+const { readFile, mkdir } = require('node:fs/promises');
 const path = require('node:path');
 
 const root = path.join(__dirname, '../public');
@@ -24,11 +24,16 @@ test('Every game screen contains its panels and scrolls only inside them', async
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage({ reducedMotion: 'reduce', hasTouch: true });
+  if (process.env.LAYOUT_SCREENSHOTS) await mkdir(process.env.LAYOUT_SCREENSHOTS, { recursive: true });
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.evaluate(async () => {
     await document.fonts.ready;
     const { createLobby } = await import('/lobby/render.js');
     const { fitRevealText } = await import('/reveal.js');
+    const { initializeFullscreen } = await import('/fullscreen.js');
+    window.initializeFullscreen = initializeFullscreen;
+    window.messages = [];
+    initializeFullscreen({ toast: message => window.messages.push(message) });
     window.fitRevealText = fitRevealText;
     window.room = { id: 'layout', state: 'waiting', users: {}, presence: {} };
     window.lobby = createLobby({ getRoom: () => window.room, getUid: () => 'p0', ui: { rollNumber: (el, n) => el.textContent = n, toast: () => {} }, isRevealing: () => false });
@@ -43,12 +48,19 @@ test('Every game screen contains its panels and scrolls only inside them', async
     };
   });
   const contains = async (selector, label) => {
+    const target = typeof selector === 'string' ? page.locator(selector) : selector;
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const bounds = await page.locator(selector).evaluate(el => {
+    await target.evaluate(async el => {
+      await Promise.all(el.getAnimations().filter(animation => animation.effect.getTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {})));
+    });
+    const bounds = await target.evaluate(el => {
       const r = el.getBoundingClientRect();
-      return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height, vw: innerWidth, vh: innerHeight };
+      const panel = el.closest('form, dialog');
+      const p = panel && panel !== el ? panel.getBoundingClientRect() : null;
+      return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height, vw: innerWidth, vh: innerHeight, panel: p && { x: p.x, y: p.y, right: p.right, bottom: p.bottom } };
     });
     assert(bounds.x >= -1 && bounds.y >= -1 && bounds.right <= bounds.vw + 1 && bounds.bottom <= bounds.vh + 1 && bounds.width > 0 && bounds.height > 0, `${label}: ${JSON.stringify(bounds)}`);
+    if (bounds.panel) assert(bounds.y >= bounds.panel.y - 1 && bounds.bottom <= bounds.panel.bottom + 1 && bounds.x >= bounds.panel.x - 1 && bounds.right <= bounds.panel.right + 1, `${label} must remain inside its panel: ${JSON.stringify(bounds)}`);
   };
   const noPageScroll = async () => {
     const result = await page.evaluate(() => {
@@ -62,6 +74,18 @@ test('Every game screen contains its panels and scrolls only inside them', async
       await page.setViewportSize({ width,height });
       for (const id of ['homeScreen', 'setupScreen']) {
         await page.evaluate(id => window.showScreen(id), id);
+        await page.evaluate(() => document.querySelectorAll('.field-error').forEach(el => el.textContent = ''));
+        const panel = id === 'homeScreen' ? '#roomForm' : '#namesForm';
+        await contains(panel, id + ' form');
+        const scroll = await page.locator(panel).evaluate(el => ({ height: el.clientHeight, scroll: el.scrollHeight }));
+        assert(scroll.scroll <= scroll.height + 1, `${width}x${height} ${id} should fit without scrolling: ${JSON.stringify(scroll)}`);
+        if (id === 'homeScreen') {
+          await page.evaluate(() => { document.querySelector('#passField').inert = false; document.querySelector('#createHint').inert = true; document.querySelector('#roomForm').dataset.mode = 'join'; });
+          const join = await page.locator(panel).evaluate(el => ({ height: el.clientHeight, scroll: el.scrollHeight }));
+          assert(join.scroll <= join.height + 1, `${width}x${height} join form should fit without scrolling: ${JSON.stringify(join)}`);
+          await page.evaluate(() => { document.querySelector('#passField').inert = true; document.querySelector('#createHint').inert = false; document.querySelector('#roomForm').dataset.mode = 'create'; });
+        }
+        if (process.env.LAYOUT_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.LAYOUT_SCREENSHOTS, `${id}-${width}x${height}.png`) });
         // Validation messages must remain reachable without growing the screen.
         await page.evaluate(() => document.querySelectorAll('.field-error').forEach(el => el.textContent = 'Please enter a valid name before continuing.'));
         await contains('#' + id, id);
@@ -72,10 +96,8 @@ test('Every game screen contains its panels and scrolls only inside them', async
             if (await page.locator(selector).isVisible()) await contains(selector, selector);
           }
         }
-        const panel = id === 'homeScreen' ? '#roomForm' : '#namesForm';
         await contains(panel, id + ' form');
-        await page.locator(panel).evaluate(el => el.scrollTop = el.scrollHeight);
-        await contains(id === 'homeScreen' ? '#roomSubmit' : '#submitNames', id + ' submit after inner scroll');
+        await contains(id === 'homeScreen' ? '#roomSubmit' : '#submitNames', id + ' submit before any scrolling');
         await noPageScroll();
       }
       await page.evaluate(() => window.showScreen('lobbyScreen'));
@@ -85,6 +107,12 @@ test('Every game screen contains its panels and scrolls only inside them', async
         await contains('#revealSecrets', 'reveal button');
         await contains('#lobbyScreen > .bar', 'lobby toolbar');
         if (watchers) await contains('#watching', 'watchers');
+        const head = await page.locator('.list-head').evaluate(el => ({ height: el.clientHeight, scroll: el.scrollHeight }));
+        assert(head.scroll <= head.height + 1, `Room details should not scroll: ${JSON.stringify(head)}`);
+        if (players === 11 && process.env.LAYOUT_SCREENSHOTS) {
+          await page.waitForTimeout(800);
+          await page.screenshot({ path: path.join(process.env.LAYOUT_SCREENSHOTS, `lobby-${width}x${height}.png`) });
+        }
         const table = await page.evaluate(() => {
           const stage = document.querySelector('.lobby-body').getBoundingClientRect();
           const r = document.querySelector('#tableView').getBoundingClientRect();
@@ -123,9 +151,56 @@ test('Every game screen contains its panels and scrolls only inside them', async
       for (const id of dialogs) {
         await page.locator('#' + id).evaluate(el => el.showModal());
         await contains('#' + id, id + ' border');
+        const actions = page.locator('#' + id + ' > button:not([hidden]), #' + id + ' > .row-2 > button:not([hidden]), #' + id + ' .switch');
+        for (let i = 0; i < await actions.count(); i++) await contains(actions.nth(i), id + ' essential action');
         await noPageScroll();
         await page.locator('#' + id).evaluate(el => el.close());
       }
     });
   }
+  await t.test('Rotation preserves toolbar anchors and reading order', async () => {
+    for (const [width,height] of [[390,844], [844,390], [390,844]]) {
+      await page.setViewportSize({ width,height });
+      await page.evaluate(() => window.showScreen('lobbyScreen'));
+      await contains('.bar-logo', 'Empire icon');
+      const lobby = await page.evaluate(() => {
+        const rect = selector => document.querySelector(selector).getBoundingClientRect();
+        return { logo: rect('.bar-logo').x, room: rect('.list-room').x, roomY: rect('.list-room').y, toolbarBottom: rect('#lobbyScreen > .bar').bottom, toolbarX: rect('#lobbyScreen > .bar').x, toolbarWidth: rect('#lobbyScreen > .bar').width, toggleCenter: rect('#viewToggle').x + rect('#viewToggle').width / 2 };
+      });
+      assert(Math.abs(lobby.logo - lobby.room) < 1, JSON.stringify(lobby));
+      assert(lobby.roomY >= lobby.toolbarBottom && lobby.roomY <= lobby.toolbarBottom + 12, JSON.stringify(lobby));
+      assert(Math.abs(lobby.toggleCenter - lobby.toolbarX - lobby.toolbarWidth / 2) < 1, JSON.stringify(lobby));
+      await page.evaluate(() => window.showScreen('setupScreen'));
+      const setup = await page.evaluate(() => ({ title: document.querySelector('.setup-title').getBoundingClientRect().x, crest: document.querySelector('#crestButton').getBoundingClientRect().x, real: document.querySelector('#realName').getBoundingClientRect().x, secret: document.querySelector('#secretName').getBoundingClientRect().x }));
+      assert(setup.title < setup.crest && setup.real <= setup.secret, JSON.stringify(setup));
+    }
+  });
+  await t.test('Fullscreen enters from a click, exits, and handles rejection', async () => {
+    await page.evaluate(() => {
+      window.showScreen('homeScreen');
+      const request = document.documentElement.requestFullscreen.bind(document.documentElement);
+      document.documentElement.requestFullscreen = options => { window.fullscreenOptions = options; return request(options); };
+    });
+    await page.locator('#homeScreen [data-fullscreen]').click();
+    await page.waitForFunction(() => Boolean(document.fullscreenElement));
+    assert.equal(await page.evaluate(() => window.fullscreenOptions.navigationUI), 'hide');
+    assert.equal(await page.locator('#homeScreen [data-fullscreen]').getAttribute('aria-label'), 'Exit fullscreen');
+    await noPageScroll();
+    await page.locator('#homeScreen [data-fullscreen]').click();
+    await page.waitForFunction(() => !document.fullscreenElement);
+    assert.equal(await page.locator('#homeScreen [data-fullscreen]').getAttribute('aria-label'), 'Enter fullscreen');
+    await page.evaluate(() => {
+      document.documentElement.requestFullscreen = async () => { throw new Error('Denied'); };
+      document.querySelector('#optionsDialog').showModal();
+    });
+    await page.locator('#fullscreenButton').click();
+    assert.equal(await page.locator('#fullscreenButton').isEnabled(), true);
+    assert.equal(await page.evaluate(() => window.messages.at(-1)), 'Fullscreen is unavailable in this browser.');
+    await page.evaluate(() => {
+      document.querySelector('#optionsDialog').close();
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: false });
+      window.initializeFullscreen({ toast: () => {} });
+    });
+    assert.equal(await page.locator('[data-fullscreen]:not([hidden])').count(), 0);
+  });
 });
