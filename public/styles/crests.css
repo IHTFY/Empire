@@ -38,8 +38,8 @@
 /* A soft spotlight marks the center slot, so the selection reads even mid-swipe. */
 .crest-rail::before {
   content: ''; position: absolute; left: 50%; top: 50%; z-index: -1; width: 120px; height: 100%; pointer-events: none;
-  transform: translate(-50%, -50%); opacity: .45; transition: opacity .24s var(--ease);
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 30%, transparent), transparent);
+  transform: translate(-50%, -50%); opacity: .5; transition: opacity .24s var(--ease);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 38%, transparent), transparent);
 }
 .crest-group.is-active .crest-rail::before { opacity: 1; }
 .crest-grid { --cover-step: 44px; --cover-size: 50px; position: relative; display: flex; align-items: center; gap: 0; overflow-x: auto; overflow-y: hidden; height: 58px; padding: 4px 0; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; transition: height .24s var(--ease); }
@@ -60,9 +60,11 @@
 .crest-grid .is-centered .crest-tile {
   border-color: color-mix(in srgb, var(--gold) 80%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 82%, var(--gold) 18%), color-mix(in srgb, var(--field) 92%, var(--gold) 8%));
-  box-shadow: 0 8px 18px rgba(0, 0, 0, .45), 0 0 0 4px color-mix(in srgb, var(--gold) 16%, transparent), inset 0 1px 0 rgba(255, 255, 255, .1);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .45), 0 0 14px color-mix(in srgb, var(--gold) 22%, transparent), inset 0 1px 0 rgba(255, 255, 255, .1);
 }
-.crest-grid .is-centered .crest-swatch { background: var(--c); border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold), 0 0 0 6px color-mix(in srgb, var(--gold) 18%, transparent), 0 6px 14px rgba(0, 0, 0, .45); }
+.crest-grid .is-centered .crest-swatch { background: var(--c); border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold), 0 0 14px color-mix(in srgb, var(--gold) 30%, transparent), 0 6px 14px rgba(0, 0, 0, .45); }
+/* Colors must stay judgeable away from the center, so swatches dim only lightly. */
+.crest-grid .crest-swatch { filter: brightness(calc(.6 + var(--cover-dim, 1) * .4)); }
 /* While browsing, only the centered cover carries the selection treatment. */
 .crest-grid .crest-carousel-item:not(.is-centered) .crest-tile { border-color: transparent; background: transparent; box-shadow: none; }
 .crest-grid .crest-carousel-item:not(.is-centered) .crest-swatch { border-color: rgba(244, 241, 232, .14); background: var(--c); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25); }
