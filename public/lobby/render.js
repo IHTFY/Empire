@@ -358,6 +358,7 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     startButton.classList.toggle('btn-quiet', room.locked);
 
     rollNumber($('playerCount'), count);
+    $('tableCenter').querySelector('.tc-unit').textContent = count === 1 ? 'player' : 'players';
     $('waitingText').textContent = waitingText;
     $('listSummary').textContent = `${count} player${count === 1 ? '' : 's'} · ${waitingText.toLowerCase()}`;
     startButton.classList.toggle('is-disabled', (!room.locked && count < 2) || isRevealing() || preparing);
