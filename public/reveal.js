@@ -91,12 +91,40 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
   let announceQueue = Promise.resolve();
   // Bots' names outlive their removal, so the announcement can say who it was.
   let botNames = {};
-  function announceRemoved(key, entry) {
+
+  // Announcements have their own token: it changes when the room is left or a round resets,
+  // which hides any overlay at once and ends queued and running announcements early.
+  let announceRun = 0;
+  const wakers = new Set();
+  const announceScreens = () => [$('eliminatedScreen'), $('captureScreen')];
+  // A sleep that ends early on cancellation, so the next announcement is not held up.
+  const nap = ms => new Promise(resolve => {
+    const wake = () => { clearTimeout(timer); wakers.delete(wake); resolve(); };
+    const timer = setTimeout(wake, ms);
+    wakers.add(wake);
+  });
+  function cancelAnnouncements() {
+    announceRun++;
+    announceScreens().forEach(screen => { screen.hidden = true; });
+    [...wakers].forEach(wake => wake());
+  }
+  // Returns a check for whether this announcement still belongs to the room and round it began in.
+  function announcementScope() {
     const code = getRoom().id;
+    const run = announceRun;
+    return () => getRoom().id === code && run === announceRun;
+  }
+  // Waits for a normal reveal to finish; false if the announcement was canceled meanwhile.
+  async function waitForReveal(current) {
+    while (revealing && current()) await nap(300);
+    return current();
+  }
+
+  function announceRemoved(key, entry) {
+    const current = announcementScope();
     const botName = botNames[key];
     announceQueue = announceQueue.then(async () => {
-      if (getRoom().id !== code) return;
-      while (revealing) await sleep(300);
+      if (!current() || !await waitForReveal(current)) return;
       const screen = $('eliminatedScreen');
       const word = $('eliminatedName');
       $('eliminatedCrest').innerHTML = crestSvg(botCrest(key));
@@ -108,18 +136,17 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       screen.hidden = false;
       fitRevealText(screen);
       audio.speak(entry.name, entry.voice);
-      await sleep(3200);
-      screen.hidden = true;
-    }).catch(() => { $('eliminatedScreen').hidden = true; });
+      await nap(3200);
+      if (current()) screen.hidden = true;
+    }).catch(() => { if (current()) $('eliminatedScreen').hidden = true; });
   }
 
   // A captured player's empire changes hands: their crest burns into the captor's and
   // the members move across one at a time. Shares the bot queue, so screens never overlap.
   function announceCapture({ name, crest, captor, captorCrest, moved, captorSize }) {
-    const code = getRoom().id;
+    const current = announcementScope();
     announceQueue = announceQueue.then(async () => {
-      if (getRoom().id !== code) return;
-      while (revealing) await sleep(300);
+      if (!current() || !await waitForReveal(current)) return;
       const screen = $('captureScreen');
       const lost = $('captureLostCrest');
       const lostCount = $('captureLostCount');
@@ -146,12 +173,15 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       word.classList.remove('wrap');
       screen.hidden = false;
       fitRevealText(screen);
-      await sleep(1100);
+      await nap(1100);
+      if (!current()) return;
       // The crest flares, then snaps into the captor's colors at the height of the burn.
       lost.classList.add('burning');
-      await sleep(380);
+      await nap(380);
+      if (!current()) return;
       lost.innerHTML = crestSvg(captorCrest, { letter: initialOf(name) });
-      await sleep(520);
+      await nap(520);
+      if (!current()) return;
       const step = Math.max(110, Math.min(420, 1400 / total));
       while (left > 0) {
         left--;
@@ -162,13 +192,14 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
         void $('captureWonCrest').offsetWidth;
         $('captureWonCrest').classList.add('gain');
         audio.tick(520 + 40 * Math.min(won, 12));
-        await sleep(step);
+        await nap(step);
+        if (!current()) return;
       }
       lostCount.classList.add('is-empty');
       audio.chime();
-      await sleep(1500);
-      screen.hidden = true;
-    }).catch(() => { $('captureScreen').hidden = true; });
+      await nap(1500);
+      if (current()) screen.hidden = true;
+    }).catch(() => { if (current()) $('captureScreen').hidden = true; });
   }
 
   // Releases everything one playback holds. Safe to repeat; only the attempt that set
@@ -286,6 +317,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
 
   let firstEliminated = true;
   function resetAnnouncements() {
+    cancelAnnouncements();
     announced = new Set();
     firstEliminated = true;
   }
@@ -307,6 +339,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
   return {
     play: displaySecrets,
     cancel: () => { revealRun++; },
+    cancelAnnouncements,
     isRevealing: () => revealing,
     resetAnnouncements,
     rememberBots,
