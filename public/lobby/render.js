@@ -571,7 +571,10 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
         el.innerHTML = `${avatarHtml()}<span class="row-name"></span><span class="row-status"></span>`;
         const x = makeRemoveButton('row-x');
         const cap = makeCaptureButton('row-cap');
-        el.append(cap, x);
+        const actions = document.createElement('span');
+        actions.className = 'row-actions';
+        actions.append(cap, x);
+        el.append(actions);
         setTimeout(() => el.classList.remove('pop'), 500);
         entry = { el, avatar: el.querySelector('.avatar'), x, cap };
         rowEls.set(p.key, entry);
