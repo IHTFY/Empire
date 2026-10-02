@@ -34,6 +34,44 @@ test('room cleanup respects active connections and ignores stale legacy online f
   assert.equal(h.data.games.legacy.state, 'waiting');
 });
 
+test('room cleanup keeps a room that reconnects after the sweep read its snapshot', async () => {
+  const old = Date.now() - 13 * 60 * 60 * 1000;
+  const room = name => ({ state: 'waiting', name, pass: 'x', createdAt: old, presence: { alice: { version: 2, online: false, lastSeen: old } } });
+  let ref;
+  const database = { ref: target => ref(target) };
+  const h = harness({
+    games: { back: room('Den'), idle: room('Old') },
+    roomNames: { Den: { x: 'back' }, Old: { x: 'idle' } }
+  }, {}, { database });
+  let reads = 0;
+  ref = (target = '') => {
+    const base = h.ref(target);
+    if (target !== 'games') return base;
+    // Alice reconnects right after the sweep captures its snapshot.
+    return { ...base, once: async () => {
+      const snap = await base.once();
+      if (++reads === 1) h.data.games.back.presence.alice = { version: 2, online: true, lastSeen: Date.now(), connections: { a: { name: 'Alice' } } };
+      return snap;
+    } };
+  };
+  await h.exports.dailySweep();
+  assert.ok(h.data.games.back);
+  assert.equal(h.data.roomNames.Den.x, 'back');
+  assert.equal(h.data.games.idle, undefined);
+  assert.equal(h.data.roomNames.Old?.x, undefined);
+});
+
+test('room cleanup leaves a reused room name alone', async () => {
+  const old = Date.now() - 13 * 60 * 60 * 1000;
+  const h = harness({
+    games: { idle: { state: 'waiting', name: 'Old', pass: 'x', createdAt: old, presence: {} }, other: { state: 'waiting', createdAt: Date.now() } },
+    roomNames: { Old: { x: 'other' } }
+  });
+  await h.exports.dailySweep();
+  assert.equal(h.data.games.idle, undefined);
+  assert.equal(h.data.roomNames.Old?.x, 'other');
+});
+
 test('undoing nested captures restores each earlier empire', async () => {
   const { capturePlan, releasePlan } = await import(pathToFileURL(path.join(__dirname, '../../public/captures.js')).href);
   let captures = {};

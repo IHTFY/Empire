@@ -72,25 +72,19 @@ async function sweepAbandonedRooms(skipId) {
     }
   });
 
+  const candidates = [];
   Object.entries(games).forEach(([id, game]) => {
     if (id === skipId || !game) {
       return;
     }
-    const presence = Object.values(game.presence || {}).filter(Boolean);
-    if (presence.some(p => p.version === 2 ? Object.keys(p.connections || {}).length > 0 : p.online)) {
+    const status = activityStatus(game, seen[id], now);
+    if (status === 'live') {
       if (seen[id]) updates[`meta/seen/${id}`] = null;
-      return;
-    }
-    const times = presence.map(p => p.lastSeen).concat([game.startedAt, game.createdAt, seen[id]])
-      .filter(t => typeof t === 'number');
-    if (times.length === 0) {
+    } else if (status === 'unknown') {
       // No sign of activity yet (a room from before presence tracking): start its clock now.
       updates[`meta/seen/${id}`] = now;
-    } else if (now - Math.max(...times) > IDLE_MS) {
-      updates[`games/${id}`] = null;
-      updates[`meta/seen/${id}`] = null;
-      // Free the room's name along with it.
-      if (game.name && game.pass) updates[`roomNames/${game.name}/${game.pass}`] = null;
+    } else if (status === 'idle') {
+      candidates.push({ id, name: game.name, pass: game.pass });
     }
   });
   // Names whose room has gone some other way.
@@ -105,6 +99,40 @@ async function sweepAbandonedRooms(skipId) {
 
   if (Object.keys(updates).length > 0) {
     await db.ref().update(updates);
+  }
+  await Promise.all(candidates.map(candidate => deleteIfStillIdle(candidate, seen[candidate.id], now)));
+}
+
+// 'live' (someone is connected), 'unknown' (no timestamps yet), 'idle' (past the threshold)
+// or 'recent'.
+function activityStatus(game, seenAt, now) {
+  const presence = Object.values(game.presence || {}).filter(Boolean);
+  if (presence.some(p => p.version === 2 ? Object.keys(p.connections || {}).length > 0 : p.online)) {
+    return 'live';
+  }
+  const times = presence.map(p => p.lastSeen).concat([game.startedAt, game.createdAt, seenAt])
+    .filter(t => typeof t === 'number');
+  if (times.length === 0) return 'unknown';
+  return now - Math.max(...times) > IDLE_MS ? 'idle' : 'recent';
+}
+
+// The sweep's snapshot can be stale by the time it deletes: a player may have reconnected
+// since. Recheck the room's current state inside the transaction that removes it, and free
+// its name only if that deletion happened and the name still points at this room.
+async function deleteIfStillIdle({ id, name, pass }, seenAt, now) {
+  let deleted = false;
+  await db.ref(`games/${id}`).transaction(game => {
+    deleted = false;
+    // An empty local cache is retried against the server; a missing room needs no change.
+    if (!game) return game;
+    if (activityStatus(game, seenAt, now) !== 'idle') return undefined;
+    deleted = true;
+    return null;
+  });
+  if (!deleted) return;
+  await db.ref(`meta/seen/${id}`).set(null);
+  if (name && pass) {
+    await db.ref(`roomNames/${name}/${pass}`).transaction(current => (current === id ? null : undefined));
   }
 }
 
