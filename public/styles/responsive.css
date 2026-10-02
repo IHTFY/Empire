@@ -1,17 +1,33 @@
-/* ---------- Larger screens ----------
-   Phones in portrait keep the single column above untouched. Wider screens get a roomier
-   column, a table that grows to fill its space, centered dialogs and a bigger reveal;
-   landscape screens split each page into two balanced columns. */
+/* Portrait phones retain the original stacked layouts. */
+.screen-home { display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, auto); }
+.screen-home, .screen-setup { width: 100%; margin: 0 auto; }
+.hero { flex: 1; min-height: 0; container: hero / size; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; }
+.hero-logo { display: flex; width: min(168px, max(48px, calc(100cqh - 164px))); height: min(168px, max(48px, calc(100cqh - 164px))); }
+.hero-title { display: block; font-size: 64px; }
+.hero-tagline { display: block; max-width: 280px; font-size: 16px; }
+#roomForm { width: 100%; padding: 20px; gap: 14px; }
+.mode-extra > [inert] { display: none; }
+.setup-head { flex-direction: row; align-items: center; }
+.setup-title { font-size: 48px; }
+.crest-btn { width: 92px; height: 92px; }
+.names-form { gap: 20px; }
+#roomForm > .btn, .names-form > .btn, .sheet > .sheet-close, .sheet > .row-2 { position: sticky; bottom: 0; z-index: 2; }
+.sheet > .row-2 { background: var(--surface); }
+.names-form:has(.field-error:not(:empty)) #secretHint { display: none; }
+#roomForm:has(.field-error:not(:empty)) #createHint { display: none; }
+.screen-lobby > .bar { display: grid; grid-template-columns: 1fr auto 1fr; }
+.screen-lobby .bar-logo { justify-self: start; }
+.screen-lobby .bar-group { justify-self: end; }
+.list-head { overflow: visible; }
+#revealLabel { min-width: 0; line-height: 1.05; }
+.watching { display: grid; gap: 4px; max-height: min(22dvh, 100px); flex-shrink: 0; }
 
 @media (min-width: 600px) {
   .app { max-width: 640px; }
-  .screen { padding-left: 32px; padding-right: 32px; }
-
-  /* The table fills whatever square fits (JS scales its 390 stage to match). */
-  .lobby-body { margin: 0 -32px; container-type: size; }
-  .table { width: min(100cqw, 100cqh, 1100px); }
-  .list-view { width: min(calc(100% - 64px), 560px); }
-
+  .screen { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
+  .lobby-body { margin: 0 -24px; }
+  .list-view { width: calc(100% - 48px); }
+  .list-room { font-size: clamp(30px, 3vw, 48px); }
   dialog.sheet {
     width: min(480px, calc(100% - 48px)); margin: auto; padding: 20px 24px 24px;
     border-radius: 28px; box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
@@ -23,90 +39,134 @@
   .sheet-grip { display: none; }
   .sheet-tall { max-height: min(88dvh, 860px); }
   #rulesDialog { width: min(560px, calc(100% - 48px)); }
-
   .reveal { background: radial-gradient(60vmin 60vmin at 50% 50%, rgba(79, 99, 217, .26), rgba(7, 8, 25, 0) 70%), var(--bg-deep); }
-  .count { width: clamp(260px, 50vmin, 520px); height: clamp(260px, 50vmin, 520px); }
-  .count-num { font-size: clamp(200px, 38vmin, 400px); }
+  .count { width: min(50vmin, 520px); height: min(50vmin, 520px); }
+  .count-num { font-size: min(38vmin, 400px); }
   .reveal-name { font-size: clamp(80px, 13vmin, 180px); }
   .eliminated-label { font-size: clamp(15px, 2.2vmin, 22px); }
-  .eliminated-stage .eliminated-crest { width: clamp(132px, 22vmin, 260px); height: clamp(132px, 22vmin, 260px); }
-  .eliminated-who { font-size: clamp(40px, 6vmin, 80px); }
-  .eliminated-stage .capture-crest { width: clamp(112px, 18vmin, 220px); height: clamp(112px, 18vmin, 220px); }
-  .capture-count { font-size: clamp(34px, 5vmin, 64px); }
   .capture-arrow { width: clamp(34px, 5vmin, 60px); height: clamp(34px, 5vmin, 60px); }
   .reveal-timer { left: max(48px, calc(50% - 360px)); right: max(48px, calc(50% - 360px)); }
 }
 
-@media (min-width: 640px) and (min-aspect-ratio: 5/4) {
-  .app { max-width: clamp(1280px, 150vh, 1800px); }
-  .screen { display: grid; align-content: stretch; column-gap: clamp(32px, 6vw, 96px); padding-left: clamp(24px, 4vw, 56px); padding-right: clamp(24px, 4vw, 56px); }
-  .bar { grid-area: bar; }
-
-  /* Home: the crest and title on the left, the room card on the right. */
-  .screen-home {
-    grid-template: "bar bar" auto "hero card" 1fr / minmax(0, 1.1fr) minmax(0, 1fr);
-  }
-  body:has(.screen-home:not([hidden])) {
-    /* Keep the glow behind the hero, 30% across the centered app. */
-    background-image: radial-gradient(min(60vw, 720px) min(60vh, 600px) at calc(50% - min(20vw, clamp(256px, 30vh, 360px))) 50%, rgba(79, 99, 217, .32), rgba(11, 13, 38, 0) 70%);
-  }
+/* Landscape uses two columns without taking height away from the table. */
+@media (min-width: 480px) and (min-aspect-ratio: 5/4) {
+  .app { max-width: 1600px; }
+  .screen { display: grid; column-gap: 24px; }
+  .screen-home { grid-template: "bar card" auto "hero card" minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr); }
+  .screen-home > .bar { grid-area: bar; }
   .hero { grid-area: hero; }
-  .hero-logo { width: clamp(120px, 30vh, 280px); height: clamp(120px, 30vh, 280px); }
-  .hero-logo img { width: 89%; height: 89%; }
-  .hero-title { font-size: clamp(56px, 12vh, 128px); }
-  .hero-tagline { max-width: 20em; font-size: clamp(16px, 2.2vh, 26px); }
-  #roomForm { grid-area: card; align-self: center; justify-self: start; width: min(100%, 420px); padding: 28px; gap: 16px; }
-
-  /* Pick names: the heading and crest beside the form. */
-  .screen-setup { grid-template: "bar bar" auto "intro form" 1fr / minmax(0, 1fr) minmax(0, 1fr); }
-  .setup-intro { grid-area: intro; align-self: center; justify-self: end; width: min(100%, max(440px, 36vh)); gap: 20px; }
-  .setup-title { font-size: clamp(48px, 9vh, 88px); }
-  .setup-head { flex-direction: column-reverse; align-items: flex-start; gap: 24px; }
-  .crest-btn { width: clamp(92px, 18vh, 220px); height: clamp(92px, 18vh, 220px); border-radius: 28px; }
-  .crest-edit { width: clamp(30px, 4vh, 48px); height: clamp(30px, 4vh, 48px); border-radius: 50%; }
+  .hero-logo { width: min(100cqw, max(64px, calc(100cqh - 120px)), 280px); height: min(100cqw, max(64px, calc(100cqh - 120px)), 280px); }
+  .hero-title { font-size: clamp(40px, 12dvh, 96px); }
+  .hero-tagline { font-size: 14px; }
+  #roomForm { grid-area: card; align-self: center; padding: 20px; gap: 12px; }
+  .screen-setup { grid-template: "bar bar" auto "title crest" auto "form crest" minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr); row-gap: 12px; }
+  .screen-setup > .bar { grid-area: bar; }
+  .setup-intro, .setup-head { display: contents; }
+  .setup-title { grid-area: title; font-size: clamp(28px, 7dvh, 56px); }
+  .setup-title br { display: none; }
+  .setup-intro > .muted { display: none; }
+  .crest-btn { grid-area: crest; align-self: center; justify-self: center; width: min(100%, calc(100dvh - 80px), 360px); height: auto; aspect-ratio: 1; }
+  .crest-edit { width: clamp(30px, 8vmin, 48px); height: clamp(30px, 8vmin, 48px); border-radius: 50%; }
   .crest-edit .icon { width: 46%; height: 46%; }
-  .setup-intro .muted { max-width: 22em; font-size: clamp(15px, 2vh, 24px); }
-  .names-form {
-    grid-area: form; align-self: center; justify-self: start; width: min(100%, 440px); padding: 28px;
-    border-radius: 28px; background: rgba(29, 33, 80, .72); border: 1px solid rgba(244, 241, 232, .10);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, .35);
-  }
-  .names-form .grow { display: none; }
-  .names-form .btn-xl { margin-top: 8px; }
-
-  /* Lobby: the table fills the left; the room code, invite and actions sit centered on
-     the right. Rows are gapless so hidden items leave no space; items carry their own margins. */
+  .names-form { grid-area: form; display: flex; gap: 12px; min-width: 0; }
+  .names-form > .grow { display: none; }
+  .names-form > .btn { margin-top: auto; }
   .screen-lobby {
-    row-gap: 0;
+    display: grid; column-gap: 16px; row-gap: 0;
     grid-template:
-      "bar bar" auto
-      "stage ." 1fr
-      "stage head" auto
-      "stage watch" auto
-      "stage go" auto
-      "stage ." 1fr / minmax(0, 1fr) minmax(0, 1fr);
+      "bar stage" auto
+      "head stage" auto
+      ". stage" minmax(0, 1fr)
+      "watch stage" auto
+      "go stage" auto / clamp(200px, 28vw, 320px) minmax(0, 1fr);
   }
-  .screen-lobby > .bar { margin-bottom: 16px; }
-  .wide-only { display: block; }
-  .list-head { grid-area: head; gap: 8px; }
-  .list-room { font-size: clamp(34px, 3vw, 56px); }
-  .invite { margin-top: 4px; font-size: 15px; }
-  .invite .wide-only { display: inline; }
-  .invite strong { color: var(--ink); }
-  .lobby-body { grid-area: stage; margin: 0; }
-  .list-view { width: min(100%, 560px); }
-  .watching { grid-area: watch; margin-top: 20px; }
-  #revealSecrets { grid-area: go; margin-top: 12px; }
+  .screen-lobby > .bar { grid-area: bar; margin-bottom: 8px; }
+  .screen-lobby .list-head { grid-area: head; }
+  .screen-lobby .lobby-body { grid-area: stage; margin: 0; }
+  .screen-lobby .list-view { width: 100%; }
+  .screen-lobby .watching { grid-area: watch; margin-bottom: 8px; max-height: min(180px, max(36px, calc(100dvh - 230px))); }
+  .screen-lobby #revealSecrets { grid-area: go; height: 48px; padding: 0 10px; gap: 6px; font-size: 20px; white-space: normal; }
 }
 
-/* Big, high-resolution screens: the controls and text around the stage grow in steps so
-   they stay in proportion with the table and hero, which already scale with the viewport. */
-@media (min-width: 1600px) and (min-height: 1000px) {
-  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, #revealSecrets, dialog.sheet, .toast { zoom: 1.2; }
+/* Compact spacing and horizontal fields keep ordinary phone forms visible without scrolling. */
+@media (max-height: 600px) {
+  .screen { gap: 8px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .hero-tagline { font-size: 13px; }
+  #roomForm { padding: 12px; gap: 8px; }
+  .mode-switch button { height: 36px; }
+  .stack-sm { gap: 4px; }
+  .field, .field-lg, .reroll-btn { height: 44px; }
+  .reroll-btn { width: 44px; }
+  .secret { height: 44px; }
+  .secret-input { height: 40px; }
+  .field-error, .hint { font-size: 12px; }
+  .btn, .btn-xl, .names-form .btn-xl { height: 44px; font-size: 22px; }
+  .setup-title { font-size: 32px; }
+  .setup-title br { display: none; }
+  .setup-intro { gap: 4px; }
+  .setup-intro .muted { font-size: 12px; }
+  .names-form { gap: 8px; }
+  .screen-lobby { gap: 8px; }
+  .screen-lobby .list-room { font-size: 28px; }
+  .screen-lobby .room-pass strong { font-size: 15px; }
+  .screen-lobby .invite { font-size: 13px; }
+  .sheet-item { min-height: 44px; }
+  #roomForm:has(.field-error:not(:empty)) { padding: 8px; gap: 4px; }
+  #optionsDialog[open] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 8px; gap: 2px; }
+  #optionsDialog .sheet-grip, #optionsDialog hr { display: none; }
+  #optionsDialog .sheet-item { padding: 0 8px; gap: 8px; font-size: 14px; }
+  #optionsDialog .sheet-close { grid-column: 1 / -1; margin: 0; }
 }
-@media (min-width: 2200px) and (min-height: 1300px) {
-  .bar, #roomForm, .names-form, .list-head .eyebrow, .room-pass, .invite, #listSummary, .watching, #revealSecrets, dialog.sheet, .toast { zoom: 1.45; }
+@media (max-height: 400px) {
+  .names-form { gap: 4px; }
+  .names-form .eyebrow { font-size: 12px; }
+  .hero-tagline { display: none; }
+  .screen-home #createHint { display: none; }
+  .setup-intro > .muted { display: none; }
+  .screen-setup .setup-title { font-size: 28px; }
+  dialog.sheet { padding-top: 8px; padding-bottom: 12px; gap: 4px; }
+  dialog.sheet > .muted { font-size: 14px; line-height: 1.4; }
+  #audioDialog[open] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #audioDialog .sheet-grip { display: none; }
+  #audioDialog .sheet-title, #audioDialog .switch-row, #audioDialog .sheet-close { grid-column: 1 / -1; }
+  #audioDialog .sheet-title { font-size: 28px; margin: 0; }
+  #audioDialog .slider-row { padding: 4px; gap: 4px; font-size: 14px; }
+  #audioDialog .switch-row { padding: 4px; }
+  #audioDialog .switch-text .muted { display: none; }
+  #audioDialog .sheet-close { margin-top: 0; }
 }
+
+@media (max-height: 600px) and (max-aspect-ratio: 5/4) {
+  .hero { gap: 8px; }
+  .hero-title { font-size: 48px; }
+  .hero-logo { width: min(144px, max(40px, calc(100cqh - 112px))); height: min(144px, max(40px, calc(100cqh - 112px))); }
+}
+@media (min-width: 480px) and (min-aspect-ratio: 5/4) and (max-height: 600px) {
+  .screen { column-gap: 16px; }
+  .hero { gap: 8px; }
+  .hero-logo { width: min(100cqw, max(64px, calc(100cqh - 72px)), 280px); height: min(100cqw, max(64px, calc(100cqh - 72px)), 280px); }
+  .hero-title { font-size: clamp(36px, 12dvh, 64px); }
+  .hero-tagline { display: none; }
+  #roomForm { padding: 12px; gap: 8px; }
+  .screen-setup { row-gap: 8px; }
+  .screen-setup .names-form { gap: 8px; }
+  .screen-setup #secretHint { display: none; }
+  .screen-lobby { gap: 0 12px; }
+}
+@media (min-width: 480px) and (min-aspect-ratio: 5/4) and (max-height: 400px) {
+  .screen-home #roomForm { padding: 8px; }
+  .screen-setup .names-form { gap: 2px; }
+  .screen-setup .stack-sm { gap: 2px; }
+}
+
+/* Announcement artwork and names share the viewport's height budget. */
+.eliminated-stage { gap: clamp(4px, 1dvh, 10px); padding: 16px max(28px, env(safe-area-inset-left)) 16px max(28px, env(safe-area-inset-right)); }
+.eliminated-stage .eliminated-crest { width: clamp(40px, 22vmin, 260px); height: clamp(40px, 22vmin, 260px); margin-bottom: 0; }
+.eliminated-stage .capture-crest { width: clamp(32px, 18vmin, 220px); height: clamp(32px, 18vmin, 220px); }
+.eliminated-who { font-size: clamp(20px, 6vmin, 80px); }
+.eliminated-stage .reveal-name { max-width: 100%; font-size: clamp(28px, 12vmin, 180px); }
+.capture-count { font-size: clamp(20px, 5vmin, 64px); }
+.reveal-timer { bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px), 12dvh); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

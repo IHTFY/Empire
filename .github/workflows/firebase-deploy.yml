@@ -60,6 +60,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm --dir functions audit --prod
       - run: pnpm test
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:layout
       - run: pnpm test:integration
 
   deploy:

@@ -12,6 +12,7 @@ import { createBots } from './bots.js';
 import { createReveal } from './reveal.js';
 import { initializeSharing } from './share.js';
 import { initializeUpdates } from './updates.js';
+import { initializeFullscreen } from './fullscreen.js';
 import appVersion from 'empire:version';
 
 // Compose the controllers here. Modules own their state and communicate through these
@@ -67,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshLobby: () => lobby.render()
   });
   initializeSheets();
+  initializeFullscreen(ui);
   const audio = createAudio({ db, rollNumber: ui.rollNumber });
   const rooms = createRooms({
     db, ensureSignedIn, getUid, ui, audio,
