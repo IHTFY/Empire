@@ -30,11 +30,15 @@
 /* ---------- Sheets, toast ---------- */
 
 dialog.sheet {
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
+  overflow-y: auto;
   width: min(440px, 100%); max-width: 100%; margin: auto auto 0; padding: 12px 20px max(24px, env(safe-area-inset-bottom));
   border: none; border-radius: 28px 28px 0 0; background: var(--surface); color: var(--ink);
   box-shadow: 0 -20px 60px rgba(0, 0, 0, .5);
   display: none; flex-direction: column; gap: 6px;
 }
+dialog.sheet > * { flex-shrink: 0; }
+dialog.sheet > .rules, dialog.sheet > .crest-options { flex-shrink: 1; min-height: 0; }
 /* The open animation only fills backwards, so a drag's inline transform can move the sheet
    once it has landed. Closing slides it back down from wherever it is. */
 dialog.sheet[open] { display: flex; animation: sheet-up .35s var(--ease) backwards; touch-action: none; }

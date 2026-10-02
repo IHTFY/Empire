@@ -8,8 +8,7 @@
   .screen { padding-left: 32px; padding-right: 32px; }
 
   /* The table fills whatever square fits (JS scales its 390 stage to match). */
-  .lobby-body { margin: 0 -32px; container-type: size; }
-  .table { width: min(100cqw, 100cqh, 1100px); }
+  .lobby-body { margin: 0 -32px; }
   .list-view { width: min(calc(100% - 64px), 560px); }
 
   dialog.sheet {
@@ -37,14 +36,14 @@
   .reveal-timer { left: max(48px, calc(50% - 360px)); right: max(48px, calc(50% - 360px)); }
 }
 
-@media (min-width: 640px) and (min-aspect-ratio: 5/4) {
+@media (min-width: 480px) and (min-aspect-ratio: 5/4) {
   .app { max-width: clamp(1280px, 150vh, 1800px); }
   .screen { display: grid; align-content: stretch; column-gap: clamp(32px, 6vw, 96px); padding-left: clamp(24px, 4vw, 56px); padding-right: clamp(24px, 4vw, 56px); }
   .bar { grid-area: bar; }
 
   /* Home: the crest and title on the left, the room card on the right. */
   .screen-home {
-    grid-template: "bar bar" auto "hero card" 1fr / minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template: "bar bar" auto "hero card" minmax(0, 1fr) / minmax(0, 1.1fr) minmax(0, 1fr);
   }
   body:has(.screen-home:not([hidden])) {
     /* Keep the glow behind the hero, 30% across the centered app. */
@@ -58,7 +57,7 @@
   #roomForm { grid-area: card; align-self: center; justify-self: start; width: min(100%, 420px); padding: 28px; gap: 16px; }
 
   /* Pick names: the heading and crest beside the form. */
-  .screen-setup { grid-template: "bar bar" auto "intro form" 1fr / minmax(0, 1fr) minmax(0, 1fr); }
+  .screen-setup { grid-template: "bar bar" auto "intro form" minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr); }
   .setup-intro { grid-area: intro; align-self: center; justify-self: end; width: min(100%, max(440px, 36vh)); gap: 20px; }
   .setup-title { font-size: clamp(48px, 9vh, 88px); }
   .setup-head { flex-direction: column-reverse; align-items: flex-start; gap: 24px; }
@@ -84,7 +83,7 @@
       "stage head" auto
       "stage watch" auto
       "stage go" auto
-      "stage ." 1fr / minmax(0, 1fr) minmax(0, 1fr);
+      "stage ." 1fr / minmax(0, 1.6fr) minmax(0, 1fr);
   }
   .screen-lobby > .bar { margin-bottom: 16px; }
   .wide-only { display: block; }
@@ -98,6 +97,58 @@
   .watching { grid-area: watch; margin-top: 20px; }
   #revealSecrets { grid-area: go; margin-top: 12px; }
 }
+
+/* Keep space for the stage and form panels on short displays. */
+@media (max-height: 600px) {
+  .screen { gap: 12px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .screen-lobby { gap: 8px; }
+  .screen-lobby .list-head { max-height: 28dvh; overflow-y: auto; }
+  .screen-lobby .watching { max-height: 15dvh; }
+  .screen-lobby #revealSecrets { height: 48px; font-size: 22px; }
+}
+
+/* Short landscape screens put all controls beside the full-height table. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .screen { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); gap: 12px; }
+  #roomForm, .names-form { padding: 16px; gap: 12px; }
+  .setup-intro { gap: 12px; }
+  .setup-head { gap: 12px; }
+  .setup-title { font-size: clamp(28px, 9dvh, 48px); }
+  .setup-intro .muted { font-size: 14px; }
+  .crest-btn { width: clamp(48px, 18dvh, 92px); height: clamp(48px, 18dvh, 92px); }
+  .app:has(.screen-lobby:not([hidden])) { max-width: none; }
+  .screen-lobby {
+    display: grid;
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    column-gap: 16px;
+    row-gap: 0;
+    grid-template:
+      "stage bar" auto
+      "stage ." minmax(0, 1fr)
+      "stage head" minmax(0, auto)
+      "stage watch" auto
+      "stage go" auto
+      "stage ." minmax(0, 1fr) / minmax(0, 1fr) clamp(220px, 32vw, 300px);
+  }
+  .screen-lobby > .bar { grid-area: bar; margin-bottom: 8px; }
+  .screen-lobby .lobby-body { grid-area: stage; margin: 0; }
+  .screen-lobby .list-view { width: 100%; }
+  .screen-lobby .list-head { grid-area: head; gap: 2px; min-height: 0; overflow-y: auto; }
+  .screen-lobby .list-room { font-size: 30px; }
+  .screen-lobby .invite { margin-top: 0; font-size: 14px; }
+  .screen-lobby .invite .wide-only { display: none; }
+  .screen-lobby .watching { grid-area: watch; margin-top: 8px; max-height: 20dvh; overflow-y: auto; }
+  .screen-lobby #revealSecrets { grid-area: go; margin-top: 8px; height: 48px; padding: 0 10px; border-radius: 16px; font-size: 22px; }
+}
+
+/* Announcement artwork and names share the viewport's height budget. */
+.eliminated-stage { gap: clamp(4px, 1dvh, 10px); padding: 16px max(28px, env(safe-area-inset-left)) 16px max(28px, env(safe-area-inset-right)); }
+.eliminated-stage .eliminated-crest { width: clamp(40px, 22vmin, 260px); height: clamp(40px, 22vmin, 260px); margin-bottom: 0; }
+.eliminated-stage .capture-crest { width: clamp(32px, 18vmin, 220px); height: clamp(32px, 18vmin, 220px); }
+.eliminated-who { font-size: clamp(20px, 6vmin, 80px); }
+.eliminated-stage .reveal-name { max-width: 100%; font-size: clamp(28px, 12vmin, 180px); }
+.capture-count { font-size: clamp(20px, 5vmin, 64px); }
+.reveal-timer { bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px), 12dvh); }
 
 /* Big, high-resolution screens: the controls and text around the stage grow in steps so
    they stay in proportion with the table and hero, which already scale with the viewport. */

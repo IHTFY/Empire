@@ -39,11 +39,11 @@
 .morph-player, .morph-player * { transition: none !important; animation: none !important; }
 .lobby-body.morphing > .table, .lobby-body.morphing > .list-view { animation: none; }
 
-.lobby-body { position: relative; margin: 0 -24px; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.lobby-body { position: relative; margin: 0 -24px; flex: 1; min-width: 0; min-height: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
 .list-view { width: calc(100% - 48px); align-self: stretch; }
 
-/* The table is drawn on a 390 × 390 stage, scaled to fit narrower phones. */
-.table { position: relative; width: min(100%, 390px); aspect-ratio: 1; flex-shrink: 0; animation: fade .35s ease both; }
+/* Scale the 390 × 390 stage to the largest square that fits its available space. */
+.table { position: relative; width: min(100cqw, 100cqh, 1100px); aspect-ratio: 1; flex-shrink: 0; animation: fade .35s ease both; }
 .table-inner { position: absolute; left: 0; top: 0; width: 390px; height: 390px; transform-origin: top left; }
 @keyframes fade { from { opacity: 0; transform: scale(.97); } to { opacity: 1; } }
 
@@ -113,7 +113,7 @@
 .seat-x .icon { width: 10px; height: 10px; }
 
 .list-view { display: flex; flex-direction: column; gap: 10px; min-height: 0; animation: fade .35s ease both; }
-.list-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.list-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; flex-shrink: 0; }
 .list-room { font-size: 34px; min-width: 0; line-height: 1.1; }
 .invite { font-size: 14px; }
 .invite-share-choice { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 14px; vertical-align: middle; white-space: nowrap; }

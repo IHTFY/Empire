@@ -2,6 +2,33 @@ import { $ } from './dom.js';
 import { COUNTDOWN_MS, NAME_MS } from './config.js';
 import { crestSvg, botCrest, initialOf } from './crest.js';
 
+// Fit announcement text as well as the secret word, including after a rotation.
+export function fitRevealText(screen) {
+  if (screen.hidden || !screen.clientWidth) return;
+  const stage = screen.querySelector('.eliminated-stage, .reveal-stage');
+  const style = stage && getComputedStyle(stage);
+  const availableWidth = stage ? stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : screen.clientWidth;
+  const words = [...screen.querySelectorAll('.reveal-name, .eliminated-who')];
+  for (const word of words) {
+    word.style.fontSize = '';
+    word.classList.remove('wrap');
+    let size = parseFloat(getComputedStyle(word).fontSize);
+    while (word.scrollWidth > availableWidth && size > 36) {
+      size = Math.max(36, size - 2);
+      word.style.fontSize = `${size}px`;
+    }
+    if (word.scrollWidth > availableWidth) word.classList.add('wrap');
+  }
+  while (stage && stage.getBoundingClientRect().height > screen.clientHeight - 32) {
+    let changed = false;
+    for (const word of words) {
+      const size = parseFloat(getComputedStyle(word).fontSize);
+      if (size > 12) { word.style.fontSize = `${Math.max(12, size - 2)}px`; changed = true; }
+    }
+    if (!changed) break;
+  }
+}
+
 // Owns synchronized playback, its cancellation token, and the bot announcement queue.
 export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby }) {
   const startButton = $('revealSecrets');
@@ -30,16 +57,8 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Long names shrink from their styled size to stay on one line; only very long ones wrap.
-  function fitWord(word, box) {
-    const room = box.clientWidth - 56;
-    let size = Math.round(parseFloat(getComputedStyle(word).fontSize) / 4) * 4;
-    while (word.scrollWidth > room && size > 36) {
-      size -= 4;
-      word.style.fontSize = `${size}px`;
-    }
-    if (word.scrollWidth > room) word.classList.add('wrap');
-  }
+  const resize = new ResizeObserver(entries => entries.forEach(({ target }) => fitRevealText(target)));
+  document.querySelectorAll('.reveal').forEach(screen => resize.observe(screen));
 
   // Everyone follows the server's clock: startedAt is a server timestamp, so a player who
   // reloads or arrives mid-reveal joins at the current name instead of getting a replay.
@@ -59,7 +78,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
     word.className = 'reveal-name display';
     word.textContent = name;
     stage.replaceChildren(word);
-    fitWord(word, stage);
+    fitRevealText(stage.closest('.reveal'));
     timer.hidden = false;
     bar.classList.remove('run');
     void bar.offsetWidth; // restart the timer animation
@@ -87,7 +106,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       word.style.fontSize = '';
       word.classList.remove('wrap');
       screen.hidden = false;
-      fitWord(word, screen);
+      fitRevealText(screen);
       audio.speak(entry.name, entry.voice);
       await sleep(3200);
       screen.hidden = true;
@@ -126,7 +145,7 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
       word.style.fontSize = '';
       word.classList.remove('wrap');
       screen.hidden = false;
-      fitWord(word, screen);
+      fitRevealText(screen);
       await sleep(1100);
       // The crest flares, then snaps into the captor's colors at the height of the burn.
       lost.classList.add('burning');
