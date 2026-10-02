@@ -190,7 +190,6 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
     $('releaseMore').hidden = !Object.entries(room.captures).some(([id, c]) => id !== key && c && c.via === key && room.users[id]);
     openSheet($('confirmRelease'));
   }
-  $('lockInfo').addEventListener('click', () => toast($('lockInfo').dataset.text));
   $('releaseButton').addEventListener('click', () => {
     if (pendingRelease && (getRoom().captures || {})[pendingRelease]) releasePlayer(pendingRelease);
     pendingRelease = null;
@@ -346,12 +345,6 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       }
       return chip;
     }));
-    const lockInfo = $('lockInfo');
-    lockInfo.hidden = !spectator && !room.locked;
-    lockInfo.dataset.text = spectator
-      ? 'Names are set for this round. You can watch and join at the next round.'
-      : 'Names are set for this round. New players can watch and join next round.';
-    lockInfo.title = lockInfo.dataset.text;
     $('botIcon').setAttribute('href', room.locked ? '#i-lock' : '#i-bot');
     $('generateName').hidden = spectator;
     document.querySelectorAll('[data-open="confirmNewGame"], [data-open="confirmDelete"]').forEach(button => { button.hidden = spectator; });
