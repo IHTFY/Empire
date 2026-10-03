@@ -101,6 +101,17 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
     $('rerollName').disabled = locked;
   }
 
+  const modeExtra = document.querySelector('.mode-extra');
+  function sizeModeExtra() {
+    const panel = modeExtra.querySelector(':scope > :not([inert])');
+    modeExtra.style.height = `${panel.firstElementChild.scrollHeight}px`;
+  }
+  // Measure natural content, rather than the maximum of two overlapping collapsing panels.
+  // This also follows wrapped hints, validation messages, and viewport/font changes.
+  const modeExtraObserver = new ResizeObserver(sizeModeExtra);
+  modeExtra.querySelectorAll(':scope > * > *').forEach(content => modeExtraObserver.observe(content));
+  sizeModeExtra();
+
   function setRoomMode(mode) {
     stopRoomNameRoll();
     if (mode !== roomMode) {
@@ -117,6 +128,7 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
     $('roomSubmitLabel').textContent = joining ? 'Join' : 'Create';
     userGameCode.placeholder = joining ? 'Room name' : '';
     clearCodeError();
+    sizeModeExtra();
   }
 
   // Puts the home form back to a fresh state with a new suggestion.

@@ -60,12 +60,16 @@ body:has(.screen-home:not([hidden])) {
 #roomForm[data-mode="join"] .reroll-btn { width: 0; margin-left: -10px; opacity: 0; border-width: 0; pointer-events: none; overflow: hidden; }
 .mode-switch button { position: relative; height: 40px; border: none; background: none; border-radius: 12px; font-size: 15px; font-weight: 700; color: var(--muted); transition: color .2s; }
 .mode-switch button[aria-pressed="true"] { color: var(--ink); }
-/* Password field and create hint share one cell, so the card keeps its height when the mode flips. */
-.mode-extra { display: grid; }
-.mode-extra > * { grid-area: 1 / 1; align-self: start; transition: opacity .25s var(--ease), transform .3s var(--ease); }
-.mode-extra > [inert] { opacity: 0; transform: translateY(-6px); pointer-events: none; visibility: hidden; transition: opacity .2s var(--ease), transform .3s var(--ease), visibility 0s .3s; }
+/* The measured panel height moves the card and hero while the contents crossfade. */
+.mode-extra { position: relative; transition: height .35s var(--ease); }
+.mode-panel { position: relative; width: 100%; transition: opacity .35s var(--ease), transform .35s var(--ease); }
+.mode-extra > [inert] { position: absolute; top: 0; left: 0; opacity: 0; transform: translateY(-6px); pointer-events: none; visibility: hidden; transition: opacity .35s var(--ease), transform .35s var(--ease), visibility 0s .35s; }
 .field-pass { font-family: var(--mono); font-size: 20px; letter-spacing: .3em; text-transform: uppercase; }
 .field-pass::placeholder { letter-spacing: .3em; }
 .btn.is-busy { pointer-events: none; opacity: .7; }
 .room-pass { font-size: 14px; color: var(--muted); }
 .room-pass strong { margin-left: 6px; font-family: var(--mono); font-size: 17px; letter-spacing: .18em; color: var(--gold-hi); user-select: all; }
+
+/* Container and viewport changes also ease the hero artwork and type sizes. */
+.hero-logo { transition: width .35s var(--ease), height .35s var(--ease); }
+.hero-title, .hero-tagline { transition: font-size .35s var(--ease); }
