@@ -138,12 +138,14 @@
             <p id="userGameCodeHelper" class="field-error" role="alert"></p>
           </div>
           <div class="mode-extra">
-          <div id="passField" class="stack-sm" inert>
-            <label for="roomPass" class="eyebrow">Password</label>
-            <input id="roomPass" class="field field-pass" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ABCDEF" enterkeyhint="go" />
-            <p id="roomPassHelper" class="field-error" role="alert"></p>
-          </div>
-          <p id="createHint" class="hint">Keep the suggested name or type your own. The room gets a password to share with friends.</p>
+            <div id="passField" class="mode-panel" inert>
+              <div class="stack-sm">
+                <label for="roomPass" class="eyebrow">Password</label>
+                <input id="roomPass" class="field field-pass" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ABCDEF" enterkeyhint="go" />
+                <p id="roomPassHelper" class="field-error" role="alert"></p>
+              </div>
+            </div>
+            <div id="createHint" class="mode-panel"><p class="hint">Keep the suggested name or type your own. The room gets a password to share with friends.</p></div>
           </div>
           <button id="roomSubmit" type="submit" class="btn btn-gold"><span class="sheen"></span><span id="roomSubmitLabel">Create</span></button>
         </form>

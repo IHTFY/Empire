@@ -175,6 +175,66 @@ test('Every game screen contains its panels and scrolls only inside them', async
       }
     });
   }
+  await t.test('Room modes animate layout, preserve drafts, and respect reduced motion', async () => {
+    await page.evaluate(async () => {
+      const { createHome } = await import('/home.js');
+      createHome({ ui: { show: () => {}, toast: () => {} } });
+      document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+      window.showScreen('homeScreen');
+    });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    for (const [width, height] of [[320,568], [390,844], [390,400], [667,375], [1440,900]]) {
+      await page.setViewportSize({ width, height });
+      await page.locator('#modeCreate').click();
+      await page.waitForTimeout(1000);
+      for (const mode of ['join', 'create']) {
+        const frames = await page.evaluate(async mode => {
+          const measure = () => ['#roomForm', '.hero-logo', '.hero-title', '.hero-tagline', '#roomSubmit'].map(selector => {
+            const r = document.querySelector(selector).getBoundingClientRect();
+            return [r.y, r.width, r.height];
+          });
+          const frames = [measure()];
+          document.querySelector(mode === 'join' ? '#modeJoin' : '#modeCreate').click();
+          const start = performance.now();
+          while (performance.now() - start < 1000) {
+            await new Promise(requestAnimationFrame);
+            frames.push(measure());
+          }
+          return frames;
+        }, mode);
+        let changed = 0;
+        for (let element = 0; element < frames[0].length; element++) {
+          for (let property = 0; property < 3; property++) {
+            const values = frames.map(frame => frame[element][property]);
+            const delta = Math.abs(values.at(-1) - values[0]);
+            if (delta < 4) continue;
+            changed++;
+            const jumps = values.slice(1).map((value, i) => Math.abs(value - values[i]));
+            assert(Math.max(...jumps) < delta * .6 + 2, `${width}x${height} ${mode} element ${element} property ${property} jumped: ${values}`);
+            assert(values.some(value => Math.abs(value - values[0]) > delta * .15 && Math.abs(value - values.at(-1)) > delta * .15), 'Layout must pass through intermediate positions and sizes');
+          }
+        }
+        assert(changed > 0, 'The mode change should exercise a layout transition');
+        await contains('#roomSubmit', `${mode} submit after transition`);
+        await noPageScroll();
+      }
+    }
+    await page.locator('#userGameCode').fill('create-draft');
+    await page.locator('#modeJoin').click();
+    await page.locator('#userGameCode').fill('join-draft');
+    await page.locator('#modeCreate').click();
+    assert.equal(await page.locator('#userGameCode').inputValue(), 'create-draft');
+    await page.locator('#modeCreate').press('ArrowRight');
+    assert.equal(await page.locator('#userGameCode').inputValue(), 'join-draft');
+    assert.equal(await page.locator('#passField').evaluate(el => el.inert), false);
+    assert.equal(await page.locator('#createHint').evaluate(el => el.inert), true);
+    await page.locator('#modeJoin').press('ArrowLeft');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.locator('#modeJoin').click();
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('#passField').evaluate(el => el.getAnimations().length), 0);
+    await page.locator('#modeCreate').click();
+  });
   await t.test('Rotation preserves toolbar anchors and reading order', async () => {
     for (const [width,height] of [[390,844], [844,390], [390,844]]) {
       await page.setViewportSize({ width,height });

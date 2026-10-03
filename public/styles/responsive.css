@@ -6,7 +6,6 @@
 .hero-title { display: block; font-size: 64px; }
 .hero-tagline { display: block; max-width: 280px; font-size: 16px; }
 #roomForm { width: 100%; padding: 20px; gap: 14px; }
-.mode-extra > [inert] { display: none; }
 .setup-head { flex-direction: row; align-items: center; }
 .setup-title { font-size: 48px; }
 .crest-btn { width: 92px; height: 92px; }
