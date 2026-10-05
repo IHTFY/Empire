@@ -17,11 +17,20 @@ export function closeSheet(dialog) {
 }
 export function openSheet(dialog) {
   if (dialog.open) dialog.close();
+  if (dialog.id === 'rulesDialog') document.getElementById('tutorialFrame').src = '/how-to.html';
   dialog.showModal();
 }
 
 // Bind gestures and delegated sheet buttons once, after the DOM is ready.
 export function initializeSheets() {
+  const tutorial = document.getElementById('rulesDialog');
+  tutorial.addEventListener('close', () => {
+    if (!tutorial.open) document.getElementById('tutorialFrame').removeAttribute('src');
+  });
+  window.addEventListener('message', event => {
+    const frame = document.getElementById('tutorialFrame');
+    if (event.origin === location.origin && event.source === frame.contentWindow && event.data === 'empire:close-tutorial') closeSheet(tutorial);
+  });
   document.querySelectorAll('dialog.sheet').forEach(sheet => {
     sheet.addEventListener('close', () => {
       sheet.classList.remove('closing', 'dragging');

@@ -404,43 +404,8 @@
       </div>
     </dialog>
 
-    <dialog id="rulesDialog" class="sheet sheet-tall" aria-labelledby="rulesTitle">
-      <div class="sheet-grip"></div>
-      <h2 id="rulesTitle" class="display sheet-title">How to play</h2>
-      <div class="rules">
-        <p class="goal"><span>Goal</span>Be the leader of the last empire standing.</p>
-
-        <h3>Setup</h3>
-        <ol class="steps">
-          <li>Create a room, or leave the name blank for a random one.</li>
-          <li>Tap <strong>Share</strong> and send the link, or have friends enter the room name and password at <a href="https://empire.ihtfy.com">empire.ihtfy.com</a>. Both are shown in the lobby.</li>
-          <li>Enter your real name and a secret name.</li>
-          <li>Short on players? Add bots from the room menu.</li>
-          <li>Press <strong>Reveal the names</strong> once everyone is in.</li>
-        </ol>
-
-        <h3>Play</h3>
-        <ol class="steps">
-          <li><strong>Pick a secret name</strong> you hope nobody links to you.</li>
-          <li><strong>Memorize.</strong> Names are read twice in random order. No recording. Leaders can vote to hear them again.</li>
-          <li><strong>Take turns</strong> clockwise. Only leaders take turns.</li>
-          <li><strong>Guess.</strong> Name another leader and their secret name.
-            <ul>
-              <li><b class="no">Wrong</b> Your turn ends.</li>
-              <li><b class="yes">Right</b> They join your empire and you guess again.</li>
-            </ul>
-          </li>
-          <li><strong>Win</strong> as the last leader whose name is never guessed.</li>
-        </ol>
-
-        <h3>Good to know</h3>
-        <ul class="tips">
-          <li>A conquered leader brings their whole empire along.</li>
-          <li>Members help guess and protect their leader's name.</li>
-          <li>Members may talk, but only leaders make official guesses.</li>
-        </ul>
-      </div>
-      <button type="button" class="btn btn-ghost sheet-close" data-close>Close</button>
+    <dialog id="rulesDialog" class="sheet tutorial-sheet" aria-label="How to play">
+      <iframe id="tutorialFrame" title="How to play Empire"></iframe>
     </dialog>
 
     <div id="updateToast" class="update-toast" role="status" aria-live="polite" hidden>
