@@ -252,6 +252,46 @@ test('Every game screen contains its panels and scrolls only inside them', async
       assert(setup.title < setup.crest && setup.real <= setup.secret, JSON.stringify(setup));
     }
   });
+  await t.test('Tutorial fits phones, distinguishes empires, and closes from its controls', async () => {
+    await page.evaluate(async () => {
+      window.showScreen('homeScreen');
+      const { initializeSheets } = await import('/sheets.js');
+      initializeSheets();
+    });
+    for (const [width, height] of [[320,568], [390,844], [390,400], [480,280], [667,375], [1440,900]]) {
+      await page.setViewportSize({ width, height });
+      await page.locator('#homeScreen [data-open="rulesDialog"]').click();
+      const frame = page.frameLocator('#tutorialFrame');
+      await frame.locator('.seat').first().waitFor();
+      await contains('#rulesDialog', 'tutorial border');
+      const initial = await frame.locator('#table .av').evaluateAll(els => els.map(el => el.innerHTML));
+      assert.equal(new Set(initial).size, 5, 'Each initial empire has a distinct crest');
+      for (let step = 1; step <= 17; step++) {
+        await frame.getByRole('button', { name: `Step ${step}`, exact: true }).click();
+        const bounds = await frame.locator('.sheet').evaluate(el => {
+          const selectors = ['.stage', '.transport', '.close'];
+          return selectors.map(selector => {
+            const r = el.querySelector(selector).getBoundingClientRect();
+            return { selector, left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: innerWidth, height: innerHeight };
+          });
+        });
+        for (const r of bounds) assert(r.left >= -1 && r.top >= -1 && r.right <= r.width + 1 && r.bottom <= r.height + 1, JSON.stringify(r));
+        if (step === 11) {
+          const crestKeys = await frame.locator('#table .av').evaluateAll(els => els.map(el => el.dataset.crest));
+          assert.equal(crestKeys[2], crestKeys[3], "Captured Cy takes on Ben's full crest");
+        }
+      }
+      const winningCrests = await frame.locator('#table .av').evaluateAll(els => els.map(el => el.innerHTML.replace(/<span class="badge">.*?<\/span>/g, '')));
+      assert.equal(new Set(winningCrests).size, 1, 'The winning empire shares one crest');
+      await frame.getByRole('button', { name: 'Close', exact: true }).click();
+      await page.waitForFunction(() => !document.querySelector('#rulesDialog').open && !document.querySelector('#tutorialFrame').hasAttribute('src'));
+      assert.equal(await page.locator('#tutorialFrame').getAttribute('src'), null, 'Closing unloads tutorial timers');
+    }
+    await page.locator('#homeScreen [data-open="rulesDialog"]').click();
+    await page.frameLocator('#tutorialFrame').getByRole('button', { name: 'Next step' }).click();
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('#rulesDialog').open);
+  });
   await t.test('Fullscreen enters from a click, exits, and handles rejection', async () => {
     await page.evaluate(() => {
       window.showScreen('homeScreen');
