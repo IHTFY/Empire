@@ -17,7 +17,13 @@ export function closeSheet(dialog) {
 }
 export function openSheet(dialog) {
   if (dialog.open) dialog.close();
-  if (dialog.id === 'rulesDialog') document.getElementById('tutorialFrame').src = '/how-to.html';
+  if (dialog.id === 'rulesDialog') {
+    // Replace the browsing context so a quick reopen cannot target the old document.
+    const oldFrame = document.getElementById('tutorialFrame');
+    const frame = oldFrame.cloneNode(false);
+    frame.src = '/how-to.html';
+    oldFrame.replaceWith(frame);
+  }
   dialog.showModal();
 }
 
