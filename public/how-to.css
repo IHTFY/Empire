@@ -30,6 +30,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn-ghost { background: transparent; color: var(--ink); border: 1.5px solid rgba(244,241,232,.28); }
 .btn .icon { width: 22px; height: 22px; }
 .btn.close { flex: none; height: 48px; font-size: 20px; }
+.sheet-foot { flex: none; display: flex; flex-direction: column; gap: 4px; }
+.support-link { align-self: center; padding: 4px 8px; font-size: 14px; font-weight: 600; color: var(--gold-hi); }
 
 /* ---- stage (the sample game) ---- */
 .stage { position: relative; flex: none; height: 358px; border-radius: 22px; border: 1px solid var(--line); background: radial-gradient(300px 220px at 50% 0, rgba(79,99,217,.22), rgba(11,13,38,0) 70%), var(--bg); overflow: hidden; }
@@ -178,7 +180,8 @@ button:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
   .stage { grid-column: 1; grid-row: 2; height: 100%; min-height: 0; }
   .transport { grid-column: 1; grid-row: 3; }
   .rules { grid-column: 2; grid-row: 2; }
-  .close { grid-column: 2; grid-row: 3; }
+  .sheet-foot { grid-column: 2; grid-row: 3; flex-direction: row; align-items: center; gap: 12px; }
+  .sheet-foot .close { flex: 1; }
   .sheet-title { font-size: 28px; }
   .btn.close { height: 36px; }
 }
