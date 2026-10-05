@@ -32,12 +32,12 @@ const versionPlugin = {
   }
 };
 
-// Serve one JS file and one CSS file. `pnpm build` is the production build used by
+// Bundle the app and the isolated tutorial. `pnpm build` is the production build used by
 // preview and live deployment: it is minified, and source maps support debugging the
 // original modules. `pnpm dev` keeps the output readable. No code splitting is needed.
 export const buildOptions = {
   absWorkingDir: fileURLToPath(new URL('../', import.meta.url)),
-  entryPoints: ['public/script.js', 'public/style.css'],
+  entryPoints: ['public/script.js', 'public/style.css', 'public/how-to.js', 'public/how-to.css'],
   outdir: 'public/assets',
   bundle: true,
   format: 'esm',

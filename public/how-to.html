@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Empire · How to play</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=DM+Mono:wght@500&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/how-to.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><g fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></g></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/></g></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></g></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></g></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></g></symbol>
+  <symbol id="i-cw" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></g></symbol>
+</defs></svg>
+
+<div class="sheet" aria-labelledby="t">
+  <div class="grip"></div>
+  <div class="sheet-head"><h2 class="display sheet-title" id="t">How to play</h2><span class="section-tag" id="tag"></span></div>
+
+  <!-- the practice game -->
+  <div class="stage" id="stage" aria-live="polite">
+    <div class="view" id="vTable"><div class="strip" id="strip"></div><div class="table" id="table"></div><div class="sheet-over" id="capSheet"></div></div>
+    <div class="view centered" id="vHome"><div class="zoomed"><form class="card" id="homeCard" data-mode="create">
+      <div class="mode-switch"><span>Create a room</span><span>Join a room</span></div>
+      <div class="stack-sm"><span class="eyebrow">Room name</span>
+        <div class="field-row"><div class="field">bold-otter</div><span class="icon-btn reroll"><svg class="icon"><use href="#i-refresh"/></svg></span></div></div>
+      <div class="pass-wrap"><div><div class="stack-sm" style="padding-bottom:2px"><span class="eyebrow">Password</span><div class="field field-pass">K7M2QX</div></div></div></div>
+      <div class="hint-create"><div><p class="hint">Keep the suggested name or type your own. The room gets a password to share with friends.</p></div></div>
+      <span class="btn btn-gold" id="homeBtn">Create</span>
+    </form></div></div>
+    <div class="view centered" id="vSetup"><div class="zoomed">
+      <div class="setup-head"><h1 class="display setup-title">Claim your<br>place</h1><span class="crest-btn"><span class="av" style="--s:76px" data-crest="frankie"></span><span class="crest-edit"><svg class="icon"><use href="#i-edit"/></svg></span></span></div>
+      <div class="stack-sm"><span class="eyebrow">Your name</span><div class="field field-lg">Frankie</div>
+        <span class="eyebrow gold-text" style="margin-top:6px">Secret name</span>
+        <div class="secret"><div class="secret-chars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="secret-toggle"><svg class="icon"><use href="#i-eye"/></svg></span></div>
+        <p class="lock-hint"><svg class="icon"><use href="#i-lock"/></svg>Only the game sees it. Avoid obvious names.</p></div>
+    </div></div>
+    <div class="view centered" id="vLobby"><div class="list-head"><span class="display list-room">bold-otter</span><span class="room-pass">Password <strong>K7M2QX</strong></span></div>
+      <div class="zoomed" style="zoom:.8"><div class="table" id="lobbyTable"></div></div>
+      <span class="btn btn-gold btn-xl" style="height:54px;font-size:22px;margin-top:6px"><svg class="icon"><use href="#i-play"/></svg>Reveal the names</span></div>
+    <div class="view" id="vReveal"><div class="reveal-demo"><span class="reading-pill" id="readPill">Reading 1 of 2</span><div class="reveal-name display" id="revealName">Moana</div><div class="reveal-timer"><span></span></div></div></div>
+  </div>
+
+  <!-- transport -->
+  <div class="transport">
+    <button class="t-btn" id="prev" aria-label="Previous step"><svg class="icon"><use href="#i-prev"/></svg></button>
+    <button class="t-btn play" id="play" aria-label="Pause"><svg class="icon"><use href="#i-pause"/></svg></button>
+    <div class="ticks" id="ticks"></div>
+    <button class="t-btn" id="next" aria-label="Next step"><svg class="icon"><use href="#i-next"/></svg></button>
+  </div>
+
+  <!-- the rules -->
+  <div class="rules" id="rules"></div>
+  <button type="button" class="btn btn-ghost close" id="closeTutorial">Close</button>
+</div>
+
+<script type="module" src="/assets/how-to.js"></script>
+</body>
+</html>
