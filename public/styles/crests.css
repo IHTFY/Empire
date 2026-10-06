@@ -37,14 +37,14 @@
 .crest-rail { -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent); mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent); }
 /* A soft spotlight marks the center slot, so the selection reads even mid-swipe. */
 .crest-rail::before {
-  content: ''; position: absolute; left: 50%; top: 50%; z-index: -1; width: 120px; height: 100%; pointer-events: none;
+  content: ''; position: absolute; left: 50%; top: 50%; z-index: -1; width: 150px; height: 100%; pointer-events: none;
   transform: translate(-50%, -50%); opacity: .5; transition: opacity .24s var(--ease);
   background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 38%, transparent), transparent);
 }
 .crest-group.is-active .crest-rail::before { opacity: 1; }
-.crest-grid { --cover-step: 44px; --cover-size: 50px; position: relative; display: flex; align-items: center; gap: 0; overflow-x: auto; overflow-y: hidden; height: 58px; padding: 4px 0; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; transition: height .24s var(--ease); }
+.crest-grid { --cover-step: 44px; --cover-size: 54px; position: relative; display: flex; align-items: center; gap: 0; overflow-x: auto; overflow-y: hidden; height: 62px; padding: 4px 0; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; transition: height .24s var(--ease); }
 .crest-grid::-webkit-scrollbar { display: none; }
-.crest-group.is-active .crest-grid { --cover-size: 74px; height: 82px; }
+.crest-group.is-active .crest-grid { --cover-size: 100px; height: 108px; }
 .crest-group[data-part="color"] .crest-grid { --cover-step: 34px; --cover-size: 34px; height: 48px; }
 .crest-group[data-part="color"].is-active .crest-grid { --cover-size: 44px; height: 56px; }
 .crest-carousel-item { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 var(--cover-step); width: var(--cover-step); height: 100%; scroll-snap-align: center; }
@@ -57,16 +57,13 @@
   transform: perspective(360px) translateX(var(--cover-shift, 0px)) rotateY(var(--cover-angle, 0deg)) scale(var(--cover-scale, 1));
 }
 .crest-grid .crest-tile .crest { filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .45)); }
-.crest-grid .is-centered .crest-tile {
-  border-color: color-mix(in srgb, var(--gold) 80%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 82%, var(--gold) 18%), color-mix(in srgb, var(--field) 92%, var(--gold) 8%));
-  box-shadow: 0 8px 18px rgba(0, 0, 0, .45), 0 0 14px color-mix(in srgb, var(--gold) 22%, transparent), inset 0 1px 0 rgba(255, 255, 255, .1);
-}
+/* Crests sit on the rail without a plate; the centered one lifts with a deeper shadow and glow. */
+.crest-grid .crest-tile:not(.crest-swatch) { padding: 1px; border-color: transparent; background: transparent; box-shadow: none; }
+.crest-grid .is-centered .crest-tile .crest { filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .55)) drop-shadow(0 0 14px color-mix(in srgb, var(--gold) 28%, transparent)); }
 .crest-grid .is-centered .crest-swatch { background: var(--c); border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold), 0 0 14px color-mix(in srgb, var(--gold) 30%, transparent), 0 6px 14px rgba(0, 0, 0, .45); }
 /* Colors must stay judgeable away from the center, so swatches dim only lightly. */
 .crest-grid .crest-swatch { filter: brightness(calc(.6 + var(--cover-dim, 1) * .4)); }
 /* While browsing, only the centered cover carries the selection treatment. */
-.crest-grid .crest-carousel-item:not(.is-centered) .crest-tile { border-color: transparent; background: transparent; box-shadow: none; }
 .crest-grid .crest-carousel-item:not(.is-centered) .crest-swatch { border-color: rgba(244, 241, 232, .14); background: var(--c); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25); }
 .crest-group.is-active .crest-group-head > .eyebrow { color: var(--gold-hi); }
 .crest-grid .crest-swatch { margin: 0; }
