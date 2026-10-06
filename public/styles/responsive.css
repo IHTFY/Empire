@@ -89,6 +89,8 @@
 
 /* Compact spacing and horizontal fields keep ordinary phone forms visible without scrolling. */
 @media (max-height: 600px) {
+  /* Short screens already scroll the crest options; keep the centered cover at its earlier size. */
+  .crest-group.is-active .crest-grid { --cover-size: 74px; height: 82px; }
   .screen { gap: 8px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
   .hero-tagline { font-size: 13px; }
   #roomForm { padding: 12px; gap: 8px; }

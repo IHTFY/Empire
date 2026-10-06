@@ -1,6 +1,20 @@
+// Crest covers shrink away from the center and are packed by their scaled widths, so the
+// enlarged center pushes its neighbors aside instead of covering them.
+const coverScale = distance => Math.max(.3, 1 - Math.min(distance, 1) * .42 - Math.max(0, distance - 1) * .12);
+// Centers of the covers 0–8 slots from the middle; covers farther out have faded away.
+function packedCenters(size) {
+  const centers = [0];
+  for (let i = 1; i <= 8; i++) centers.push(centers[i - 1] + (coverScale(i - 1) + coverScale(i)) / 2 * size * .88);
+  return centers;
+}
+function packedOffset(distance, centers) {
+  const whole = Math.min(Math.floor(distance), centers.length - 2);
+  return centers[whole] + (centers[whole + 1] - centers[whole]) * Math.min(1, distance - whole);
+}
+
 // Native scrolling supplies touch inertia and snapping. Three copies of the choices
 // let the rail return to its middle copy without changing what the player sees.
-export function createCrestCarousel({ grid, keys, createTile, onActivate, onBrowse, onSelect }) {
+export function createCrestCarousel({ grid, keys, createTile, onActivate, onBrowse, onSelect, packed }) {
   const items = [];
   let selected = 0;
   let ready = false;
@@ -38,6 +52,9 @@ export function createCrestCarousel({ grid, keys, createTile, onActivate, onBrow
     else if (moving && grid.scrollLeft > grid.scrollWidth - grid.clientWidth - slotWidth * 2) grid.scrollLeft -= keys.length * slotWidth;
     const center = grid.scrollLeft + grid.clientWidth / 2;
     const current = nearest();
+    const tilt = packed ? 36 : 42;
+    // The target size, not the animating width, so covers settle where they will end up.
+    const centers = packed && packedCenters(parseFloat(getComputedStyle(grid).getPropertyValue('--cover-size')));
     items.forEach(({ slot, tile }, index) => {
       const distance = ((index + .5) * slotWidth - center) / slotWidth;
       const magnitude = Math.abs(distance);
@@ -46,17 +63,19 @@ export function createCrestCarousel({ grid, keys, createTile, onActivate, onBrow
       // Depth comes from dimming rather than transparency, so overlapping covers stay
       // solid; only the outermost ones fade into the rail edges.
       const reach = Math.min(magnitude, 1);
-      tile.style.setProperty('--cover-scale', Math.max(.58, 1 - magnitude * .14 - reach * .06));
-      tile.style.setProperty('--cover-dim', Math.max(.42, 1 - magnitude * .16 - reach * .12));
-      tile.style.setProperty('--cover-opacity', Math.max(0, Math.min(1, 4.6 - magnitude)));
-      if (reducedMotion()) {
-        tile.style.setProperty('--cover-angle', '0deg');
-        tile.style.setProperty('--cover-shift', '0px');
+      if (packed) {
+        tile.style.setProperty('--cover-scale', coverScale(magnitude));
+        tile.style.setProperty('--cover-dim', Math.max(.38, 1 - reach * .22 - Math.max(0, magnitude - 1) * .14));
+        tile.style.setProperty('--cover-opacity', Math.max(0, Math.min(1, 4.2 - magnitude)));
+        tile.style.setProperty('--cover-shift', `${Math.sign(distance) * packedOffset(magnitude, centers) - distance * slotWidth}px`);
       } else {
-        // Neighbors swing in quickly, then hold their angle like a coverflow stack.
-        tile.style.setProperty('--cover-angle', `${-Math.sign(distance) * Math.min(42, magnitude * 42)}deg`);
-        tile.style.setProperty('--cover-shift', `${-Math.sign(distance) * Math.min(magnitude, 3) * slotWidth * .06}px`);
+        tile.style.setProperty('--cover-scale', Math.max(.58, 1 - magnitude * .14 - reach * .06));
+        tile.style.setProperty('--cover-dim', Math.max(.42, 1 - magnitude * .16 - reach * .12));
+        tile.style.setProperty('--cover-opacity', Math.max(0, Math.min(1, 4.6 - magnitude)));
+        tile.style.setProperty('--cover-shift', reducedMotion() ? '0px' : `${-Math.sign(distance) * Math.min(magnitude, 3) * slotWidth * .06}px`);
       }
+      // Neighbors swing in quickly, then hold their angle like a coverflow stack.
+      tile.style.setProperty('--cover-angle', reducedMotion() ? '0deg' : `${-Math.sign(distance) * Math.min(tilt, magnitude * tilt)}deg`);
       slot.classList.toggle('is-centered', index === current);
     });
     onBrowse(keys[items[current].index]);
