@@ -13,7 +13,7 @@ import { createReveal } from './reveal.js';
 import { initializeSharing } from './share.js';
 import { initializeUpdates } from './updates.js';
 import { initializeFullscreen } from './fullscreen.js';
-import { rememberFinishedRound, showHomeAd } from './ads.js';
+import { closeHomeAd, rememberFinishedRound, showHomeAd } from './ads.js';
 import appVersion from 'empire:version';
 
 // Compose the controllers here. Modules own their state and communicate through these
@@ -67,7 +67,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetHomeForm: () => home.reset(),
     fitTable: () => lobby.fitTable(),
     refreshLobby: () => lobby.render(),
-    openHome: () => showHomeAd($('homeAd'), $('homeAdBox'))
+    openHome: () => showHomeAd($('homeAd'), $('homeAdBox')),
+    closeHome: () => closeHomeAd($('homeAdBox'))
   });
   initializeSheets();
   initializeFullscreen(ui);

@@ -1,10 +1,11 @@
 import { $ } from './dom.js';
 
 // Owns screen visibility and small display helpers; screen controllers are supplied by the entry point.
-export function createUI({ resetHomeForm, fitTable, refreshLobby, openHome }) {
+export function createUI({ resetHomeForm, fitTable, refreshLobby, openHome, closeHome }) {
   const screens = { home: $('homeScreen'), setup: $('setupScreen'), lobby: $('lobbyScreen') };
   let homeFormStale = false;
   function show(name) {
+    if (name !== 'home') closeHome();
     if (name !== 'home' && homeFormStale) {
       resetHomeForm();
       homeFormStale = false;

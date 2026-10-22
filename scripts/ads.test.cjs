@@ -83,3 +83,50 @@ test('a box removed before the loader arrives gets no ad, so its replacement can
   await settle();
   assert.deepEqual(h.shown, [[replacement, 'room/round-1']]);
 });
+
+// A box in a fake page: replaceWith disconnects it, cloneNode gives an empty connected copy.
+function fakeBox({ filled = false } = {}) {
+  const box = {
+    isConnected: true,
+    querySelector: () => filled ? {} : null,
+    cloneNode: () => { box.copy = fakeBox(); return box.copy; },
+    replaceWith: copy => { box.isConnected = false; box.replacedBy = copy; }
+  };
+  return box;
+}
+
+test('a new round gets a fresh box, because the loader refuses a box that holds an ad', async () => {
+  const h = harness();
+  const aside = { hidden: true };
+  const first = fakeBox({ filled: true });
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd(aside, first);
+  h.context.rememberFinishedRound('room/round-2');
+  h.context.showHomeAd(aside, first);
+  h.added[0].listeners.load();
+  await settle();
+  assert.equal(first.isConnected, false);
+  assert.deepEqual(h.shown, [[first.copy, 'room/round-2']]);
+});
+
+test('closing Home replaces a box still waiting for its ad, so nothing is requested in the hidden screen', async () => {
+  const h = harness();
+  const box = fakeBox();
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd({ hidden: true }, box);
+  h.context.closeHomeAd(box);
+  h.added[0].listeners.load();
+  await settle();
+  assert.equal(box.isConnected, false);
+  assert.equal(h.shown.length, 0);
+  h.context.showHomeAd({ hidden: true }, box.copy);
+  await settle();
+  assert.deepEqual(h.shown, [[box.copy, 'room/round-1']]);
+});
+
+test('closing Home keeps a box that already holds its ad', () => {
+  const h = harness();
+  const box = fakeBox({ filled: true });
+  h.context.closeHomeAd(box);
+  assert.equal(box.isConnected, true);
+});
