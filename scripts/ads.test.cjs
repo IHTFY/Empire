@@ -10,16 +10,18 @@ class FakeScript {
   remove() { this.removed = true; }
 }
 
-function harness({ onLine = true } = {}) {
+function harness({ onLine = true, key = null, cookie = '' } = {}) {
   const added = [];
   const shown = [];
   const storage = new Map();
   const context = vm.createContext({
     navigator: { onLine },
     document: {
+      cookie,
       createElement: () => new FakeScript(),
       head: { appendChild: el => { added.push(el); } }
     },
+    localStorage: { getItem: name => (name === 'ihtfy-ad-free' ? key : null) },
     sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) },
     window: { ihtfyAds: { show: (box, key) => shown.push([box, key]) } }
   });
@@ -150,4 +152,34 @@ test('closing Home keeps a box that already holds its ad', () => {
   const box = fakeBox({ filled: true });
   h.context.closeHomeAd(box);
   assert.equal(box.isConnected, true);
+});
+
+test('without an ad-free key, startup loads nothing', () => {
+  const h = harness({ cookie: 'other=1' });
+  h.context.loadForBuyer();
+  assert.equal(h.added.length, 0);
+});
+
+test('with an ad-free key in storage, startup loads the loader once and a later ad reuses it', async () => {
+  const h = harness({ key: 'x.y.z' });
+  h.context.loadForBuyer();
+  assert.equal(h.added.length, 1);
+  assert.equal(h.added[0].src, 'https://ihtfy.com/ads/v1.js');
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd({ hidden: true }, { isConnected: true });
+  assert.equal(h.added.length, 1);
+});
+
+test('with only the ad-free cookie, startup loads the loader', () => {
+  const h = harness({ cookie: 'a=1; ihtfy-ad-free=x.y.z' });
+  h.context.loadForBuyer();
+  assert.equal(h.added.length, 1);
+});
+
+test('a failed startup load stays quiet', async () => {
+  const h = harness({ key: 'x.y.z' });
+  h.context.loadForBuyer();
+  h.added[0].listeners.error();
+  await settle();
+  assert.equal(h.added[0].removed, true);
 });

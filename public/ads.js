@@ -1,7 +1,9 @@
 // The ad on the home screen comes from the shared IHTFY loader, which ihtfy.com serves
 // for all the games (its source is in the IHTFY/com.ihtfy repo). Nothing ad-related loads
 // until a player has finished a round and is back home: the loader arrives then, and
-// AdSense after it at browser idle. Rooms never show ads.
+// AdSense after it at browser idle. The one exception is a visitor who may have bought
+// ad-free (loadForBuyer): the loader comes at startup so it can hide the ad box before it
+// shows. Rooms never show ads.
 const LOADER = 'https://ihtfy.com/ads/v1.js';
 
 // The last round this tab played in, as "room/round". It lasts for the tab, so ending a
@@ -18,9 +20,7 @@ function finishedRound() {
 
 let loader = null;
 
-// Fills `box` with an ad for the game over named `key`; offline or on failure it stays empty.
-function showAd(box, key) {
-  if (!navigator.onLine) return;
+function load() {
   loader ??= new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.async = true;
@@ -33,8 +33,22 @@ function showAd(box, key) {
     });
     document.head.appendChild(script);
   });
+  return loader;
+}
+
+// Called once at startup. A visitor with an ad-free key (local storage, or the cookie
+// ihtfy.com sets) gets the loader right away, which hides the ad box before it appears.
+export function loadForBuyer() {
+  let stored = null;
+  try { stored = localStorage.getItem('ihtfy-ad-free'); } catch (err) { /* storage off: the cookie may still hold it */ }
+  if (stored || /(?:^|;\s*)ihtfy-ad-free=/.test(document.cookie)) load().catch(() => {});
+}
+
+// Fills `box` with an ad for the game over named `key`; offline or on failure it stays empty.
+function showAd(box, key) {
+  if (!navigator.onLine) return;
   // A box removed while the loader was on its way would hold the key and block its replacement.
-  loader.then(() => box.isConnected && window.ihtfyAds.show(box, key), () => {});
+  load().then(() => box.isConnected && window.ihtfyAds.show(box, key), () => {});
 }
 
 // The round the current box was set up for. The loader refuses a box that already holds an
