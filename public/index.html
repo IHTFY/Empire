@@ -89,60 +89,69 @@
     </svg>
 
     <main class="app">
-      <!-- 1 · Home: create or join -->
-      <section id="homeScreen" class="screen screen-home" aria-label="Create or join a room">
-        <div class="bar">
-          <button type="button" class="link-btn" data-open="rulesDialog" aria-label="How to play">
-            <svg class="icon"><use href="#i-info" /></svg><span class="home-help-label">How to play</span>
-          </button>
-          <div class="bar-group">
-            <button type="button" class="icon-btn" data-fullscreen aria-label="Enter fullscreen" hidden><svg class="icon"><use href="#i-fullscreen" /></svg></button>
-            <button type="button" class="icon-btn sound-btn" data-open="audioDialog" aria-label="Sound settings">
-              <svg class="icon"><use href="#i-sound-off" /></svg>
+      <!-- 1 · Home: create or join. After a finished round, an ad sits below the fold. -->
+      <div class="home-page">
+        <section id="homeScreen" class="screen screen-home" aria-label="Create or join a room">
+          <div class="bar">
+            <button type="button" class="link-btn" data-open="rulesDialog" aria-label="How to play">
+              <svg class="icon"><use href="#i-info" /></svg><span class="home-help-label">How to play</span>
             </button>
-          </div>
-        </div>
-
-        <div class="hero">
-          <div class="hero-logo">
-            <span class="halo"></span><span class="halo halo-2"></span>
-            <img src="images/icons/256.png" alt="Empire logo" width="150" height="150" />
-          </div>
-          <h1 class="display hero-title rise">Empire</h1>
-          <p class="hero-tagline rise" style="animation-delay: 0.08s">The party game of secret names. Guess them all, rule them all.</p>
-        </div>
-
-        <form id="roomForm" class="card rise" style="animation-delay: 0.16s" data-mode="create" novalidate>
-          <div class="mode-switch" role="group" aria-label="Create or join">
-            <button type="button" id="modeCreate" aria-pressed="true">Create a room</button>
-            <button type="button" id="modeJoin" aria-pressed="false">Join a room</button>
-          </div>
-          <div class="stack-sm">
-            <label for="userGameCode" class="eyebrow">Room name</label>
-            <div class="field-row">
-              <div class="room-name-field" id="roomNameField">
-                <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
-                <div class="room-name-roll" id="roomNameRoll" aria-hidden="true"></div>
-              </div>
-              <button type="button" id="rerollName" class="icon-btn reroll-btn" aria-label="Suggest another room name" title="Suggest another room name">
-                <svg class="icon"><use href="#i-refresh" /></svg>
+            <div class="bar-group">
+              <button type="button" class="icon-btn" data-fullscreen aria-label="Enter fullscreen" hidden><svg class="icon"><use href="#i-fullscreen" /></svg></button>
+              <button type="button" class="icon-btn sound-btn" data-open="audioDialog" aria-label="Sound settings">
+                <svg class="icon"><use href="#i-sound-off" /></svg>
               </button>
             </div>
-            <p id="userGameCodeHelper" class="field-error" role="alert"></p>
           </div>
-          <div class="mode-extra">
-            <div id="passField" class="mode-panel" inert>
-              <div class="stack-sm">
-                <label for="roomPass" class="eyebrow">Password</label>
-                <input id="roomPass" class="field field-pass" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ABCDEF" enterkeyhint="go" />
-                <p id="roomPassHelper" class="field-error" role="alert"></p>
-              </div>
+
+          <div class="hero">
+            <div class="hero-logo">
+              <span class="halo"></span><span class="halo halo-2"></span>
+              <img src="images/icons/256.png" alt="Empire logo" width="150" height="150" />
             </div>
-            <div id="createHint" class="mode-panel"><p class="hint">Keep the suggested name or type your own. The room gets a password to share with friends.</p></div>
+            <h1 class="display hero-title rise">Empire</h1>
+            <p class="hero-tagline rise" style="animation-delay: 0.08s">The party game of secret names. Guess them all, rule them all.</p>
           </div>
-          <button id="roomSubmit" type="submit" class="btn btn-gold"><span class="sheen"></span><span id="roomSubmitLabel">Create</span></button>
-        </form>
-      </section>
+
+          <form id="roomForm" class="card rise" style="animation-delay: 0.16s" data-mode="create" novalidate>
+            <div class="mode-switch" role="group" aria-label="Create or join">
+              <button type="button" id="modeCreate" aria-pressed="true">Create a room</button>
+              <button type="button" id="modeJoin" aria-pressed="false">Join a room</button>
+            </div>
+            <div class="stack-sm">
+              <label for="userGameCode" class="eyebrow">Room name</label>
+              <div class="field-row">
+                <div class="room-name-field" id="roomNameField">
+                  <input id="userGameCode" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" enterkeyhint="go" />
+                  <div class="room-name-roll" id="roomNameRoll" aria-hidden="true"></div>
+                </div>
+                <button type="button" id="rerollName" class="icon-btn reroll-btn" aria-label="Suggest another room name" title="Suggest another room name">
+                  <svg class="icon"><use href="#i-refresh" /></svg>
+                </button>
+              </div>
+              <p id="userGameCodeHelper" class="field-error" role="alert"></p>
+            </div>
+            <div class="mode-extra">
+              <div id="passField" class="mode-panel" inert>
+                <div class="stack-sm">
+                  <label for="roomPass" class="eyebrow">Password</label>
+                  <input id="roomPass" class="field field-pass" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ABCDEF" enterkeyhint="go" />
+                  <p id="roomPassHelper" class="field-error" role="alert"></p>
+                </div>
+              </div>
+              <div id="createHint" class="mode-panel"><p class="hint">Keep the suggested name or type your own. The room gets a password to share with friends.</p></div>
+            </div>
+            <button id="roomSubmit" type="submit" class="btn btn-gold"><span class="sheen"></span><span id="roomSubmitLabel">Create</span></button>
+          </form>
+        </section>
+
+        <!-- At least 150px below the form; the box keeps its size whether or not an ad fills it. -->
+        <aside id="homeAd" class="home-ad" hidden>
+          <p class="muted small">Advertisements</p>
+          <div id="homeAdBox" class="home-ad-box" data-ad-slot="6470163205"></div>
+          <a class="muted small" href="https://ihtfy.com/privacy">Privacy</a>
+        </aside>
+      </div>
 
       <!-- 2 · Pick names -->
       <section id="setupScreen" class="screen screen-setup" aria-label="Pick your names" hidden>

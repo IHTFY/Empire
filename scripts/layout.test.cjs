@@ -113,6 +113,16 @@ test('Every game screen contains its panels and scrolls only inside them', async
         await contains(id === 'homeScreen' ? '#roomSubmit' : '#submitNames', id + ' submit before any scrolling');
         await noPageScroll();
       }
+      // After a finished round the ad sits below the unchanged home screen, out of the way.
+      await page.evaluate(() => { window.showScreen('homeScreen'); document.querySelector('#homeAd').hidden = false; });
+      await contains('#roomSubmit', 'home submit beside the ad');
+      const ad = await page.evaluate(() => {
+        const box = document.querySelector('#homeAdBox').getBoundingClientRect();
+        return { gap: box.top - document.querySelector('#roomSubmit').getBoundingClientRect().bottom, width: box.width, height: box.height };
+      });
+      assert(ad.gap >= 150 && ad.width === 300 && ad.height === 250, `Home ad box: ${JSON.stringify(ad)}`);
+      await noPageScroll();
+      await page.evaluate(() => { document.querySelector('#homeAd').hidden = true; });
       await page.evaluate(() => window.showScreen('lobbyScreen'));
       for (const [players, watchers] of [[2,0], [11,3], [30,15]]) {
         await page.evaluate(([n,w]) => window.populate(n,w), [players, watchers]);
