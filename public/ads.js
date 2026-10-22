@@ -41,6 +41,11 @@ function showAd(box, key) {
 // ad, so a new round gets a fresh box.
 let boxRound = null;
 
+// How many waiting boxes Home has canceled. The loader holds a round's key until its request
+// settles, so a request for a canceled box would block the replacement; after a cancel the
+// next request uses a fresh key and the canceled one just exits.
+let cancels = 0;
+
 // Swaps `box` for an empty copy. The old one is no longer connected, so ad work still
 // waiting on it does nothing.
 function freshBox(box) {
@@ -57,11 +62,13 @@ export function showHomeAd(aside, box) {
   if (boxRound !== null && boxRound !== key) box = freshBox(box);
   boxRound = key;
   aside.hidden = false;
-  showAd(box, key);
+  showAd(box, cancels ? `${key}#${cancels}` : key);
 }
 
 // Called when Home closes: a box still waiting for its ad is replaced, so nothing is
 // requested inside the hidden screen. A filled box stays for the round.
 export function closeHomeAd(box) {
-  if (!box.querySelector('ins.adsbygoogle')) freshBox(box);
+  if (box.querySelector('ins.adsbygoogle')) return;
+  cancels++;
+  freshBox(box);
 }

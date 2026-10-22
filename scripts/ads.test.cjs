@@ -121,7 +121,28 @@ test('closing Home replaces a box still waiting for its ad, so nothing is reques
   assert.equal(h.shown.length, 0);
   h.context.showHomeAd({ hidden: true }, box.copy);
   await settle();
-  assert.deepEqual(h.shown, [[box.copy, 'room/round-1']]);
+  assert.deepEqual(h.shown, [[box.copy, 'room/round-1#1']]);
+});
+
+test('a canceled request still holding its round key does not block the replacement', async () => {
+  const h = harness();
+  const pendingKeys = new Set();
+  h.context.window.ihtfyAds.show = (box, key) => {
+    if (pendingKeys.has(key)) return;
+    pendingKeys.add(key);
+    h.shown.push([box, key]);
+  };
+  h.context.rememberFinishedRound('room/round-1');
+  const box = fakeBox();
+  h.context.showHomeAd({ hidden: true }, box);
+  h.added[0].listeners.load();
+  await settle();
+  h.context.closeHomeAd(box);
+  h.context.showHomeAd({ hidden: true }, box.copy);
+  await settle();
+  assert.equal(h.shown.length, 2);
+  assert.notEqual(h.shown[0][1], h.shown[1][1]);
+  assert.equal(h.shown[1][0], box.copy);
 });
 
 test('closing Home keeps a box that already holds its ad', () => {
