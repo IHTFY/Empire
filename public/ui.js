@@ -1,10 +1,11 @@
 import { $ } from './dom.js';
 
 // Owns screen visibility and small display helpers; screen controllers are supplied by the entry point.
-export function createUI({ resetHomeForm, fitTable, refreshLobby }) {
+export function createUI({ resetHomeForm, fitTable, refreshLobby, openHome, closeHome }) {
   const screens = { home: $('homeScreen'), setup: $('setupScreen'), lobby: $('lobbyScreen') };
   let homeFormStale = false;
   function show(name) {
+    if (name !== 'home') closeHome();
     if (name !== 'home' && homeFormStale) {
       resetHomeForm();
       homeFormStale = false;
@@ -13,6 +14,7 @@ export function createUI({ resetHomeForm, fitTable, refreshLobby }) {
     window.scrollTo(0, 0);
     requestAnimationFrame(fitMarquees);
     if (name === 'lobby') requestAnimationFrame(() => { fitTable(); refreshLobby(); });
+    if (name === 'home') openHome();
   }
 
   // Text too long for its box (like a long room code) glides to its end and back.

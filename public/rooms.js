@@ -28,7 +28,7 @@ export function rememberedRoom() {
 export function createRooms({
   db, ensureSignedIn, getUid, ui, audio,
   onChange, onDetach, onRoundReset, onEnter, onUsers, onEliminated,
-  onPlaybackStart, onPlaybackStop, openSetup, setSecret
+  onPlaybackStart, onPlaybackStop, onRoundLocked, openSetup, setSecret
 }) {
   const { show, toast, fitMarquees } = ui;
   const realName = $('realName');
@@ -177,6 +177,13 @@ export function createRooms({
     listen(db.ref(`games/${gameID}/locked`), snapshot => {
       locked = snapshot.val() === true;
       onChange();
+      // A player whose names were revealed has played this round; Home may show an ad after it.
+      if (locked && users[getUid()]) {
+        const code = gameID;
+        db.ref(`games/${code}/roundId`).once('value')
+          .then(round => { if (round.val()) onRoundLocked(`${code}/${round.val()}`); })
+          .catch(err => console.error(err));
+      }
     });
 
     if (!users[getUid()] && locked) {

@@ -70,6 +70,13 @@ body:has(.screen-home:not([hidden])) {
 .room-pass { font-size: 14px; color: var(--muted); }
 .room-pass strong { margin-left: 6px; font-family: var(--mono); font-size: 17px; letter-spacing: .18em; color: var(--gold-hi); user-select: all; }
 
+/* After a finished round, Home scrolls down to one ad below the unchanged screen. The scroller
+   is sized from the viewport, not its parents: AdSense sets `height: auto` on an ad's ancestors. */
+.home-page { height: 100vh; height: 100dvh; overflow-y: auto; }
+.home-page:has(> #homeScreen[hidden]) { display: none; }
+.home-ad { display: grid; justify-items: center; gap: 6px; padding: 150px 10px 24px; }
+.home-ad-box { width: 300px; height: 250px; min-height: 250px; }
+
 /* Container and viewport changes also ease the hero artwork and type sizes. */
 .hero-logo { transition: width .35s var(--ease), height .35s var(--ease); }
 .hero-title, .hero-tagline { transition: font-size .35s var(--ease); }

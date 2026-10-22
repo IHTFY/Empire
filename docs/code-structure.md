@@ -25,6 +25,7 @@ Read it first to see how the app is connected.
 | `sheets.js` | Dialog buttons, animation, drag-to-dismiss gestures |
 | `bots.js` | Word-list loading and adding bots |
 | `share.js` | Native sharing and clipboard fallback |
+| `ads.js` | The finished round, the shared ad loader, the Home ad below the fold |
 
 `crest.js`, `room-names.js`, and `presence.js` are focused data/formatting helpers.
 `config.js` contains client limits and timing; `dom.js` provides the DOM lookup helper.
