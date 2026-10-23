@@ -12,6 +12,7 @@ import { createBots } from './bots.js';
 import { createReveal } from './reveal.js';
 import { initializeSharing } from './share.js';
 import { initializeUpdates } from './updates.js';
+import { initializeIdle } from './idle.js';
 import { initializeFullscreen } from './fullscreen.js';
 import { closeHomeAd, loadForBuyer, rememberFinishedRound, showHomeAd } from './ads.js';
 import appVersion from 'empire:version';
@@ -20,6 +21,7 @@ import appVersion from 'empire:version';
 // callbacks, so they do not import each other in a cycle or rely on application globals.
 document.addEventListener('DOMContentLoaded', async () => {
   initializeUpdates(appVersion);
+  initializeIdle();
   loadForBuyer();
   try {
     await window.empireFirebaseReady;
