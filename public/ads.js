@@ -41,7 +41,9 @@ function load() {
 export function loadForBuyer() {
   let stored = null;
   try { stored = localStorage.getItem('ihtfy-ad-free'); } catch (err) { /* storage off: the cookie may still hold it */ }
-  if (stored || /(?:^|;\s*)ihtfy-ad-free=/.test(document.cookie)) load().catch(() => {});
+  let cookie = '';
+  try { cookie = document.cookie; } catch (err) { /* cookies off too (a sandboxed frame): the page must still start */ }
+  if (stored || /(?:^|;\s*)ihtfy-ad-free=/.test(cookie)) load().catch(() => {});
 }
 
 // Fills `box` with an ad for the game over named `key`; offline or on failure it stays empty.
