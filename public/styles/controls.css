@@ -77,6 +77,8 @@
 }
 .btn > span:not(.sheen):not(.spinner) { position: relative; }
 @keyframes sheen { 0% { transform: translateX(-120%) skewX(-20deg); } 60%, 100% { transform: translateX(260%) skewX(-20deg); } }
+/* idle.js puts .idle on the page after 15 s without input and while the tab is hidden. */
+.idle :is(.btn-gold, .icon-btn-gold, .chip, .foil, .switch, .sheen, .halo, .hero-logo img, .crest-btn .crest) { animation-play-state: paused; }
 
 .spinner {
   width: 20px; height: 20px; border-radius: 50%;
