@@ -183,3 +183,11 @@ test('a failed startup load stays quiet', async () => {
   await settle();
   assert.equal(h.added[0].removed, true);
 });
+
+test('startup goes on when storage and cookies both throw', () => {
+  const h = harness();
+  h.context.localStorage.getItem = () => { throw new Error('denied'); };
+  Object.defineProperty(h.context.document, 'cookie', { get() { throw new Error('denied'); } });
+  assert.doesNotThrow(() => h.context.loadForBuyer());
+  assert.equal(h.added.length, 0);
+});
