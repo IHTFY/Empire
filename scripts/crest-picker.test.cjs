@@ -89,6 +89,7 @@ test('The crest editor switches tabs and applies each choice', async t => {
   await page.focus('#crestPanel-ink .crest-pad-cell[tabindex="0"]');
   await page.keyboard.press('ArrowLeft');
   assert.match(await value(), /\.palecrimson$/, 'an arrow from Auto starts at the top left');
+  await page.click('#crestPanel-ink [data-value="auto"]');
   // Coming back to a tab mid-animation still scrolls its chosen tile into view.
   await page.click('#crestTab-emblem');
   await page.click('#crestPanel-emblem [data-value="letter"]');
