@@ -70,12 +70,36 @@ body:has(.screen-home:not([hidden])) {
 .room-pass { font-size: 14px; color: var(--muted); }
 .room-pass strong { margin-left: 6px; font-family: var(--mono); font-size: 17px; letter-spacing: .18em; color: var(--gold-hi); user-select: all; }
 
-/* After a finished round, Home scrolls down to one ad below the unchanged screen. The scroller
-   is sized from the viewport, not its parents: AdSense sets `height: auto` on an ad's ancestors. */
+/* After a finished round, Home shares the screen with one ad: the ad box sits below the form,
+   inside the viewport, in the largest size the loader offers that leaves the form usable. The
+   box is 50px or more from the Create button and 52px from the Privacy link, and nothing
+   overlaps it. The scroller is sized from the viewport, not its parents: AdSense sets
+   `height: auto` on an ad's ancestors. */
 .home-page { height: 100vh; height: 100dvh; overflow-y: auto; }
 .home-page:has(> #homeScreen[hidden]) { display: none; }
-.home-ad { display: grid; justify-items: center; gap: 6px; padding: 150px 10px 24px; }
-.home-ad-box { width: 300px; height: 250px; min-height: 250px; }
+.home-page:has(> .home-ad:not([hidden])) { display: flex; flex-direction: column; }
+.home-page:has(> .home-ad:not([hidden])) > .screen-home { flex-grow: 1; flex-basis: 0; height: auto; padding-bottom: 8px; }
+/* While Home picks the ad size it measures the settled layout, not a mid-transition one. */
+.home-page.measuring, .home-page.measuring * { transition: none !important; }
+.home-ad { flex: none; display: grid; justify-items: center; gap: 6px; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); }
+.home-ad p { line-height: 1.2; }
+.home-ad-box { width: 300px; height: 250px; min-height: 250px; margin-bottom: 46px; }
+.home-ad-box[data-ad-size="320x100"] { width: 320px; height: 100px; min-height: 100px; }
+.home-ad-box[data-ad-size="320x50"] { width: 320px; height: 50px; min-height: 50px; }
+/* Short phone windows give the form its compact spacing so the ad fits too. */
+@media (max-height: 700px) {
+  .home-page:has(> .home-ad:not([hidden])) #roomForm { padding: 12px; gap: 8px; }
+  .home-page:has(> .home-ad:not([hidden])) .mode-switch button { height: 36px; }
+  .home-page:has(> .home-ad:not([hidden])) #roomForm .stack-sm { gap: 4px; }
+  .home-page:has(> .home-ad:not([hidden])) #roomForm :is(.field, .reroll-btn, .btn) { height: 44px; }
+  .home-page:has(> .home-ad:not([hidden])) #roomForm .reroll-btn { width: 44px; }
+  .home-page:has(> .home-ad:not([hidden])) #roomForm :is(.field-error, .hint) { font-size: 12px; }
+}
+
+/* Toasts leave the bottom while Home shows its ad, so nothing covers it. */
+body:has(.home-page:not(:has(> #homeScreen[hidden])) > .home-ad:not([hidden])) .toast { top: max(16px, env(safe-area-inset-top)); bottom: auto; transform: translate(-50%, -140%); }
+body:has(.home-page:not(:has(> #homeScreen[hidden])) > .home-ad:not([hidden])) .toast.show { transform: translate(-50%, 0); }
+body:has(.home-page:not(:has(> #homeScreen[hidden])) > .home-ad:not([hidden])) .update-toast { top: max(16px, env(safe-area-inset-top)); bottom: auto; }
 
 /* Container and viewport changes also ease the hero artwork and type sizes. */
 .hero-logo { transition: width .35s var(--ease), height .35s var(--ease); }

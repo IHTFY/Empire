@@ -24,6 +24,7 @@ export function openSheet(dialog) {
     frame.src = '/how-to.html';
     oldFrame.replaceWith(frame);
   }
+  document.dispatchEvent(new CustomEvent('sheetopen'));
   dialog.showModal();
 }
 
