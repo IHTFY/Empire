@@ -18,84 +18,96 @@
   background: var(--foil); border: 2px solid var(--bg); color: var(--gold-ink);
 }
 .crest-edit .icon { width: 14px; height: 14px; }
-.crest-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
-.crest-head .sheet-title { margin: 0; }
-.crest-big { position: relative; inset: auto; width: 64px; height: 64px; flex-shrink: 0; }
-#crestNote.taken { color: #FFB23D; font-weight: 700; }
-.crest-options { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 4px 5px 2px; margin: 0 -5px; }
-.crest-group { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-shrink: 0; }
-.crest-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.crest-group-head .eyebrow { font-size: 12px; }
-.crest-row-controls { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.crest-selection { color: var(--muted); font-size: 11px; margin-right: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.crest-row-arrow { display: flex; align-items: center; justify-content: center; width: 26px; height: 24px; padding: 4px; flex-shrink: 0; border: none; border-radius: 8px; color: var(--muted); background: transparent; }
-.crest-row-arrow svg { width: 16px; height: 16px; }
-.crest-row-arrow:hover:not(:disabled) { color: var(--gold-hi); background: var(--field); }
-.crest-row-arrow:disabled { opacity: .25; cursor: default; }
-.crest-row-arrow:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 1px; }
-.crest-rail { position: relative; min-width: 0; isolation: isolate; }
-.crest-rail { -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent); mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent); }
-/* A soft spotlight marks the center slot, so the selection reads even mid-swipe. */
-.crest-rail::before {
-  content: ''; position: absolute; left: 50%; top: 50%; z-index: -1; width: 150px; height: 100%; pointer-events: none;
-  transform: translate(-50%, -50%); opacity: .5; transition: opacity .24s var(--ease);
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 38%, transparent), transparent);
+/* The crest editor: a large crest, one tab per part, and the chosen tab's options. */
+#crestDialog { height: min(88dvh, 820px); }
+#crestDialog .sheet-title { margin: 0; text-align: center; }
+.crest-stage { position: relative; display: flex; justify-content: center; height: clamp(88px, 24dvh, 220px); margin: 4px 0 6px; }
+.crest-big { position: relative; inset: auto; height: 100%; aspect-ratio: 1; }
+.crest-big .crest { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)); }
+.crest-note {
+  position: absolute; left: 50%; bottom: 0; width: max-content; max-width: 100%; margin: 0; padding: 6px 12px; border-radius: 10px;
+  background: var(--surface-2); color: var(--gold-hi); font-weight: 700; text-align: center; box-shadow: 0 6px 16px rgba(0, 0, 0, .4);
+  opacity: 0; transform: translate(-50%, 4px); transition: opacity .2s var(--ease), transform .2s var(--ease); pointer-events: none;
 }
-.crest-group.is-active .crest-rail::before { opacity: 1; }
-.crest-grid { --cover-step: 44px; --cover-size: 54px; position: relative; display: flex; align-items: center; gap: 0; overflow-x: auto; overflow-y: hidden; height: 62px; padding: 4px 0; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; transition: height .24s var(--ease); }
-.crest-grid::-webkit-scrollbar { display: none; }
-.crest-group.is-active .crest-grid { --cover-size: 100px; height: 108px; }
-.crest-group[data-part="color"] .crest-grid { --cover-step: 34px; --cover-size: 34px; height: 48px; }
-.crest-group[data-part="color"].is-active .crest-grid { --cover-size: 44px; height: 56px; }
-.crest-carousel-item { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 var(--cover-step); width: var(--cover-step); height: 100%; scroll-snap-align: center; }
-/* Keep native row swipes and vertical overflow scrolling; the sheet grip still drags. */
-#crestDialog, #crestDialog .crest-options, #crestDialog .crest-grid { touch-action: pan-x pan-y; }
-#crestDialog .sheet-grip, #crestDialog .crest-head, #crestDialog > .row-2 { touch-action: none; }
-.crest-grid .crest-tile {
-  width: var(--cover-size); height: var(--cover-size); flex: 0 0 var(--cover-size); opacity: var(--cover-opacity, 1);
-  filter: brightness(var(--cover-dim, 1)) saturate(calc(.4 + var(--cover-dim, 1) * .6));
-  transform: perspective(360px) translateX(var(--cover-shift, 0px)) rotateY(var(--cover-angle, 0deg)) scale(var(--cover-scale, 1));
+.crest-note.taken { opacity: 1; transform: translate(-50%, 0); }
+.crest-tabs { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.crest-tab {
+  height: 44px; padding: 0 2px; border: none; background: none; color: var(--muted);
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; transition: color .2s;
 }
-.crest-grid .crest-tile .crest { filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .45)); }
-/* Crests sit on the rail without a plate; the centered one lifts with a deeper shadow and glow. */
-.crest-grid .crest-tile:not(.crest-swatch) { padding: 1px; border-color: transparent; background: transparent; box-shadow: none; }
-.crest-grid .is-centered .crest-tile .crest { filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .55)) drop-shadow(0 0 14px color-mix(in srgb, var(--gold) 28%, transparent)); }
-.crest-grid .is-centered .crest-swatch { background: var(--c); border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold), 0 0 14px color-mix(in srgb, var(--gold) 30%, transparent), 0 6px 14px rgba(0, 0, 0, .45); }
-/* Colors must stay judgeable away from the center, so swatches dim only lightly. */
-.crest-grid .crest-swatch { filter: brightness(calc(.6 + var(--cover-dim, 1) * .4)); }
-/* While browsing, only the centered cover carries the selection treatment. */
-.crest-grid .crest-carousel-item:not(.is-centered) .crest-swatch { border-color: rgba(244, 241, 232, .14); background: var(--c); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25); }
-.crest-group.is-active .crest-group-head > .eyebrow { color: var(--gold-hi); }
-.crest-grid .crest-swatch { margin: 0; }
+.crest-tab[aria-selected="true"] { color: var(--ink); }
+.crest-tab:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: -2px; border-radius: 8px; }
+.crest-tab-indicator { position: absolute; left: 0; bottom: -1px; height: 3px; border-radius: 2px; background: var(--foil); transition: transform .25s var(--ease), width .25s var(--ease); }
+.crest-tab-indicator.no-motion { transition: none; }
+.crest-options { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; margin: 0 -6px; }
+.crest-panel { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 6px; overscroll-behavior: contain; scrollbar-width: thin; }
+.crest-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.crest-grid-label { display: block; margin: 0 2px 8px; }
+.crest-grid + .crest-grid-label { margin-top: 16px; }
 .crest-tile {
-  position: relative; aspect-ratio: 1; padding: 4px; border-radius: 12px;
-  border: 1.5px solid transparent; background: var(--field);
-  transition: width .24s var(--ease), height .24s var(--ease), flex-basis .24s var(--ease), margin .24s var(--ease), transform .14s cubic-bezier(.3, .7, .4, 1), border-color .2s, background-color .2s, box-shadow .2s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 8px 4px 6px;
+  border: 1.5px solid var(--line); border-radius: 14px; background: var(--field); color: var(--ink);
+  transition: transform .12s cubic-bezier(.3, .7, .4, 1), border-color .2s, background-color .2s, box-shadow .2s;
 }
-.crest-tile .crest { filter: none; }
-.crest-tile:active { transform: scale(.92); }
-.crest-grid .crest-tile:active { transform: perspective(360px) translateX(var(--cover-shift, 0px)) rotateY(var(--cover-angle, 0deg)) scale(calc(var(--cover-scale, 1) * .96)); }
-.crest-tile[aria-pressed="true"] { border-color: var(--gold); background: rgba(255, 122, 26, .14); }
-.crest-tile:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
-.crest-swatch { padding: 0; background: var(--c); border-radius: 50%; border: 2px solid rgba(244, 241, 232, .14); }
-.crest-swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 3px var(--gold); background-color: var(--c); }
-.crest-metals { display: flex; gap: 10px; align-items: center; padding: 3px 4px 4px; }
-.crest-metals .eyebrow { flex-shrink: 0; }
-.crest-trim-controls { display: flex; flex: 1; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; min-width: 0; }
-.crest-trim-styles, .crest-trim-metals { display: flex; align-items: center; gap: 5px; }
-.crest-trim-styles .crest-tile { flex-shrink: 0; width: 30px; height: 30px; padding: 2px; border-radius: 50%; }
-.crest-trim-metals { margin-left: auto; }
-.crest-metals .crest-swatch { flex-shrink: 0; width: 22px; height: 22px; aspect-ratio: auto; }
-#crestDialog .crest-head { flex-shrink: 0; }
-#crestDialog .row-2 { margin-top: 8px; flex-shrink: 0; }
+.crest-tile-art { display: flex; width: 100%; max-width: 64px; aspect-ratio: 1; }
+.crest-tile-art .crest { filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .4)); }
+.crest-tile-label { max-width: 100%; color: var(--muted); font-size: 12px; line-height: 1.2; text-align: center; overflow-wrap: anywhere; transition: color .2s; }
+.crest-tile[aria-pressed="true"] { border-color: var(--gold); background: rgba(255, 122, 26, .12); box-shadow: 0 0 14px rgba(255, 122, 26, .22); }
+.crest-tile[aria-pressed="true"] .crest-tile-label { color: var(--ink); }
+.crest-tile:active { transform: scale(.94); }
+.crest-tile:focus-visible, .crest-ring-swatch:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.crest-swatch-tile .crest-tile-art { width: 62%; margin: 6px 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25), 0 0 0 1.5px rgba(244, 241, 232, .14); }
+/* Colors ring the crest on an ellipse that fills the panel; each swatch's slot is the
+   ring's share of the perimeter, so the buttons stay as large as the space allows. */
+.crest-panel-color { display: flex; overflow: hidden; container-type: size; }
+.crest-panel-color[hidden] { display: none; }
+.crest-ring { --pitch: clamp(24px, calc((100cqw + 100cqh) * .058 - 4px), 46px); position: relative; flex: 1; }
+.crest-ring-swatch {
+  --a: calc(var(--i) / var(--n) * 360deg - 90deg);
+  position: absolute; width: var(--pitch); height: var(--pitch); padding: 0; border: none; border-radius: 50%; background: none;
+  left: calc(50% + cos(var(--a)) * (50% - var(--pitch) / 2) - var(--pitch) / 2);
+  top: calc(50% + sin(var(--a)) * (50% - var(--pitch) / 2) - var(--pitch) / 2);
+}
+.crest-ring-swatch::before {
+  content: ''; position: absolute; inset: 12%; border-radius: 50%; background: var(--c);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25), 0 0 0 1.5px rgba(244, 241, 232, .14);
+  transition: transform .2s var(--ease), box-shadow .2s;
+}
+.crest-ring-swatch[aria-pressed="true"]::before { transform: scale(1.14); box-shadow: 0 0 0 2px var(--ink), 0 0 0 4.5px var(--gold), 0 0 14px rgba(255, 122, 26, .35); }
+.crest-ring-swatch:active::before { transform: scale(.9); }
+.crest-ring-center {
+  --size: max(48px, min(.7 * (100cqh - var(--pitch)) - var(--pitch) - 20px, .7 * (100cqw - var(--pitch)) - var(--pitch)));
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none;
+}
+.crest-ring-crest { display: flex; width: var(--size); height: var(--size); }
+.crest-ring-label { color: var(--ink); font-size: 13px; font-weight: 700; white-space: nowrap; }
+/* Keep native scrolling in the option panels; the sheet grip still drags. */
+#crestDialog .crest-panel { touch-action: pan-y; }
+#crestDialog .sheet-grip, #crestDialog .crest-stage, #crestDialog > .row-2 { touch-action: none; }
+#crestDialog .row-2 { margin-top: 8px; }
 #crestDialog .btn { height: 48px; min-height: 48px; padding-top: 10px; padding-bottom: 10px; font-size: 24px; }
-@media (max-width: 420px) {
-  .crest-metals { gap: 8px; }
-  .crest-trim-controls { column-gap: 8px; }
-  .crest-trim-styles, .crest-trim-metals { gap: 4px; }
-  .crest-trim-styles .crest-tile { width: 28px; height: 28px; }
-  .crest-metals .crest-swatch { width: 20px; height: 20px; }
-}
 @media (max-width: 360px) {
-  .crest-metals .eyebrow { align-self: flex-start; margin-top: 8px; }
+  .crest-tab { font-size: 12px; letter-spacing: 0; }
+  .crest-grid { gap: 6px; }
+}
+@media (max-height: 600px) {
+  #crestDialog { height: calc(100dvh - 16px); }
+  #crestDialog .sheet-title { font-size: 26px; }
+  .crest-stage { height: clamp(64px, 20dvh, 140px); }
+}
+/* Short, wide screens put the crest on the left and the options on the right. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #crestDialog { width: min(820px, calc(100% - 24px)); height: calc(100dvh - 16px); max-height: none; }
+  #crestDialog[open] {
+    display: grid; column-gap: 20px; row-gap: 4px;
+    grid-template: "grip grip" auto "title tabs" auto "stage options" minmax(0, 1fr) "stage actions" auto / minmax(0, 2fr) minmax(0, 3fr);
+  }
+  #crestDialog .sheet-grip { grid-area: grip; }
+  #crestDialog .sheet-title { grid-area: title; align-self: center; }
+  .crest-stage { grid-area: stage; height: auto; min-height: 0; margin: 0; align-items: center; }
+  .crest-big { height: auto; width: 100%; max-height: 100%; }
+  .crest-tabs { grid-area: tabs; }
+  .crest-options { grid-area: options; }
+  #crestDialog > .row-2 { grid-area: actions; margin-top: 4px; }
+  .crest-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 }

@@ -1,7 +1,6 @@
 import { $ } from './dom.js';
 import { openSheet } from './sheets.js';
-import { createCrestCarousel } from './crest-carousel.js';
-import { initialOf, SHAPE_CHOICES, COLOR_CHOICES, METALS, METAL_CHOICES, TRIMS, PATTERNS, EMBLEM_CHOICES, PART_OPTIONS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
+import { initialOf, SHAPE_CHOICES, COLOR_CHOICES, METAL_CHOICES, TRIMS, PATTERNS, EMBLEM_CHOICES, PART_OPTIONS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
 
 // Owns the editable crest and its device persistence; crest.js remains the drawing library.
 export function createCrestPicker({ getRoom, getUid }) {
@@ -27,7 +26,6 @@ export function createCrestPicker({ getRoom, getUid }) {
     placeholder = false;
     crest = parseCrest(saved);
     saveCrest();
-    if ($('crestDialog').open) requestAnimationFrame(() => centerRows());
   }
 
   // Another player in this room already bears the same crest (with the same letter, if any).
@@ -42,142 +40,180 @@ export function createCrestPicker({ getRoom, getUid }) {
     });
   }
 
-  // Each group lists its choices; tiles preview the choice on your current crest.
-  const crestGroups = [
-    { part: 'shape', label: 'Shape', options: SHAPE_CHOICES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'horsehead', 'pavise', 'vesica', 'lozenge', 'crescent', 'thureos', 'scutum', 'ancile', 'boeotian', 'vexillum', 'gonfanon', 'hoplon', 'heater', 'spanish', 'swiss', 'polish', 'bouche', 'kite', 'standard', 'tablet', 'peltast', 'banner', 'oval', 'pennon'] },
-    { part: 'color', label: 'Color', options: COLOR_CHOICES, swatch: true },
-    { part: 'pattern', label: 'Pattern', options: PATTERNS },
-    { part: 'emblem', label: 'Emblem', options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'aquila', 'doubleeagle', 'ouroboros', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'botonny', 'maltese', 'letter'] }
+  // One tab per part. Trim covers two parts: the border style and its metal.
+  const tabs = [
+    { id: 'shape', label: 'Shape', parts: { shape: { options: SHAPE_CHOICES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'horsehead', 'pavise', 'vesica', 'lozenge', 'crescent', 'thureos', 'scutum', 'ancile', 'boeotian', 'vexillum', 'gonfanon', 'hoplon', 'heater', 'spanish', 'swiss', 'polish', 'bouche', 'kite', 'standard', 'tablet', 'peltast', 'banner', 'oval', 'pennon'] } } },
+    { id: 'color', label: 'Color', parts: { color: { options: COLOR_CHOICES } } },
+    { id: 'pattern', label: 'Pattern', parts: { pattern: { options: PATTERNS } } },
+    { id: 'emblem', label: 'Emblem', parts: { emblem: { options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'aquila', 'doubleeagle', 'ouroboros', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'botonny', 'maltese', 'letter'] } } },
+    { id: 'trim', label: 'Trim', parts: { trim: { label: 'Style', options: TRIMS }, metal: { label: 'Metal', options: METAL_CHOICES, swatch: true } } }
   ];
-  let activePart = 'emblem';
+  let activeTab = 'emblem';
   let displayedCrest = '';
+  // Tiles redraw only while their panel shows; hidden panels catch up when opened.
+  const stale = new Set(tabs.map(tab => tab.id));
+  const tabButtons = new Map();
+  const panels = new Map();
+  // Each option group's part and its choices in display order.
+  const groups = new Map();
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const carousels = new Map();
-
-  function centerRows(animate = false) {
-    carousels.forEach((carousel, part) => carousel.center(crest[part], { animate }));
-  }
-
-  function activateRow(section) {
-    if (activePart === section.dataset.part) return;
-    activePart = section.dataset.part;
-    $('crestOptions').querySelectorAll('.crest-group').forEach(group => {
-      group.classList.toggle('is-active', group === section);
-    });
-    // Tile art grows inside fixed slots, so switching rows never shifts the selection.
-    carousels.forEach(carousel => carousel.paint());
-  }
-
-  function crestTile(part, value, label, swatch) {
+  function optionButton(part, value) {
+    const option = PART_OPTIONS[part][value];
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = swatch ? 'crest-tile crest-swatch' : 'crest-tile';
     btn.dataset.part = part;
     btn.dataset.value = value;
-    btn.setAttribute('aria-label', label);
-    btn.title = label;
-    if (swatch) btn.style.setProperty('--c', swatch);
+    if (part === 'color') {
+      btn.className = 'crest-ring-swatch';
+      btn.setAttribute('aria-label', option.label);
+    } else {
+      btn.className = part === 'metal' ? 'crest-tile crest-swatch-tile' : 'crest-tile';
+      btn.innerHTML = '<span class="crest-tile-art"></span><span class="crest-tile-label"></span>';
+      btn.lastChild.textContent = option.label;
+    }
+    if (option.hex) btn.style.setProperty('--c', option.hex);
     return btn;
   }
 
-  function buildCrestOptions() {
-    const box = $('crestOptions');
-    crestGroups.forEach(group => {
-      const section = document.createElement('div');
-      section.className = 'crest-group';
-      section.dataset.part = group.part;
-      section.classList.toggle('is-active', group.part === activePart);
-      const head = document.createElement('div');
-      head.className = 'crest-group-head';
-      head.innerHTML = `<span class="eyebrow">${group.label}</span>`;
-      const controls = document.createElement('div');
-      controls.className = 'crest-row-controls';
-      const selection = document.createElement('span');
-      selection.className = 'crest-selection';
-      controls.appendChild(selection);
-      [-1, 1].forEach(step => {
-        const arrow = document.createElement('button');
-        arrow.type = 'button';
-        arrow.className = 'crest-row-arrow';
-        arrow.dataset.step = step;
-        arrow.setAttribute('aria-label', `${step < 0 ? 'Previous' : 'More'} ${group.label.toLowerCase()} options`);
-        arrow.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${step < 0 ? 'm10 4-4 4 4 4' : 'm6 4 4 4-4 4'}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-        arrow.addEventListener('click', () => {
-          activateRow(section);
-          carousels.get(group.part).advance(step);
-        });
-        controls.appendChild(arrow);
-      });
-      head.appendChild(controls);
-      if (group.part === 'color') {
-        const metals = document.createElement('div');
-        metals.className = 'crest-metals';
-        metals.innerHTML = '<span class="eyebrow">Trim</span>';
-        const controls = document.createElement('div');
-        controls.className = 'crest-trim-controls';
-        const styles = document.createElement('div');
-        styles.className = 'crest-trim-styles';
-        styles.setAttribute('role', 'group');
-        styles.setAttribute('aria-label', 'Trim style');
-        Object.entries(TRIMS).forEach(([key, style]) => styles.appendChild(crestTile('trim', key, `${style.label} trim`)));
-        const swatches = document.createElement('div');
-        swatches.className = 'crest-trim-metals';
-        swatches.setAttribute('role', 'group');
-        swatches.setAttribute('aria-label', 'Trim metal');
-        // A retired metal already worn stays selectable until the player changes it.
-        Object.entries({ ...METAL_CHOICES, [crest.metal]: METALS[crest.metal] }).forEach(([key, metal]) => swatches.appendChild(crestTile('metal', key, `${metal.label} trim`, metal.hex)));
-        controls.append(styles, swatches);
-        metals.appendChild(controls);
-        section.appendChild(metals);
-      }
-      const grid = document.createElement('div');
-      grid.className = 'crest-grid';
-      grid.setAttribute('role', 'group');
-      grid.setAttribute('aria-label', `${group.label} options`);
-      let keys = group.order || Object.keys(group.options);
-      const options = { ...group.options };
-      // Preserve a retired mark already worn by this player when centering the row.
-      if (!options[crest[group.part]]) {
-        options[crest[group.part]] = PART_OPTIONS[group.part][crest[group.part]];
-        keys = [...keys, crest[group.part]];
-      }
-      const rail = document.createElement('div');
-      rail.className = 'crest-rail';
-      rail.appendChild(grid);
-      section.prepend(head, rail);
-      const carousel = createCrestCarousel({
-        grid, keys, packed: !group.swatch,
-        createTile: key => {
-          const option = options[key];
-          return crestTile(group.part, key, option.label, group.swatch && option.hex);
-        },
-        onActivate: () => activateRow(section),
-        onBrowse: key => { selection.textContent = options[key].label; },
-        onSelect: key => {
-          if (crest[group.part] === key) return;
-          placeholder = false;
-          crest[group.part] = key;
-          saveCrest();
-          renderCrest();
-        }
-      });
-      carousels.set(group.part, carousel);
-      box.appendChild(section);
+  // A retired option this player still wears stays selectable after the others.
+  function addOptions(group) {
+    const { part, keys } = groups.get(group);
+    [...keys, crest[part]].forEach(key => {
+      if (!group.querySelector(`[data-value="${key}"]`)) group.appendChild(optionButton(part, key));
     });
-    box.addEventListener('click', event => {
-      const tile = event.target.closest('.crest-tile');
-      if (!tile || !['metal', 'trim'].includes(tile.dataset.part)) return;
-      activateRow(tile.closest('.crest-group'));
+    const swatches = group.querySelectorAll('.crest-ring-swatch');
+    swatches.forEach((swatch, index) => swatch.style.setProperty('--i', index));
+    group.style.setProperty('--n', swatches.length);
+  }
+
+  function buildPanel(panel, tab) {
+    Object.entries(tab.parts).forEach(([part, spec]) => {
+      if (spec.label) {
+        const label = document.createElement('span');
+        label.className = 'eyebrow crest-grid-label';
+        label.textContent = spec.label;
+        panel.appendChild(label);
+      }
+      // Colors sit on an ellipse around a preview of the crest, like a color wheel.
+      const group = document.createElement('div');
+      group.className = part === 'color' ? 'crest-ring' : 'crest-grid';
+      groups.set(group, { part, keys: spec.order || Object.keys(spec.options) });
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-label', `${spec.label || tab.label} options`);
+      if (part === 'color') {
+        group.innerHTML = '<div class="crest-ring-center"><span class="crest-ring-crest"></span><span class="crest-ring-label"></span></div>';
+      }
+      addOptions(group);
+      panel.appendChild(group);
+    });
+  }
+
+  function buildCrestOptions() {
+    const tabList = $('crestTabs');
+    const indicator = document.createElement('span');
+    indicator.className = 'crest-tab-indicator';
+    tabList.appendChild(indicator);
+    tabs.forEach(tab => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'crest-tab';
+      button.id = `crestTab-${tab.id}`;
+      button.textContent = tab.label;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', `crestPanel-${tab.id}`);
+      button.addEventListener('click', () => showTab(tab.id));
+      tabList.appendChild(button);
+      tabButtons.set(tab.id, button);
+
+      const panel = document.createElement('div');
+      panel.className = `crest-panel crest-panel-${tab.id}`;
+      panel.id = `crestPanel-${tab.id}`;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', button.id);
+      buildPanel(panel, tab);
+      $('crestOptions').appendChild(panel);
+      panels.set(tab.id, panel);
+    });
+    tabList.addEventListener('keydown', event => {
+      const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+      if (!step) return;
+      const index = tabs.findIndex(tab => tab.id === activeTab);
+      const next = tabs[(index + step + tabs.length) % tabs.length].id;
+      showTab(next);
+      tabButtons.get(next).focus();
+      event.preventDefault();
+    });
+    $('crestOptions').addEventListener('click', event => {
+      const tile = event.target.closest('button[data-part]');
+      if (!tile) return;
+      const { part, value } = tile.dataset;
+      if (crest[part] === value) return;
       placeholder = false;
-      crest[tile.dataset.part] = tile.dataset.value;
+      crest[part] = value;
       saveCrest();
       renderCrest();
     });
     window.addEventListener('resize', () => {
-      if ($('crestDialog').open) centerRows();
+      if ($('crestDialog').open) moveIndicator(false);
     });
   }
-  buildCrestOptions();
+
+  function moveIndicator(animate) {
+    const button = tabButtons.get(activeTab);
+    const indicator = $('crestTabs').querySelector('.crest-tab-indicator');
+    indicator.classList.toggle('no-motion', !animate);
+    indicator.style.width = `${button.offsetWidth}px`;
+    indicator.style.transform = `translateX(${button.offsetLeft}px)`;
+  }
+
+  // Bring the chosen tile into the middle of its scrolling panel.
+  function revealSelection(animate) {
+    const panel = panels.get(activeTab);
+    const tile = panel.querySelector('.crest-grid [aria-pressed="true"]');
+    if (!tile || panel.scrollHeight <= panel.clientHeight) return;
+    const top = tile.offsetTop - panel.offsetTop - (panel.clientHeight - tile.offsetHeight) / 2;
+    panel.scrollTo({ top: Math.max(0, top), behavior: animate && !reducedMotion() ? 'smooth' : 'instant' });
+  }
+
+  function showTab(id, { animate = true } = {}) {
+    const changed = activeTab !== id;
+    activeTab = id;
+    tabButtons.forEach((button, key) => {
+      button.setAttribute('aria-selected', String(key === id));
+      button.tabIndex = key === id ? 0 : -1;
+    });
+    panels.forEach((panel, key) => {
+      panel.hidden = key !== id;
+      if (key === id && changed && animate && !reducedMotion()) {
+        panel.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+      }
+    });
+    renderTiles();
+    moveIndicator(animate);
+    revealSelection(false);
+  }
+
+  function renderTiles() {
+    const id = activeTab;
+    if (!stale.has(id)) return;
+    stale.delete(id);
+    const panel = panels.get(id);
+    const letter = initialOf(realName.value) || '?';
+    panel.querySelectorAll('.crest-grid, .crest-ring').forEach(addOptions);
+    panel.querySelectorAll('button[data-part]').forEach(tile => {
+      const { part, value } = tile.dataset;
+      tile.setAttribute('aria-pressed', String(crest[part] === value));
+      if (part === 'color' || part === 'metal') return;
+      // Patterns are shown without the emblem so the division is easy to see.
+      const preview = { ...crest, [part]: value, ...(part === 'pattern' ? { emblem: 'letter' } : {}) };
+      tile.firstChild.innerHTML = crestSvg(preview, { letter: part === 'pattern' ? '' : letter });
+    });
+    if (id === 'color') {
+      panel.querySelector('.crest-ring-crest').innerHTML = crestSvg(crest, { letter });
+      panel.querySelector('.crest-ring-label').textContent = PART_OPTIONS.color[crest.color].label;
+    }
+  }
 
   function renderCrest() {
     const letter = initialOf(realName.value) || '?';
@@ -187,7 +223,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     $('crestPreview').innerHTML = crestSvg(crest, { letter });
     function animateCrest(element) {
       element.getAnimations().forEach(animation => animation.cancel());
-      if (changed && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (changed && !reducedMotion()) {
         element.animate([
           { opacity: .55, transform: 'translateY(2px) scale(.96)' },
           { opacity: 1, transform: 'translateY(0) scale(1)' }
@@ -195,35 +231,22 @@ export function createCrestPicker({ getRoom, getUid }) {
       }
     }
     animateCrest($('crestPreview'));
+    tabs.forEach(tab => stale.add(tab.id));
     if (!$('crestDialog').open) return;
     $('crestBig').innerHTML = crestSvg(crest, { letter });
     animateCrest($('crestBig'));
     const taken = crestTaken();
     $('crestNote').classList.toggle('taken', taken);
-    $('crestNote').textContent = taken ? 'Someone in this room already bears this crest. Change a part to stand apart.' : 'Swipe to choose. Center is selected.';
-    crestGroups.forEach(group => {
-      const section = $('crestOptions').querySelector(`[data-part="${group.part}"]`);
-      section.querySelector('.crest-selection').textContent = PART_OPTIONS[group.part][crest[group.part]].label;
-    });
-    document.querySelectorAll('#crestOptions .crest-tile').forEach(tile => {
-      const { part, value } = tile.dataset;
-      tile.setAttribute('aria-pressed', String(crest[part] === value));
-      if (part === 'color' || part === 'metal') return;
-      if (part === 'trim') {
-        tile.innerHTML = crestSvg({ ...crest, shape: 'hoplon', pattern: 'plain', emblem: 'letter', trim: value });
-        return;
-      }
-      // Patterns are shown without the emblem so the division is easy to see.
-      const preview = { ...crest, [part]: value, ...(part === 'pattern' ? { emblem: 'letter' } : {}) };
-      tile.innerHTML = crestSvg(preview, { letter: part === 'pattern' ? '' : letter });
-    });
-    carousels.forEach(carousel => carousel.paint());
+    $('crestNote').textContent = taken ? 'Someone in this room already bears this crest. Change a part to stand apart.' : '';
+    renderTiles();
   }
+
+  buildCrestOptions();
 
   $('crestButton').addEventListener('click', () => {
     openSheet($('crestDialog'));
     renderCrest();
-    requestAnimationFrame(() => centerRows());
+    showTab(activeTab, { animate: false });
   });
   $('crestShuffle').addEventListener('click', () => {
     const emblems = Object.keys(EMBLEM_CHOICES);
@@ -231,7 +254,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     crest = { ...randomCrest(), emblem: emblems[Math.floor(Math.random() * emblems.length)] };
     saveCrest();
     renderCrest();
-    requestAnimationFrame(() => centerRows(true));
+    revealSelection(true);
   });
   realName.addEventListener('input', renderCrest);
   renderCrest();
