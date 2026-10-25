@@ -133,11 +133,12 @@ export function createCrestPicker({ getRoom, getUid }) {
       return Math.max(0, Math.min(hues - 1, Math.floor((turn + 90) / wedge)));
     };
     ring.addEventListener('pointerdown', event => {
-      // The ring's box covers the hollow inside the arch too; only the band (a little narrower
-      // than the knob) picks, with a few pixels of slack.
+      // The ring's box also covers the hollow inside the arch and the empty corners above it;
+      // only the band (a little narrower than the knob) picks, with a few pixels of slack.
       const box = ring.getBoundingClientRect();
       const knob = arch.querySelector('.crest-arch-knob').offsetWidth;
-      if (Math.hypot(event.clientX - box.left - box.width / 2, event.clientY - box.top - box.width / 2) < box.width / 2 - knob - 2) return;
+      const distance = Math.hypot(event.clientX - box.left - box.width / 2, event.clientY - box.top - box.width / 2);
+      if (distance < box.width / 2 - knob - 2 || distance > box.width / 2 + 8) return;
       ring.setPointerCapture(event.pointerId);
       pickHue(hueAt(event));
       event.preventDefault();

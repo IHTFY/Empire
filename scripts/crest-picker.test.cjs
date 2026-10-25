@@ -69,6 +69,9 @@ test('The crest editor switches tabs and applies each choice', async t => {
   const box = await page.locator('#crestPanel-color .crest-arch-ring').boundingBox();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height - hollow.r / 3);
   assert.match(await value(), /^heater\.deepblue\./);
+  // So does a tap in the empty corners of the arch's box.
+  await page.mouse.click(box.x + 2, box.y + 2);
+  assert.match(await value(), /^heater\.deepblue\./);
   // A new hue keeps the tone.
   await tap('color', 7);
   assert.match(await value(), /^heater\.deepteal\./);
