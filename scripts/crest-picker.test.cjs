@@ -63,6 +63,17 @@ test('The crest editor switches tabs and applies each choice', async t => {
   assert.match(await value(), /^heater\.blue\./);
   await wheel.press('ArrowLeft');
   assert.notEqual(await wheel.getAttribute('aria-valuetext'), 'Blue');
+  // Coming back to a tab mid-animation still scrolls its chosen tile into view.
+  await page.click('#crestTab-emblem');
+  await page.click('#crestPanel-emblem [data-value="letter"]');
+  await page.click('#crestTab-color');
+  await page.click('#crestTab-emblem');
+  const inView = await page.evaluate(() => {
+    const panel = document.querySelector('#crestPanel-emblem').getBoundingClientRect();
+    const tile = document.querySelector('#crestPanel-emblem [data-value="letter"]').getBoundingClientRect();
+    return tile.top >= panel.top && tile.bottom <= panel.bottom;
+  });
+  assert.equal(inView, true, 'chosen emblem shows after switching back');
   await page.click('#crestTab-trim');
   await page.click('#crestPanel-trim [data-value="riveted"]');
   await page.click('#crestPanel-trim [data-value="silver"]');

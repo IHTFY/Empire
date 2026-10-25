@@ -220,7 +220,8 @@ export function createCrestPicker({ getRoom, getUid }) {
     const panel = panels.get(activeTab);
     const tile = panel.querySelector('.crest-grid [aria-pressed="true"]');
     if (!tile || panel.scrollHeight <= panel.clientHeight) return;
-    const top = tile.offsetTop - panel.offsetTop - (panel.clientHeight - tile.offsetHeight) / 2;
+    // Bounding boxes, not offsetTop: the tab's entrance transform makes the panel the tile's offset parent.
+    const top = panel.scrollTop + tile.getBoundingClientRect().top - panel.getBoundingClientRect().top - (panel.clientHeight - tile.offsetHeight) / 2;
     panel.scrollTo({ top: Math.max(0, top), behavior: animate && !reducedMotion() ? 'smooth' : 'instant' });
   }
 
