@@ -48,6 +48,18 @@ test('players are offered only current colors, metals and emblems', async () => 
   }
 });
 
+test('the color grid offers every current color once, each column darkening downward', async () => {
+  const { COLOR_GRID, COLOR_CHOICES, COLORS } = await load();
+  const keys = COLOR_GRID.flat();
+  assert.deepEqual([...keys].sort(), Object.keys(COLOR_CHOICES).sort());
+  for (let col = 0; col < COLOR_GRID[0].length; col++) {
+    const column = COLOR_GRID.map(row => relativeLuminance(COLORS[row[col]].hex));
+    assert.deepEqual([...column].sort((a, b) => b - a), column, `column ${COLOR_GRID[2][col]}`);
+  }
+  assert.equal(COLORS.palecrimson.label, 'Pale red');
+  assert.equal(COLORS.darkazure.label, 'Dark sky blue');
+});
+
 test('emblems are inked black or white with at least 3:1 contrast on every color', async () => {
   const { COLORS, inkFor, crestSvg } = await load();
   for (const [key, color] of Object.entries(COLORS)) assert(contrast(inkFor(color.hex), color.hex) >= 3, `${key} ink contrast`);

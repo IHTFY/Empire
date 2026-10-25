@@ -43,8 +43,8 @@ export const SHAPES = {
   gonfanon: { label: 'Gonfanon', d: 'M7 4H41V30L35.5 44L29.8 33.5L24 44L18.2 33.5L12.5 44L7 30Z', cx: 24, cy: 19.5, s: 1.04 }
 };
 
-// Saturated rainbow colors, then common shades. Retired colors still render for
-// existing crests but aren't offered.
+// Saturated rainbow colors, then grays. Retired colors still render for existing crests
+// but aren't offered.
 export const COLORS = {
   crimson: { label: 'Red', hex: '#D7262B' },
   vermilion: { label: 'Vermilion', hex: '#EA4E1B' },
@@ -66,13 +66,13 @@ export const COLORS = {
   gray: { label: 'Gray', hex: '#858B95' },
   iron: { label: 'Charcoal', hex: '#42474F' },
   sable: { label: 'Black', hex: '#17181D' },
-  cream: { label: 'Cream', hex: '#EEDFB8' },
-  sand: { label: 'Tan', hex: '#C9A06A' },
-  brown: { label: 'Brown', hex: '#7B4B26' },
-  oxblood: { label: 'Maroon', hex: '#7A1F2B' },
-  midnight: { label: 'Navy', hex: '#1F2D63' },
-  olive: { label: 'Olive', hex: '#7D7F22' },
-  pine: { label: 'Forest', hex: '#1F5A33' },
+  cream: { retired: true, label: 'Cream', hex: '#EEDFB8' },
+  sand: { retired: true, label: 'Tan', hex: '#C9A06A' },
+  brown: { retired: true, label: 'Brown', hex: '#7B4B26' },
+  oxblood: { retired: true, label: 'Maroon', hex: '#7A1F2B' },
+  midnight: { retired: true, label: 'Navy', hex: '#1F2D63' },
+  olive: { retired: true, label: 'Olive', hex: '#7D7F22' },
+  pine: { retired: true, label: 'Forest', hex: '#1F5A33' },
   rust: { retired: true, label: 'Rust', hex: '#C0662B' },
   ochre: { retired: true, label: 'Ochre', hex: '#8F7A14' },
   tyrian: { retired: true, label: 'Tyrian', hex: '#8E2A62' },
@@ -87,6 +87,38 @@ export const COLORS = {
   verdigris: { retired: true, label: 'Verdigris', hex: '#468071' },
   lapis: { retired: true, label: 'Lapis', hex: '#314D98' }
 };
+
+// Players pick from a grid: the rainbow colors across, each from pale at the top to dark at
+// the bottom, and the grays as the last column. The four extra tones of each color were made
+// in OKLCH from the color itself: lightness moved toward white or black, chroma scaled down
+// and kept inside sRGB.
+const HUES = ['crimson', 'vermilion', 'orange', 'amber', 'yellow', 'lime', 'green', 'teal', 'cyan', 'azure', 'blue', 'indigo', 'violet', 'magenta', 'pink'];
+const GRAYS = ['white', 'lightgray', 'gray', 'iron', 'sable'];
+const TONES = ['pale', 'light', '', 'deep', 'dark'];
+const TONE_HEXES = {
+  crimson: ['#F9B6AE', '#F0776D', '#9A0212', '#5A0106'],
+  vermilion: ['#FFC1AF', '#FB8B6B', '#A62E00', '#621801'],
+  orange: ['#FDD5B4', '#FCB170', '#A85F01', '#633601'],
+  amber: ['#FCE6BA', '#FCD077', '#AB7F03', '#654A02'],
+  yellow: ['#FAF3BE', '#F8E97D', '#AA9903', '#645A01'],
+  lime: ['#D8ECBA', '#B9DC7A', '#698B01', '#3C5100'],
+  green: ['#B6DBB8', '#77BF7E', '#066E24', '#013F11'],
+  teal: ['#B3DAD1', '#70BEAE', '#026C5E', '#023E35'],
+  cyan: ['#B8E2EA', '#76CBDC', '#00798A', '#014651'],
+  azure: ['#B9DAF5', '#7DBCEF', '#156AA1', '#013D61'],
+  blue: ['#A9C0EE', '#658EE2', '#103692', '#041B59'],
+  indigo: ['#AFB4E2', '#7679CB', '#2C1F7A', '#160C4A'],
+  violet: ['#CAB8ED', '#A37FE0', '#552190', '#310C57'],
+  magenta: ['#EEB4D9', '#DD75BC', '#89056C', '#50013E'],
+  pink: ['#FEC8DD', '#FB9AC3', '#AA4173', '#672043']
+};
+for (const hue of HUES) {
+  TONES.filter(Boolean).forEach((tone, i) => {
+    COLORS[tone + hue] = { label: `${tone[0].toUpperCase()}${tone.slice(1)} ${COLORS[hue].label.toLowerCase()}`, hex: TONE_HEXES[hue][i] };
+  });
+}
+// Rows of color keys, top to bottom.
+export const COLOR_GRID = TONES.map((tone, row) => [...HUES.map(hue => tone + hue), GRAYS[row]]);
 
 // The emblem's color: auto (black or white, whichever suits the field) or any field color.
 export const INKS = { auto: { label: 'Auto' }, ...COLORS };
