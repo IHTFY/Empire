@@ -1,8 +1,4 @@
-import { CREATURES } from './crest-creatures.js';
-import { MYTHICALS } from './crest-mythicals.js';
-import { BEASTS } from './crest-beasts.js';
-import { ROMAN } from './crest-roman.js';
-import { HERALDIC } from './crest-heraldic.js';
+import { EMBLEM_ART } from './crest-emblems.js';
 
 // Crests: each player's avatar is a small coat of arms built from six choices.
 // A crest is stored as "shape.color.pattern.emblem.metal.trim". The last component
@@ -140,61 +136,51 @@ function starPath() {
   return `<path d="M${pts.join('L')}z"/>`;
 }
 
-// Two laurel branches meeting at the bottom, open at the top.
-function laurel() {
-  let out = '<path d="M12 21C6.5 20 3.8 15 4.8 6.5M12 21C17.5 20 20.2 15 19.2 6.5" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>';
-  for (let i = 0; i < 5; i++) {
-    const deg = 128 + i * 29; // up the left side, from the bottom
-    const a = (deg * Math.PI) / 180;
-    const x = round(12 + 8 * Math.cos(a));
-    const y = round(12.4 + 8 * Math.sin(a));
-    const tilt = round(deg - 180 - 38);
-    out += `<ellipse cx="${x}" cy="${y}" rx="1.35" ry="3.2" transform="rotate(${tilt} ${x} ${y})"/>`;
-    out += `<ellipse cx="${round(24 - x)}" cy="${y}" rx="1.35" ry="3.2" transform="rotate(${-tilt} ${round(24 - x)} ${y})"/>`;
-  }
-  return out;
-}
-
 const lineArt = art => `<g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">${art}</g>`;
 
 export const EMBLEMS = {
-  ...ROMAN,
-  ...MYTHICALS,
+  aquila: { label: 'Roman eagle', svg: EMBLEM_ART.aquila },
+  ouroboros: { label: 'Ouroboros', svg: EMBLEM_ART.ouroboros },
+  medusa: { label: 'Medusa', svg: EMBLEM_ART.medusa },
+  pegasus: { label: 'Pegasus', svg: EMBLEM_ART.pegasus },
+  doubleeagle: { label: 'Double-headed eagle', svg: EMBLEM_ART.doubleeagle },
+  minotaur: { label: 'Minotaur', svg: EMBLEM_ART.minotaur },
+  unicorn: { label: 'Unicorn', svg: EMBLEM_ART.unicorn },
   letter: { label: 'Letter' },
-  laurel: { label: 'Laurel', svg: laurel() },
-  crown: { label: 'Crown', svg: HERALDIC.crown },
+  laurel: { label: 'Laurel', svg: EMBLEM_ART.laurel },
+  crown: { label: 'Crown', svg: EMBLEM_ART.crown },
   star: { retired: true, label: 'Star', svg: starPath() },
-  sword: { label: 'Sword', svg: '<path d="M12 1.5l1.4 2.4V15h-2.8V3.9z"/><rect x="6" y="15" width="12" height="2.2" rx="1.1"/><rect x="11" y="17" width="2" height="3.6"/><circle cx="12" cy="21.6" r="1.6"/>' },
+  sword: { label: 'Sword', svg: EMBLEM_ART.sword },
   tower: { retired: true, label: 'Tower', svg: '<path fill-rule="evenodd" d="M5 22V8h3V5h2.5v3h3V5H16v3h3v14zM10 22v-4.5a2 2 0 0 1 4 0V22z"/>' },
-  helm: { label: 'Helm', svg: CREATURES.helm },
+  helm: { label: 'Helm', svg: EMBLEM_ART.helm },
   moon: { retired: true, label: 'Moon', svg: '<path d="M16.1 4A9 9 0 1 0 16.1 20A8 8 0 1 1 16.1 4z"/>' },
-  cross: { label: 'Cross', svg: HERALDIC.cross },
-  botonny: { label: 'Botonny cross', svg: HERALDIC.botonny },
-  maltese: { label: 'Maltese cross', svg: HERALDIC.maltese },
-  eagle: { label: 'Eagle', svg: HERALDIC.eagle },
-  spartan: { label: 'Spartan', svg: CREATURES.spartan },
-  spears: { label: 'Spears', svg: HERALDIC.spears },
-  axe:{label:'Axe',svg:'<path d="M11 2h2v21h-2zM13 4q6 0 9-3v10q-4-4-9-4zM11 4Q5 4 2 1v10q4-4 9-4z"/>'},
-  wolf: { label: 'Wolf', svg: BEASTS.wolf.svg },
-  lion: { label: 'Lion', svg: CREATURES.lion },
-  sun: { label: 'Sun', svg: HERALDIC.sun },
+  cross: { label: 'Cross', svg: EMBLEM_ART.cross },
+  botonny: { label: 'Botonny cross', svg: EMBLEM_ART.botonny },
+  maltese: { label: 'Maltese cross', svg: EMBLEM_ART.maltese },
+  eagle: { label: 'Eagle', svg: EMBLEM_ART.eagle },
+  spartan: { label: 'Spartan', svg: EMBLEM_ART.spartan },
+  spears: { label: 'Spears', svg: EMBLEM_ART.spears },
+  axe: { label: 'Axe', svg: EMBLEM_ART.axe },
+  wolf: { label: 'Wolf', svg: EMBLEM_ART.wolf },
+  lion: { label: 'Lion', svg: EMBLEM_ART.lion },
+  sun: { label: 'Sun', svg: EMBLEM_ART.sun },
   oak:{retired:true,label:'Oak',svg:'<path d="M11 14h2v8h-2zM8 19h8v2H8z"/><path d="M12 2c3 0 4 2 4 4 4-1 6 3 4 5 4 4-1 8-5 5-1 3-5 3-6 0-4 3-9-1-5-5-2-2 0-6 4-5 0-2 1-4 4-4z"/>'},
-  thunder:{label:'Thunderbolt',svg:'<path d="M13 1 4 13h6L8 23l12-15h-7l3-7z"/>'},
+  thunder: { label: 'Thunderbolt', svg: EMBLEM_ART.thunder },
   lambda: { retired: true, label: 'Lambda', svg: '<path d="M10.5 3h3L22 21h-4L12 8 6 21H2z"/>' },
-  gladius: { label: 'Gladius', svg: HERALDIC.gladius },
+  gladius: { label: 'Gladius', svg: EMBLEM_ART.gladius },
   legion: { retired: true, label: 'Legion standard', svg: '<path d="M11 2h2v21h-2zM4 6h16v3H4zM6 10h12v7l-6 3-6-3z"/><circle cx="12" cy="3" r="2.5"/>' },
   column: { retired: true, label: 'Column', svg: '<path d="M3 3h18v3H3zM5 7h14v2H5zM6 20h12v2H6zM3 22h18v2H3zM7 9h2v10H7zM11 9h2v10h-2zM15 9h2v10h-2z"/>' },
   amphora: { retired: true, label: 'Amphora', svg: '<path d="M8 2h8v2h-1v4q4 3 3 7l-4 6H10l-4-6q-1-4 3-7V4H8zM9 22h6v2H9z"/><path d="M8 7C1 5 1 15 7 14M16 7c7-2 7 8 1 7" fill="none" stroke="currentColor" stroke-width="2"/>' },
-  horse: { label: 'War horse', svg: CREATURES.horse },
-  trident: { label: 'Trident', svg: '<path d="M12 1l2.5 6-1.5-.5v6h3l2-3V7l-2 1 3-6 3 6-2-1v4l-3 4h-4v8h-2v-8H7l-3-4V7L2 8l3-6 3 6-2-1v2.5l2 3h3v-6L9.5 7z"/>' },
+  horse: { label: 'War horse', svg: EMBLEM_ART.horse },
+  trident: { label: 'Trident', svg: EMBLEM_ART.trident },
   victory: { retired: true, label: 'Victory palm', svg: lineArt('<path d="M10 22Q13 15 13 3M13 8Q8 7 6 3Q12 3 13 8zM13 12Q6 11 3 7Q10 7 13 12zM12 17Q6 17 3 13Q10 13 12 17zM13 7Q13 3 18 1Q18 6 13 7zM13 12Q16 6 21 5Q20 11 13 12zM12 17Q17 11 22 11Q20 17 12 17z"/>') },
-  griffin: { label: 'Griffin', svg: HERALDIC.griffin },
-  phoenix: { label: 'Phoenix', svg: CREATURES.phoenix },
-  hydra: { label: 'Hydra', svg: CREATURES.hydra },
-  wyvern: { label: 'Wyvern', svg: CREATURES.wyvern },
-  twinwyrm: { label: 'Twin hydra', svg: CREATURES.twinwyrm },
-  dragon: { label: 'Dragon', svg: CREATURES.dragon },
-  serpent: { label: 'Serpent', svg: BEASTS.serpent.svg },
+  griffin: { label: 'Griffin', svg: EMBLEM_ART.griffin },
+  phoenix: { label: 'Phoenix', svg: EMBLEM_ART.phoenix },
+  hydra: { label: 'Hydra', svg: EMBLEM_ART.hydra },
+  wyvern: { label: 'Wyvern', svg: EMBLEM_ART.wyvern },
+  twinwyrm: { label: 'Twin hydra', svg: EMBLEM_ART.twinwyrm },
+  dragon: { label: 'Dragon', svg: EMBLEM_ART.dragon },
+  serpent: { label: 'Serpent', svg: EMBLEM_ART.serpent },
 };
 
 // Bots wear a robot instead of an emblem. It isn't offered in the picker, so people can't
