@@ -70,8 +70,8 @@ test('Home carries one ad after a finished round, in view and clear of every con
       // The form as the app builds it: home.js sizes the create/join panel.
       const { createHome } = await import('/home.js');
       createHome({ db: {}, ensureSignedIn() {}, enterRoom() {}, setRoomInUrl() {}, ui: { show() {}, toast() {} } });
-      const { showHomeAd, refitHomeAd } = await import('/ads.js');
-      window.addEventListener('resize', () => refitHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox')));
+      const { showHomeAd, watchHomeAd } = await import('/ads.js');
+      watchHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox'), document.querySelector('#roomForm'));
       showHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox'));
     }, finishedRound);
     return page;
@@ -89,9 +89,14 @@ test('Home carries one ad after a finished round, in view and clear of every con
       const page = await visit(viewport);
       await page.waitForFunction(() => window.shown?.length);
       const before = await page.evaluate(measure);
-      // The entry animations (the form rising into place) end; the layout must not change after.
-      await page.evaluate(() => Promise.all(document.getAnimations()
-        .filter(a => Number.isFinite(a.effect.getComputedTiming().endTime)).map(a => a.finished)));
+      // The entry animations (the form rising into place) and the create/join panel's height
+      // transition end; the box must not have moved once they have.
+      await page.waitForTimeout(700);
+      await page.evaluate(async () => {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await Promise.all(document.getAnimations()
+        .filter(a => Number.isFinite(a.effect.getComputedTiming().endTime)).map(a => a.finished.catch(() => {})));
+      });
       const after = await page.evaluate(measure);
       await page.close();
       const [width, height] = size.split('x').map(Number);
@@ -173,5 +178,26 @@ test('Home carries one ad after a finished round, in view and clear of every con
     assert.equal(result.atReturn, result.before, JSON.stringify(result));
     assert(result.size, JSON.stringify(result));
     assert(result.scroll <= 1 && result.hero >= 40, JSON.stringify(result));
+  });
+
+  await t.test('a form change that leaves the box no room takes it down; a dialog does too', async () => {
+    const grow = async (page, extra) => {
+      await page.evaluate(extra => {
+        const part = document.querySelector('#roomForm .mode-switch');
+        part.style.minHeight = part.offsetHeight + extra + 'px';
+      }, extra);
+      await page.waitForTimeout(700);
+      return page.evaluate(() => document.querySelector('#homeAd').hidden);
+    };
+    let page = await visit([360, 640]);
+    await page.waitForFunction(() => window.shown?.length);
+    assert.equal(await grow(page, 4), false, 'a small change keeps the box');
+    assert.equal(await grow(page, 80), true, 'a big change takes it down');
+    await page.close();
+    page = await visit([390, 750]);
+    await page.waitForFunction(() => window.shown?.length);
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent('sheetopen')));
+    assert.equal(await page.evaluate(() => document.querySelector('#homeAd').hidden), true);
+    await page.close();
   });
 });

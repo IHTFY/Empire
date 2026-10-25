@@ -57,9 +57,8 @@ test('no room script touches the ad code', () => {
   }
 });
 
-test('the app takes the ad down when a dialog opens or the window no longer fits it', () => {
+test('the app wires the ad to dialogs, resizes and form changes, once', () => {
   const script = publicFile('script.js');
-  assert.match(script, /addEventListener\('sheetopen', \(\) => retireHomeAd\(/);
-  assert.match(script, /addEventListener\('resize', \(\) => refitHomeAd\(/);
+  assert.match(script, /watchHomeAd\(\$\('homeAd'\), \$\('homeAdBox'\), \$\('roomForm'\)\);/);
   assert.match(publicFile('sheets.js'), /dispatchEvent\(new CustomEvent\('sheetopen'\)\);\s*dialog\.showModal\(\)/);
 });

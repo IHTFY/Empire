@@ -110,7 +110,8 @@ function fitsNow(page) {
 function placeHomeAd(aside, box, key) {
   if (!navigator.onLine) return;
   aside.hidden = false;
-  if (box.querySelector('ins.adsbygoogle')) return showAd(box, key);
+  // An ad already in the box keeps its size, so a window that has since shrunk takes it down.
+  if (box.querySelector('ins.adsbygoogle')) return fits(aside) ? showAd(box, key) : retireHomeAd(aside, box);
   const size = SIZES.find(size => { box.dataset.adSize = size; return fits(aside); });
   if (!size) {
     delete box.dataset.adSize;
@@ -155,10 +156,28 @@ export function retireHomeAd(aside, box) {
   aside.hidden = true;
 }
 
-// Called when the window resizes. A box that no longer fits (the phone turned to landscape)
-// comes down for good, as it can't change size once the loader has it. A resize while a
-// field has focus is the keyboard, which leaves what fits as it was.
-export function refitHomeAd(aside, box) {
-  if (!homeOpen || aside.hidden || document.activeElement?.matches('input, textarea')) return;
+// Called when what Home holds may have grown: the window resized (phone turned) or the form
+// changed (create/join, an error message). A box that no longer fits comes down for good, as
+// it can't change size once the loader has it. A window resize while a field has focus is the
+// keyboard, which leaves what fits as it was.
+export function refitHomeAd(aside, box, resizing = false) {
+  if (!homeOpen || aside.hidden) return;
+  if (resizing && document.activeElement?.matches('input, textarea')) return;
   if (!fits(aside)) retireHomeAd(aside, box);
+}
+
+// Wires the ad to what can happen to Home while it shows: a dialog opening over it, the window
+// resizing, and the form changing size. The form's changes are checked once its animation ends.
+export function watchHomeAd(aside, box, form) {
+  document.addEventListener('sheetopen', () => retireHomeAd(aside, box));
+  window.addEventListener('resize', () => refitHomeAd(aside, box, true));
+  let settle = 0;
+  let observing = false;
+  const formChanged = new ResizeObserver(() => {
+    // The first report is the form as it stands, not a change.
+    if (!observing) return void (observing = true);
+    clearTimeout(settle);
+    settle = setTimeout(() => refitHomeAd(aside, box), 450);
+  });
+  for (const part of form.children) formChanged.observe(part);
 }

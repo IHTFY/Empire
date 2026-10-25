@@ -106,8 +106,8 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
     const panel = modeExtra.querySelector(':scope > :not([inert])');
     // A hidden Home measures 0. Keeping the last height means the form is whole the moment Home
     // is back, which the ad's size choice relies on.
-    const height = panel.firstElementChild.scrollHeight;
-    if (height) modeExtra.style.height = `${height}px`;
+    if (!modeExtra.getClientRects().length) return;
+    modeExtra.style.height = `${panel.firstElementChild.scrollHeight}px`;
   }
   // Measure natural content, rather than the maximum of two overlapping collapsing panels.
   // This also follows wrapped hints, validation messages, and viewport/font changes.

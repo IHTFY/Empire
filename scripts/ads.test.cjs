@@ -380,6 +380,22 @@ test('a resize while a field has focus (the keyboard) leaves the ad alone', () =
   h.context.showHomeAd(home.aside, home.box);
   home.fitting = [];
   h.document.activeElement = { matches: selector => selector.includes('input') };
-  h.context.refitHomeAd(home.aside, home.box);
+  h.context.refitHomeAd(home.aside, home.box, true);
   assert.equal(home.aside.hidden, false);
+  h.context.refitHomeAd(home.aside, home.box);
+  assert.equal(home.aside.hidden, true, 'a change to the form is not the keyboard');
+});
+
+test('coming back to Home in a window that no longer fits the filled box takes it down', () => {
+  const h = harness();
+  const home = fakeHome({ filled: true, fitting: SIZES });
+  home.box.dataset.adSize = '300x250';
+  const box = home.box;
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd(home.aside, box);
+  h.context.closeHomeAd(box);
+  home.fitting = [];
+  h.context.showHomeAd(home.aside, box);
+  assert.equal(home.aside.hidden, true);
+  assert.equal(box.isConnected, false);
 });
