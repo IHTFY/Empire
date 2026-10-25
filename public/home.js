@@ -339,7 +339,9 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
       await (roomMode === 'join' ? tryJoining() : tryCreating());
     } catch (err) {
       console.error(err);
-      codeError('Something went wrong. Try again.');
+      // The code (e.g. auth/network-request-failed) lets a player's screenshot say what failed.
+      const code = err?.code || err?.name;
+      codeError(`Something went wrong${code ? ` (${code})` : ''}. Try again.`);
     } finally {
       busy = false;
       lockForm(false);
