@@ -91,9 +91,15 @@ const SIZES = ['300x250', '320x100', '320x50'];
 const MIN_HERO = 40;
 
 // Whether Home, with the box at its current size, still shows the whole form and the hero
-// without scrolling.
+// without scrolling. The logo, title and mode panel animate their size, which would have the
+// measure read the layout from before the box changed, so animation waits while it measures.
 function fits(aside) {
   const page = aside.parentElement;
+  page.classList.add('measuring');
+  try { return fitsNow(page); } finally { page.classList.remove('measuring'); }
+}
+
+function fitsNow(page) {
   const form = page.querySelector('#roomForm');
   return page.scrollHeight <= page.clientHeight && page.scrollWidth <= page.clientWidth
     && form.scrollHeight <= form.clientHeight + 1 && page.querySelector('.hero').clientHeight >= MIN_HERO;
@@ -105,12 +111,7 @@ function placeHomeAd(aside, box, key) {
   if (!navigator.onLine) return;
   aside.hidden = false;
   if (box.querySelector('ins.adsbygoogle')) return showAd(box, key);
-  // The logo, title and mode panel animate their size, which would have the measure read the
-  // layout from before the box changed.
-  const page = aside.parentElement;
-  page.classList.add('measuring');
   const size = SIZES.find(size => { box.dataset.adSize = size; return fits(aside); });
-  page.classList.remove('measuring');
   if (!size) {
     delete box.dataset.adSize;
     aside.hidden = true;
@@ -152,4 +153,12 @@ export function retireHomeAd(aside, box) {
   if (!box.querySelector('ins.adsbygoogle')) cancels++;
   freshBox(box);
   aside.hidden = true;
+}
+
+// Called when the window resizes. A box that no longer fits (the phone turned to landscape)
+// comes down for good, as it can't change size once the loader has it. A resize while a
+// field has focus is the keyboard, which leaves what fits as it was.
+export function refitHomeAd(aside, box) {
+  if (!homeOpen || aside.hidden || document.activeElement?.matches('input, textarea')) return;
+  if (!fits(aside)) retireHomeAd(aside, box);
 }

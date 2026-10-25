@@ -11,23 +11,25 @@ class FakeScript {
 }
 
 function harness({ onLine = true, key = null, cookie = '', adFree = false } = {}) {
+  const document = {
+    cookie,
+    activeElement: null,
+    createElement: () => new FakeScript(),
+    head: { appendChild: el => { added.push(el); } }
+  };
   const added = [];
   const shown = [];
   const storage = new Map();
   const context = vm.createContext({
     navigator: { onLine },
-    document: {
-      cookie,
-      createElement: () => new FakeScript(),
-      head: { appendChild: el => { added.push(el); } }
-    },
+    document,
     localStorage: { getItem: name => (name === 'ihtfy-ad-free' ? key : null) },
     sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) },
     window: { ihtfyAds: { show: (box, key) => shown.push([box, key]), adFree: async () => adFree } }
   });
   const source = readFileSync(join(__dirname, '../public/ads.js'), 'utf8').replace(/^export /gm, '');
   vm.runInContext(source, context);
-  return { context, added, shown };
+  return { context, added, shown, document };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
@@ -36,8 +38,8 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 // replaceWith disconnects a box and cloneNode gives an empty, connected copy.
 const SIZES = ['300x250', '320x100', '320x50'];
 function fakeHome({ fitting = SIZES, filled = false } = {}) {
-  const home = { box: null };
-  const overflow = () => (fitting.includes(home.box.dataset.adSize) ? 0 : 1);
+  const home = { box: null, fitting };
+  const overflow = () => (home.fitting.includes(home.box.dataset.adSize) ? 0 : 1);
   const form = { scrollHeight: 300, clientHeight: 300 };
   const hero = { clientHeight: 80 };
   const page = {
@@ -350,4 +352,34 @@ test('startup goes on when storage and cookies both throw', () => {
   Object.defineProperty(h.context.document, 'cookie', { get() { throw new Error('denied'); } });
   assert.doesNotThrow(() => h.context.loadForBuyer());
   assert.equal(h.added.length, 0);
+});
+
+test('turning the phone to a window the box no longer fits takes the ad down for good', () => {
+  const h = harness();
+  const home = fakeHome({ filled: true, fitting: SIZES });
+  home.box.dataset.adSize = '300x250';
+  const box = home.box;
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd(home.aside, box);
+  h.context.refitHomeAd(home.aside, box);
+  assert.equal(home.aside.hidden, false, 'a box that still fits stays');
+  home.fitting = [];
+  h.context.refitHomeAd(home.aside, box);
+  assert.equal(box.isConnected, false);
+  assert.equal(home.aside.hidden, true);
+  home.fitting = SIZES;
+  h.context.showHomeAd(home.aside, box.copy);
+  assert.equal(home.aside.hidden, true, 'the round gets no second box');
+});
+
+test('a resize while a field has focus (the keyboard) leaves the ad alone', () => {
+  const h = harness();
+  const home = fakeHome({ filled: true, fitting: SIZES });
+  home.box.dataset.adSize = '300x250';
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd(home.aside, home.box);
+  home.fitting = [];
+  h.document.activeElement = { matches: selector => selector.includes('input') };
+  h.context.refitHomeAd(home.aside, home.box);
+  assert.equal(home.aside.hidden, false);
 });

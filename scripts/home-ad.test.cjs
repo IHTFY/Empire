@@ -1,4 +1,4 @@
-/* global document, window, innerWidth, innerHeight, getComputedStyle */
+/* global document, window, innerWidth, innerHeight, getComputedStyle, requestAnimationFrame */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -67,14 +67,18 @@ test('Home carries one ad after a finished round, in view and clear of every con
     await page.evaluate(async finishedRound => {
       await document.fonts.ready;
       if (finishedRound) sessionStorage.setItem('finishedRound', 'room/round-1');
-      const { showHomeAd } = await import('/ads.js');
+      // The form as the app builds it: home.js sizes the create/join panel.
+      const { createHome } = await import('/home.js');
+      createHome({ db: {}, ensureSignedIn() {}, enterRoom() {}, setRoomInUrl() {}, ui: { show() {}, toast() {} } });
+      const { showHomeAd, refitHomeAd } = await import('/ads.js');
+      window.addEventListener('resize', () => refitHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox')));
       showHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox'));
     }, finishedRound);
     return page;
   };
 
   const expected = [
-    [[360, 640], '320x100'],
+    [[360, 640], '320x50'],
     [[390, 750], '320x100'],
     [[412, 800], '320x100'],
     [[1280, 800], '300x250'],
@@ -123,5 +127,51 @@ test('Home carries one ad after a finished round, in view and clear of every con
     const result = await page.evaluate(() => ({ hidden: document.querySelector('#homeAd').hidden, loader: [...document.scripts].some(s => s.src.includes('ads/v1.js')) }));
     await page.close();
     assert.deepEqual(result, { hidden: true, loader: false });
+  });
+
+  await t.test('turning to a window too short for the box takes it down, and turning back brings no second', async () => {
+    const page = await visit([390, 750]);
+    await page.waitForFunction(() => window.shown?.length);
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.waitForFunction(() => document.querySelector('#homeAd').hidden);
+    const result = await page.evaluate(() => ({ ads: document.querySelectorAll('ins.adsbygoogle').length, shown: window.shown.length }));
+    await page.setViewportSize({ width: 390, height: 750 });
+    await page.waitForTimeout(200);
+    const back = await page.evaluate(() => ({ hidden: document.querySelector('#homeAd').hidden, shown: window.shown.length }));
+    await page.close();
+    assert.deepEqual(result, { ads: 0, shown: 1 });
+    assert.deepEqual(back, { hidden: true, shown: 1 });
+  });
+
+  await t.test('coming back to Home from a room keeps the form whole, so the size chosen still fits', async () => {
+    const page = await browser.newPage({ viewport: { width: 360, height: 640 }, reducedMotion: 'reduce' });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
+    await page.route('https://ihtfy.com/ads/v1.js', route => route.fulfill({ contentType: 'text/javascript', body: loaderStub }));
+    await page.goto(url);
+    const result = await page.evaluate(async () => {
+      const frames = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 100))));
+      const { createHome } = await import('/home.js');
+      createHome({ db: {}, ensureSignedIn() {}, enterRoom() {}, setRoomInUrl() {}, ui: { show() {}, toast() {} } });
+      await frames();
+      const panel = document.querySelector('.mode-extra');
+      const before = panel.style.height;
+      // A room is open: Home is hidden while it is.
+      document.querySelector('#homeScreen').hidden = true;
+      await frames();
+      document.querySelector('#homeScreen').hidden = false;
+      const atReturn = panel.style.height;
+      sessionStorage.setItem('finishedRound', 'room/round-1');
+      const { showHomeAd } = await import('/ads.js');
+      showHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox'));
+      await frames();
+      const form = document.querySelector('#roomForm');
+      return { before, atReturn, size: document.querySelector('#homeAdBox').dataset.adSize,
+        scroll: form.scrollHeight - form.clientHeight, hero: document.querySelector('.hero').clientHeight };
+    });
+    await page.close();
+    assert(parseInt(result.before) > 0, JSON.stringify(result));
+    assert.equal(result.atReturn, result.before, JSON.stringify(result));
+    assert(result.size, JSON.stringify(result));
+    assert(result.scroll <= 1 && result.hero >= 40, JSON.stringify(result));
   });
 });

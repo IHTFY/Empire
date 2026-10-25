@@ -79,7 +79,7 @@ body:has(.screen-home:not([hidden])) {
 .home-page:has(> #homeScreen[hidden]) { display: none; }
 .home-page:has(> .home-ad:not([hidden])) { display: flex; flex-direction: column; }
 .home-page:has(> .home-ad:not([hidden])) > .screen-home { flex-grow: 1; flex-basis: 0; height: auto; padding-bottom: 8px; }
-/* While Home picks the ad size it measures the settled layout, not a mid-transition one. */
+/* While Home measures for the ad it reads the settled layout, not a mid-transition one. */
 .home-page.measuring, .home-page.measuring * { transition: none !important; }
 .home-ad { flex: none; display: grid; justify-items: center; gap: 6px; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); }
 .home-ad p { line-height: 1.2; }
