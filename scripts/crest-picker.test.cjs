@@ -1,4 +1,4 @@
-/* global document, window */
+/* global document, window, requestAnimationFrame */
 const { chromium } = require('playwright');
 const { createServer } = require('node:http');
 const { readFile } = require('node:fs/promises');
@@ -44,51 +44,87 @@ test('The crest editor switches tabs and applies each choice', async t => {
   await page.mouse.click(big.x + big.width * .2, big.y + big.height * .4);
   assert.equal(await page.getAttribute('#crestTab-color', 'aria-selected'), 'true');
   assert.equal(await page.locator('#crestPanel-emblem').isVisible(), false);
-  const name = part => page.textContent(`#crestPanel-${part} .crest-pad-name`);
-  const pad = page.locator('#crestPanel-color .crest-pad');
-  assert.match(await pad.getAttribute('class'), /\boff\b/, 'a retired color is not on the grid');
+  const name = part => page.textContent(`#crestPanel-${part} .crest-arch-name`);
+  const arch = page.locator('#crestPanel-color .crest-arch');
+  // The middle of the arch's band at a hue, and how far that is from the arch's center.
+  const ring = (part, hue = 0) => page.evaluate(([part, hue]) => {
+    const box = document.querySelector(`#crestPanel-${part} .crest-arch-ring`).getBoundingClientRect();
+    const band = document.querySelector(`#crestPanel-${part} .crest-arch-knob`).offsetWidth - 10;
+    const r = box.width / 2 - band / 2, turn = ((hue + .5) * 180 / 16 - 90) * Math.PI / 180;
+    return { x: box.left + box.width / 2 + r * Math.sin(turn), y: box.top + box.width / 2 - r * Math.cos(turn), r };
+  }, [part, hue]);
+  const tap = async (part, hue) => { const { x, y } = await ring(part, hue); await page.mouse.click(x, y); };
+  assert.match(await arch.getAttribute('class'), /\boff\b/, 'a retired color is not on the arch');
   assert.equal(await name('color'), 'Rust');
   assert.equal(await page.getAttribute('#crestPanel-color [data-value="rust"]', 'aria-pressed'), 'true', 'the retired color stays as a selected swatch');
-  await page.click('#crestPanel-color [data-value="deepblue"]');
-  assert.match(await value(), /^heater\.deepblue\./);
-  assert.equal(await name('color'), 'Deep blue');
-  assert.doesNotMatch(await pad.getAttribute('class'), /\boff\b/);
+  await tap('color', 10);
+  assert.match(await value(), /^heater\.blue\./, 'from a retired color the arch picks the pure hue');
+  assert.equal(await name('color'), 'Blue');
+  assert.doesNotMatch(await arch.getAttribute('class'), /\boff\b/);
   assert.equal(await page.getAttribute('#crestPanel-color [data-value="rust"]', 'aria-pressed'), 'false');
-  // Dragging across the grid picks each color it passes over.
-  const center = async key => {
-    const box = await page.locator(`#crestPanel-color [data-value="${key}"]`).boundingBox();
-    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  };
-  const from = await center('crimson'), to = await center('lightteal');
+  await page.click('#crestPanel-color .crest-tones [data-value="deepblue"]');
+  assert.equal(await name('color'), 'Deep blue');
+  // A tap in the hollow inside the arch picks nothing.
+  const hollow = await ring('color', 8);
+  const box = await page.locator('#crestPanel-color .crest-arch-ring').boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - hollow.r / 3);
+  assert.match(await value(), /^heater\.deepblue\./);
+  // A new hue keeps the tone.
+  await tap('color', 7);
+  assert.match(await value(), /^heater\.deepteal\./);
+  // Jumping from one end to the other glides the knob around the arch, not across it.
+  await tap('color', 0);
+  await page.waitForTimeout(400);
+  const glide = page.evaluate(() => new Promise(resolve => {
+    const ring = document.querySelector('#crestPanel-color .crest-arch-ring');
+    const knob = document.querySelector('#crestPanel-color .crest-arch-knob');
+    const out = [], end = performance.now() + 400;
+    (function frame() {
+      const b = ring.getBoundingClientRect(), k = knob.getBoundingClientRect();
+      out.push([k.left + k.width / 2 - b.left - b.width / 2, k.top + k.height / 2 - b.top - b.width / 2]);
+      if (performance.now() < end) requestAnimationFrame(frame); else resolve(out);
+    })();
+  }));
+  await tap('color', 15);
+  const { r } = await ring('color');
+  const points = await glide;
+  assert.ok(points.some(([x]) => Math.abs(x) < r / 2), 'the knob was sampled mid-glide');
+  points.forEach(([x, y]) => assert.ok(Math.abs(Math.hypot(x, y) - r) < 3, `knob at ${x.toFixed(1)},${y.toFixed(1)} is off the arch`));
+  assert.match(await value(), /^heater\.iron\./, 'the grays keep the tone too');
+  const panel = await page.evaluate(() => { const el = document.querySelector('#crestPanel-color'); return [el.scrollWidth, el.clientWidth]; });
+  assert.ok(panel[0] <= panel[1], `the knob widens the panel to ${panel[0]}px`);
+  // Dragging along the arch picks each hue it passes.
+  const from = await ring('color', 3), to = await ring('color', 11);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 6 });
   await page.mouse.up();
-  assert.match(await value(), /^heater\.lightteal\./);
-  // The arrow keys move around the grid without wrapping.
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowRight');
-  assert.match(await value(), /^heater\.deepcyan\./);
-  await page.click('#crestPanel-color [data-value="iron"]');
+  assert.match(await value(), /^heater\.deepindigo\./);
+  // The arrow keys step along the arch without wrapping.
+  await page.focus('#crestPanel-color .crest-arch-ring');
+  await page.keyboard.press('End');
+  assert.match(await value(), /^heater\.iron\./);
   await page.keyboard.press('ArrowRight');
   assert.match(await value(), /^heater\.iron\./);
-  await page.keyboard.press('ArrowUp');
-  assert.match(await value(), /^heater\.gray\./);
-  // The emblem's color has its own grid, starting on Auto.
+  await page.keyboard.press('ArrowLeft');
+  assert.match(await value(), /^heater\.deeppink\./);
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowDown');
+  assert.match(await value(), /^heater\.deepcrimson\./);
+  // The emblem's color has its own arch, starting on Auto.
   await page.click('#crestTab-ink');
   assert.equal(await page.getAttribute('#crestPanel-ink [data-value="auto"]', 'aria-pressed'), 'true');
   assert.equal(await name('ink'), 'Auto');
-  await page.click('#crestPanel-ink [data-value="crimson"]');
-  assert.match(await value(), /^heater\.gray\..*\.crimson$/, 'the field keeps its color');
+  await page.click('#crestPanel-ink .crest-tones [data-value="crimson"]');
+  assert.match(await value(), /^heater\.deepcrimson\..*\.crimson$/, 'the field keeps its color');
   assert.equal(await name('ink'), 'Red');
-  await page.click('#crestPanel-ink [data-value="darkblue"]');
-  assert.match(await value(), /\.darkblue$/);
+  await page.click('#crestPanel-ink [data-value="darkcrimson"]');
+  assert.match(await value(), /\.darkcrimson$/);
   await page.click('#crestPanel-ink [data-value="auto"]');
   assert.equal((await value()).split('.').length, 6, 'Auto is left out of the saved crest');
-  await page.focus('#crestPanel-ink .crest-pad-cell[tabindex="0"]');
+  await page.focus('#crestPanel-ink .crest-arch-ring');
   await page.keyboard.press('ArrowLeft');
-  assert.match(await value(), /\.palecrimson$/, 'an arrow from Auto starts at the top left');
+  assert.match(await value(), /\.crimson$/, 'an arrow from Auto starts at the first hue');
   await page.click('#crestPanel-ink [data-value="auto"]');
   // Coming back to a tab mid-animation still scrolls its chosen tile into view.
   await page.click('#crestTab-emblem');

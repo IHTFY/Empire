@@ -88,81 +88,102 @@ export function createCrestPicker({ getRoom, getUid }) {
     });
   }
 
-  // Colors sit in a grid: the rainbow across, each from pale at the top to dark at the bottom,
-  // with the grays last. Tap one, or drag across the grid with a loupe following. Auto, and
-  // a retired color this player still wears, sit beside the chosen color's name.
+  // Colors are picked on an arch: the rainbow runs over it with the grays at its right foot,
+  // and the chosen color's name sits inside. Tap or drag along the arch to change the hue and
+  // keep the tone. Below it are the hue's five tones, pale to dark, then Auto and any retired
+  // color this player still wears.
   const gridKeys = COLOR_GRID.flat();
-  const columns = COLOR_GRID[0].length;
-  const pads = new Map();
+  const hues = COLOR_GRID[0].length;
+  const middle = Math.floor(COLOR_GRID.length / 2);
+  const wedge = 180 / hues;
+  const arches = new Map();
 
-  function buildPad(panel, part, label) {
-    const head = document.createElement('div');
-    head.className = 'crest-pad-head';
-    head.innerHTML = '<span class="crest-pad-name"></span>';
+  function buildArch(panel, part, label) {
+    const arch = document.createElement('div');
+    arch.className = 'crest-arch';
+    arch.innerHTML = '<span class="crest-arch-ring" tabindex="0" role="slider"><span></span></span>'
+      + '<span class="crest-arch-arm"><span class="crest-arch-knob"></span></span><span class="crest-arch-name"></span>';
+    const row = document.createElement('div');
+    row.className = 'crest-arch-row';
+    row.innerHTML = '<span class="crest-swatches crest-tones" role="group" aria-label="Tones"></span>';
     const extras = document.createElement('div');
     extras.className = 'crest-swatches';
     groups.set(extras, { part, keys: part === 'ink' ? ['auto'] : [], exclude: gridKeys });
     extras.setAttribute('role', 'group');
     extras.setAttribute('aria-label', 'More colors');
-    head.appendChild(extras);
-    const pad = document.createElement('div');
-    pad.className = 'crest-pad';
-    pad.innerHTML = '<div class="crest-pad-cells" role="group"></div><span class="crest-pad-loupe"></span>';
-    const cells = pad.firstChild;
-    cells.setAttribute('aria-label', label);
-    pad.style.setProperty('--cols', columns);
-    pad.style.setProperty('--rows', COLOR_GRID.length);
-    gridKeys.forEach((key, i) => {
-      const cell = optionButton(part, key);
-      cell.className = i % columns === columns - 1 ? 'crest-pad-cell crest-pad-gray' : 'crest-pad-cell';
-      cell.tabIndex = -1;
-      cells.appendChild(cell);
-    });
-    pads.set(part, pad);
-    const pick = event => {
-      const box = cells.getBoundingClientRect();
-      const at = (offset, size, count) => Math.max(0, Math.min(count - 1, Math.floor(offset / size * count)));
-      const key = COLOR_GRID[at(event.clientY - box.top, box.height, COLOR_GRID.length)][at(event.clientX - box.left, box.width, columns)];
-      choose(part, key);
-      pad.querySelector(`[data-value="${key}"]`).focus({ preventScroll: true });
+    row.appendChild(extras);
+    const ring = arch.firstChild;
+    ring.setAttribute('aria-label', label);
+    ring.setAttribute('aria-valuemin', '0');
+    ring.setAttribute('aria-valuemax', String(hues - 1));
+    // The conic gradient starts pointing left and sweeps clockwise over the top.
+    ring.firstChild.style.background = `conic-gradient(from 270deg, ${COLOR_GRID[middle].map((key, i) => `${PART_OPTIONS.color[key].hex} ${i * wedge}deg ${(i + 1) * wedge}deg`).join(', ')}, transparent 0)`;
+    const tones = row.firstChild;
+    COLOR_GRID.forEach(() => tones.appendChild(optionButton(part, gridKeys[0])));
+    arches.set(part, { arch, tones, hue: 0 });
+    // A new hue keeps the current tone; from Auto or a retired color it starts at the pure hue.
+    const pickHue = hue => {
+      const row = COLOR_GRID.findIndex(keys => keys.includes(crest[part]));
+      choose(part, COLOR_GRID[row < 0 ? middle : row][hue]);
     };
-    cells.addEventListener('pointerdown', event => {
-      cells.setPointerCapture(event.pointerId);
-      pad.classList.add('dragging');
-      pick(event);
+    const hueAt = event => {
+      const box = ring.getBoundingClientRect();
+      const x = event.clientX - box.left - box.width / 2, y = box.top + box.width / 2 - event.clientY;
+      const turn = y < 0 ? Math.sign(x) * 90 : Math.atan2(x, y) * 180 / Math.PI;
+      return Math.max(0, Math.min(hues - 1, Math.floor((turn + 90) / wedge)));
+    };
+    ring.addEventListener('pointerdown', event => {
+      // The ring's box covers the hollow inside the arch too; only the band (a little narrower
+      // than the knob) picks, with a few pixels of slack.
+      const box = ring.getBoundingClientRect();
+      const knob = arch.querySelector('.crest-arch-knob').offsetWidth;
+      if (Math.hypot(event.clientX - box.left - box.width / 2, event.clientY - box.top - box.width / 2) < box.width / 2 - knob - 2) return;
+      ring.setPointerCapture(event.pointerId);
+      pickHue(hueAt(event));
       event.preventDefault();
+      ring.focus({ preventScroll: true });
     });
-    cells.addEventListener('pointermove', event => {
-      if (cells.hasPointerCapture(event.pointerId)) pick(event);
+    ring.addEventListener('pointermove', event => {
+      if (!ring.hasPointerCapture(event.pointerId)) return;
+      // A tap glides the knob around the arch; a drag keeps it under the finger.
+      arch.classList.add('dragging');
+      pickHue(hueAt(event));
     });
-    ['pointerup', 'pointercancel'].forEach(type => cells.addEventListener(type, () => pad.classList.remove('dragging')));
-    // The arrow keys move around the grid; from a color not on it, they start at the top left.
-    cells.addEventListener('keydown', event => {
-      const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns }[event.key];
-      if (!step) return;
+    ['pointerup', 'pointercancel'].forEach(type => ring.addEventListener(type, () => arch.classList.remove('dragging')));
+    ring.addEventListener('keydown', event => {
       const index = gridKeys.indexOf(crest[part]);
-      const next = index < 0 ? 0 : index + step;
-      const offRow = index >= 0 && Math.abs(step) === 1 && Math.floor(next / columns) !== Math.floor(index / columns);
-      if (next < 0 || next >= gridKeys.length || offRow) return;
-      choose(part, gridKeys[next]);
-      cells.children[next].focus();
+      const hue = index < 0 ? -1 : index % hues;
+      const next = { ArrowRight: hue + 1, ArrowUp: hue + 1, ArrowLeft: hue - 1, ArrowDown: hue - 1, Home: 0, End: hues - 1 }[event.key];
+      if (next === undefined) return;
       event.preventDefault();
+      // From Auto or a retired color, the arrows start at the first hue.
+      pickHue(hue < 0 && event.key.startsWith('Arrow') ? 0 : Math.max(0, Math.min(hues - 1, next)));
     });
-    panel.append(head, pad);
+    panel.append(arch, row);
   }
 
-  function renderPad(part) {
-    const pad = pads.get(part);
+  function renderArch(part) {
+    const state = arches.get(part);
+    const { arch, tones } = state;
     const value = crest[part];
     const index = gridKeys.indexOf(value);
-    pad.parentNode.querySelector('.crest-pad-name').textContent = PART_OPTIONS[part][value].label;
-    pad.classList.toggle('off', index < 0);
-    if (index >= 0) {
-      pad.style.setProperty('--col', index % columns);
-      pad.style.setProperty('--row', Math.floor(index / columns));
-      pad.style.setProperty('--c', PART_OPTIONS[part][value].hex);
-    }
-    [...pad.firstChild.children].forEach((cell, i) => { cell.tabIndex = i === Math.max(index, 0) ? 0 : -1; });
+    if (index >= 0) state.hue = index % hues;
+    arch.querySelector('.crest-arch-name').textContent = PART_OPTIONS[part][value].label;
+    arch.classList.toggle('off', index < 0);
+    if (index >= 0) arch.style.setProperty('--c', PART_OPTIONS[part][value].hex);
+    // The knob rides an arm turned about the arch's center, so it moves along the arch.
+    arch.querySelector('.crest-arch-arm').style.transform = `rotate(${(state.hue + .5) * wedge - 90}deg)`;
+    const ring = arch.firstChild;
+    if (index >= 0) ring.setAttribute('aria-valuenow', String(state.hue));
+    else ring.removeAttribute('aria-valuenow');
+    ring.setAttribute('aria-valuetext', index >= 0 ? PART_OPTIONS.color[COLOR_GRID[middle][state.hue]].label : 'None');
+    [...tones.children].forEach((dot, row) => {
+      const key = COLOR_GRID[row][state.hue];
+      dot.dataset.value = key;
+      dot.style.setProperty('--c', PART_OPTIONS[part][key].hex);
+      dot.setAttribute('aria-label', PART_OPTIONS[part][key].label);
+      dot.title = PART_OPTIONS[part][key].label;
+    });
   }
 
   function choose(part, value) {
@@ -174,7 +195,7 @@ export function createCrestPicker({ getRoom, getUid }) {
   }
 
   function buildPanel(panel, tab) {
-    if (tab.id === 'color' || tab.id === 'ink') return buildPad(panel, tab.id, tab.label);
+    if (tab.id === 'color' || tab.id === 'ink') return buildArch(panel, tab.id, tab.label);
     Object.entries(tab.parts).forEach(([part, spec]) => {
       if (spec.label) {
         const label = document.createElement('span');
@@ -280,8 +301,8 @@ export function createCrestPicker({ getRoom, getUid }) {
     stale.delete(id);
     const panel = panels.get(id);
     const letter = initialOf(realName.value) || '?';
-    if (pads.has(id)) renderPad(id);
-    panel.querySelectorAll('.crest-grid, .crest-swatches').forEach(addOptions);
+    if (arches.has(id)) renderArch(id);
+    panel.querySelectorAll('.crest-grid, .crest-swatches:not(.crest-tones)').forEach(addOptions);
     panel.querySelectorAll('button[data-part]').forEach(tile => {
       const { part, value } = tile.dataset;
       tile.setAttribute('aria-pressed', String(crest[part] === value));
