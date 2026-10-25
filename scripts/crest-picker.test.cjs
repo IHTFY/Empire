@@ -86,6 +86,9 @@ test('The crest editor switches tabs and applies each choice', async t => {
   assert.match(await value(), /\.darkblue$/);
   await page.click('#crestPanel-ink [data-value="auto"]');
   assert.equal((await value()).split('.').length, 6, 'Auto is left out of the saved crest');
+  await page.focus('#crestPanel-ink .crest-pad-cell[tabindex="0"]');
+  await page.keyboard.press('ArrowLeft');
+  assert.match(await value(), /\.palecrimson$/, 'an arrow from Auto starts at the top left');
   // Coming back to a tab mid-animation still scrolls its chosen tile into view.
   await page.click('#crestTab-emblem');
   await page.click('#crestPanel-emblem [data-value="letter"]');

@@ -142,7 +142,8 @@ export function createCrestPicker({ getRoom, getUid }) {
       if (!step) return;
       const index = gridKeys.indexOf(crest[part]);
       const next = index < 0 ? 0 : index + step;
-      if (next < 0 || next >= gridKeys.length || (Math.abs(step) === 1 && Math.floor(next / columns) !== Math.floor(index / columns))) return;
+      const offRow = index >= 0 && Math.abs(step) === 1 && Math.floor(next / columns) !== Math.floor(index / columns);
+      if (next < 0 || next >= gridKeys.length || offRow) return;
       choose(part, gridKeys[next]);
       cells.children[next].focus();
       event.preventDefault();
