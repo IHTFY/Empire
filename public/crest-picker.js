@@ -124,7 +124,8 @@ export function createCrestPicker({ getRoom, getUid }) {
       const next = { ArrowRight: index + 1, ArrowUp: index + 1, ArrowLeft: index - 1, ArrowDown: index - 1, Home: 0, End: last }[event.key];
       if (next === undefined) return;
       // From a swatch color, the arrows start at the wheel's first color.
-      choose('color', wheelColors[index < 0 ? 0 : (next + wheelColors.length) % wheelColors.length]);
+      const step = index < 0 && event.key.startsWith('Arrow') ? 0 : next;
+      choose('color', wheelColors[(step + wheelColors.length) % wheelColors.length]);
       event.preventDefault();
     });
     const swatches = document.createElement('div');

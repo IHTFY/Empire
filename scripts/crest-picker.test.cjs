@@ -86,6 +86,11 @@ test('The crest editor switches tabs and applies each choice', async t => {
   assert.match(await value(), /^heater\.sable\./);
   assert.equal(await wheel.getAttribute('aria-valuetext'), 'None');
   assert.equal(await page.textContent('.crest-wheel-label'), 'Black');
+  await wheel.press('End');
+  assert.equal(await wheel.getAttribute('aria-valuenow'), String(steps - 1), 'End goes to the last color from a swatch');
+  await page.click('#crestPanel-color [data-value="sable"]');
+  await wheel.press('ArrowRight');
+  assert.equal(await wheel.getAttribute('aria-valuenow'), '0', 'an arrow from a swatch starts at the first color');
   // Coming back to a tab mid-animation still scrolls its chosen tile into view.
   await page.click('#crestTab-emblem');
   await page.click('#crestPanel-emblem [data-value="letter"]');
