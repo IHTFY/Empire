@@ -14,7 +14,7 @@ import { initializeSharing } from './share.js';
 import { initializeUpdates } from './updates.js';
 import { initializeIdle } from './idle.js';
 import { initializeFullscreen } from './fullscreen.js';
-import { closeHomeAd, loadForBuyer, rememberFinishedRound, showHomeAd } from './ads.js';
+import { closeHomeAd, loadForBuyer, rememberFinishedRound, showHomeAd, watchHomeAd } from './ads.js';
 import appVersion from 'empire:version';
 
 // Compose the controllers here. Modules own their state and communicate through these
@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeHome: () => closeHomeAd($('homeAdBox'))
   });
   initializeSheets();
+  watchHomeAd($('homeAd'), $('roomForm'));
   initializeFullscreen(ui);
   const audio = createAudio({ db, rollNumber: ui.rollNumber });
   const rooms = createRooms({

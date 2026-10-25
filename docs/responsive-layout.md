@@ -5,7 +5,7 @@ These preferences came from the phone layout review in [PR #127](https://github.
 ## Layout priorities
 
 - Keep the main display inside the available viewport. The page should not scroll horizontally or vertically. Dialog and panel borders must also fit on screen.
-- The one exception: after a finished round, Home scrolls down to one ad below the screen. The screen above it still fits the viewport unchanged.
+- After a finished round, Home also fits one ad box below the form without scrolling: the form stays whole, the logo and title give up height, and the box is the largest of 300×250, 320×100, and 320×50 that fits. A window too short for the smallest gets no ad.
 - Reserve scrolling for repeated information, such as long player and watcher lists. Keep those lists inside bounded panels. Unique content and essential buttons should be visible without scrolling.
 - Fix layout sizing rather than hiding overflow and clipping controls. A page with no scrollbar can still have inaccessible content.
 - Give the detailed game table the most space. Place compact supporting information and controls around it. Avoid toolbar rows that consume table height and empty columns that leave useful space unused.
