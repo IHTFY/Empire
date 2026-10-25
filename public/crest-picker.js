@@ -46,7 +46,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     { id: 'color', label: 'Color', parts: { color: { options: COLOR_CHOICES } } },
     { id: 'pattern', label: 'Pattern', parts: { pattern: { options: PATTERNS } } },
     { id: 'emblem', label: 'Emblem', parts: { emblem: { options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'aquila', 'doubleeagle', 'ouroboros', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'botonny', 'maltese', 'letter'] } } },
-    { id: 'trim', label: 'Trim', parts: { trim: { label: 'Style', options: TRIMS }, metal: { label: 'Metal', options: METAL_CHOICES, swatch: true } } }
+    { id: 'trim', label: 'Trim', parts: { trim: { label: 'Style', options: TRIMS }, metal: { label: 'Metal', options: METAL_CHOICES } } }
   ];
   let activeTab = 'emblem';
   let displayedCrest = '';
@@ -54,9 +54,10 @@ export function createCrestPicker({ getRoom, getUid }) {
   const stale = new Set(tabs.map(tab => tab.id));
   const tabButtons = new Map();
   const panels = new Map();
-  // Each option group's part and its choices in display order.
   const groups = new Map();
-  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+  const reducedMotion = () => motionQuery.matches;
+  let indicator;
 
   function optionButton(part, value) {
     const option = PART_OPTIONS[part][value];
@@ -64,14 +65,9 @@ export function createCrestPicker({ getRoom, getUid }) {
     btn.type = 'button';
     btn.dataset.part = part;
     btn.dataset.value = value;
-    if (part === 'color') {
-      btn.className = 'crest-ring-swatch';
-      btn.setAttribute('aria-label', option.label);
-    } else {
-      btn.className = part === 'metal' ? 'crest-tile crest-swatch-tile' : 'crest-tile';
-      btn.innerHTML = '<span class="crest-tile-art"></span><span class="crest-tile-label"></span>';
-      btn.lastChild.textContent = option.label;
-    }
+    btn.className = part === 'metal' ? 'crest-tile crest-swatch-tile' : 'crest-tile';
+    btn.innerHTML = '<span class="crest-tile-art"></span><span class="crest-tile-label"></span>';
+    btn.lastChild.textContent = option.label;
     if (option.hex) btn.style.setProperty('--c', option.hex);
     return btn;
   }
@@ -82,12 +78,76 @@ export function createCrestPicker({ getRoom, getUid }) {
     [...keys, crest[part]].forEach(key => {
       if (!group.querySelector(`[data-value="${key}"]`)) group.appendChild(optionButton(part, key));
     });
-    const swatches = group.querySelectorAll('.crest-ring-swatch');
-    swatches.forEach((swatch, index) => swatch.style.setProperty('--i', index));
-    group.style.setProperty('--n', swatches.length);
+  }
+
+  // Colors sit around a wheel with the crest in the middle: tap a color, or drag the knob
+  // around the wheel. A retired color this player still wears gets the last slice, and keeps
+  // it so the other slices don't shift under a finger.
+  const wheel = document.createElement('div');
+  let wheelColors = Object.keys(COLOR_CHOICES);
+  let knobTurn = 0;
+
+  function buildWheel(panel) {
+    wheel.className = 'crest-wheel';
+    wheel.tabIndex = 0;
+    wheel.setAttribute('role', 'slider');
+    wheel.setAttribute('aria-label', 'Color');
+    wheel.innerHTML = '<span class="crest-wheel-ring"></span><span class="crest-wheel-arm"><span class="crest-wheel-knob"></span></span>'
+      + '<span class="crest-wheel-center"><span class="crest-wheel-crest"></span><span class="crest-wheel-label"></span></span>';
+    const pick = event => {
+      const box = wheel.getBoundingClientRect();
+      const turn = Math.atan2(event.clientX - box.left - box.width / 2, box.top + box.height / 2 - event.clientY) * 180 / Math.PI;
+      choose('color', wheelColors[Math.floor(((turn + 360) % 360) / 360 * wheelColors.length)]);
+    };
+    wheel.addEventListener('pointerdown', event => {
+      wheel.setPointerCapture(event.pointerId);
+      wheel.classList.add('dragging');
+      pick(event);
+    });
+    wheel.addEventListener('pointermove', event => {
+      if (wheel.hasPointerCapture(event.pointerId)) pick(event);
+    });
+    ['pointerup', 'pointercancel'].forEach(type => wheel.addEventListener(type, () => wheel.classList.remove('dragging')));
+    wheel.addEventListener('keydown', event => {
+      const index = wheelColors.indexOf(crest.color);
+      const last = wheelColors.length - 1;
+      const next = { ArrowRight: index + 1, ArrowUp: index + 1, ArrowLeft: index - 1, ArrowDown: index - 1, Home: 0, End: last }[event.key];
+      if (next === undefined) return;
+      choose('color', wheelColors[(next + wheelColors.length) % wheelColors.length]);
+      event.preventDefault();
+    });
+    panel.appendChild(wheel);
+  }
+
+  function renderWheel(letter) {
+    if (!wheelColors.includes(crest.color)) wheelColors = [...wheelColors, crest.color];
+    const slice = 360 / wheelColors.length;
+    const hex = key => PART_OPTIONS.color[key].hex;
+    wheel.querySelector('.crest-wheel-ring').style.background = `conic-gradient(${wheelColors.map((key, i) => `${hex(key)} ${i * slice}deg ${(i + 1) * slice}deg`).join(', ')})`;
+    const index = wheelColors.indexOf(crest.color);
+    // Turn the knob the short way round, so going from the last color to the first doesn't spin it.
+    knobTurn += (((index + .5) * slice - knobTurn) % 360 + 540) % 360 - 180;
+    wheel.querySelector('.crest-wheel-arm').style.transform = `rotate(${knobTurn}deg)`;
+    wheel.style.setProperty('--c', hex(crest.color));
+    const label = PART_OPTIONS.color[crest.color].label;
+    wheel.setAttribute('aria-valuemin', '0');
+    wheel.setAttribute('aria-valuemax', String(wheelColors.length - 1));
+    wheel.setAttribute('aria-valuenow', String(index));
+    wheel.setAttribute('aria-valuetext', label);
+    wheel.querySelector('.crest-wheel-crest').innerHTML = crestSvg(crest, { letter });
+    wheel.querySelector('.crest-wheel-label').textContent = label;
+  }
+
+  function choose(part, value) {
+    if (crest[part] === value) return;
+    placeholder = false;
+    crest[part] = value;
+    saveCrest();
+    renderCrest();
   }
 
   function buildPanel(panel, tab) {
+    if (tab.id === 'color') return buildWheel(panel);
     Object.entries(tab.parts).forEach(([part, spec]) => {
       if (spec.label) {
         const label = document.createElement('span');
@@ -95,23 +155,18 @@ export function createCrestPicker({ getRoom, getUid }) {
         label.textContent = spec.label;
         panel.appendChild(label);
       }
-      // Colors sit on an ellipse around a preview of the crest, like a color wheel.
       const group = document.createElement('div');
-      group.className = part === 'color' ? 'crest-ring' : 'crest-grid';
+      group.className = 'crest-grid';
       groups.set(group, { part, keys: spec.order || Object.keys(spec.options) });
       group.setAttribute('role', 'group');
       group.setAttribute('aria-label', `${spec.label || tab.label} options`);
-      if (part === 'color') {
-        group.innerHTML = '<div class="crest-ring-center"><span class="crest-ring-crest"></span><span class="crest-ring-label"></span></div>';
-      }
-      addOptions(group);
       panel.appendChild(group);
     });
   }
 
   function buildCrestOptions() {
     const tabList = $('crestTabs');
-    const indicator = document.createElement('span');
+    indicator = document.createElement('span');
     indicator.className = 'crest-tab-indicator';
     tabList.appendChild(indicator);
     tabs.forEach(tab => {
@@ -146,13 +201,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     });
     $('crestOptions').addEventListener('click', event => {
       const tile = event.target.closest('button[data-part]');
-      if (!tile) return;
-      const { part, value } = tile.dataset;
-      if (crest[part] === value) return;
-      placeholder = false;
-      crest[part] = value;
-      saveCrest();
-      renderCrest();
+      if (tile) choose(tile.dataset.part, tile.dataset.value);
     });
     window.addEventListener('resize', () => {
       if ($('crestDialog').open) moveIndicator(false);
@@ -161,7 +210,6 @@ export function createCrestPicker({ getRoom, getUid }) {
 
   function moveIndicator(animate) {
     const button = tabButtons.get(activeTab);
-    const indicator = $('crestTabs').querySelector('.crest-tab-indicator');
     indicator.classList.toggle('no-motion', !animate);
     indicator.style.width = `${button.offsetWidth}px`;
     indicator.style.transform = `translateX(${button.offsetLeft}px)`;
@@ -200,18 +248,25 @@ export function createCrestPicker({ getRoom, getUid }) {
     stale.delete(id);
     const panel = panels.get(id);
     const letter = initialOf(realName.value) || '?';
-    panel.querySelectorAll('.crest-grid, .crest-ring').forEach(addOptions);
+    if (id === 'color') return renderWheel(letter);
+    panel.querySelectorAll('.crest-grid').forEach(addOptions);
     panel.querySelectorAll('button[data-part]').forEach(tile => {
       const { part, value } = tile.dataset;
       tile.setAttribute('aria-pressed', String(crest[part] === value));
-      if (part === 'color' || part === 'metal') return;
+      if (part === 'metal') return;
       // Patterns are shown without the emblem so the division is easy to see.
       const preview = { ...crest, [part]: value, ...(part === 'pattern' ? { emblem: 'letter' } : {}) };
       tile.firstChild.innerHTML = crestSvg(preview, { letter: part === 'pattern' ? '' : letter });
     });
-    if (id === 'color') {
-      panel.querySelector('.crest-ring-crest').innerHTML = crestSvg(crest, { letter });
-      panel.querySelector('.crest-ring-label').textContent = PART_OPTIONS.color[crest.color].label;
+  }
+
+  function animateCrest(element, changed) {
+    element.getAnimations().forEach(animation => animation.cancel());
+    if (changed && !reducedMotion()) {
+      element.animate([
+        { opacity: .55, transform: 'translateY(2px) scale(.96)' },
+        { opacity: 1, transform: 'translateY(0) scale(1)' }
+      ], { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
     }
   }
 
@@ -221,20 +276,11 @@ export function createCrestPicker({ getRoom, getUid }) {
     const changed = displayedCrest && displayedCrest !== nextCrest;
     displayedCrest = nextCrest;
     $('crestPreview').innerHTML = crestSvg(crest, { letter });
-    function animateCrest(element) {
-      element.getAnimations().forEach(animation => animation.cancel());
-      if (changed && !reducedMotion()) {
-        element.animate([
-          { opacity: .55, transform: 'translateY(2px) scale(.96)' },
-          { opacity: 1, transform: 'translateY(0) scale(1)' }
-        ], { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
-      }
-    }
-    animateCrest($('crestPreview'));
+    animateCrest($('crestPreview'), changed);
     tabs.forEach(tab => stale.add(tab.id));
     if (!$('crestDialog').open) return;
     $('crestBig').innerHTML = crestSvg(crest, { letter });
-    animateCrest($('crestBig'));
+    animateCrest($('crestBig'), changed);
     const taken = crestTaken();
     $('crestNote').classList.toggle('taken', taken);
     $('crestNote').textContent = taken ? 'Someone in this room already bears this crest. Change a part to stand apart.' : '';

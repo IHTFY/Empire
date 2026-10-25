@@ -39,10 +39,30 @@ test('The crest editor switches tabs and applies each choice', async t => {
   assert.equal(await page.getAttribute('#crestPanel-emblem [data-value="lion"]', 'aria-pressed'), 'true');
   await page.click('#crestTab-color');
   assert.equal(await page.locator('#crestPanel-emblem').isVisible(), false);
-  assert.equal(await page.getAttribute('#crestPanel-color [data-value="rust"]', 'aria-pressed'), 'true', 'retired color stays shown and selected');
-  await page.click('#crestPanel-color [data-value="teal"]');
+  const wheel = page.locator('.crest-wheel');
+  assert.equal(await wheel.getAttribute('aria-valuetext'), 'Rust', 'retired color stays on the wheel and selected');
+  // The point in the middle of a color's slice, partway into the band.
+  const sliceAt = color => page.evaluate(async key => {
+    const { COLOR_CHOICES } = await import('/crest.js');
+    const wheel = document.querySelector('.crest-wheel');
+    const box = wheel.getBoundingClientRect();
+    const turn = (Object.keys(COLOR_CHOICES).indexOf(key) + .5) / (+wheel.getAttribute('aria-valuemax') + 1) * 2 * Math.PI;
+    const r = box.width / 2 - 8;
+    return { x: box.left + box.width / 2 + Math.sin(turn) * r, y: box.top + box.height / 2 - Math.cos(turn) * r };
+  }, color);
+  const teal = await sliceAt('teal');
+  await page.mouse.click(teal.x, teal.y);
   assert.match(await value(), /^heater\.teal\./);
-  assert.equal(await page.textContent('.crest-ring-label'), 'Teal');
+  assert.equal(await page.textContent('.crest-wheel-label'), 'Teal');
+  // Dragging the knob around picks each color it passes over.
+  const blue = await sliceAt('blue');
+  await page.mouse.move(teal.x, teal.y);
+  await page.mouse.down();
+  await page.mouse.move(blue.x, blue.y, { steps: 6 });
+  await page.mouse.up();
+  assert.match(await value(), /^heater\.blue\./);
+  await wheel.press('ArrowLeft');
+  assert.notEqual(await wheel.getAttribute('aria-valuetext'), 'Blue');
   await page.click('#crestTab-trim');
   await page.click('#crestPanel-trim [data-value="riveted"]');
   await page.click('#crestPanel-trim [data-value="silver"]');
