@@ -29,6 +29,13 @@ test('saved crests with retired marks still parse unchanged', async () => {
   }
 });
 
+test('a saved crest naming an inherited key, such as constructor, falls back and still draws', async () => {
+  const { parseCrest, crestString, crestSvg } = await load();
+  const crest = parseCrest('constructor.toString.constructor.constructor.constructor.constructor');
+  assert.equal(crestString(crest), 'hoplon.crimson.plain.letter.gold.inset');
+  assert.match(crestSvg(crest), /^<svg/);
+});
+
 test('players are offered only current colors, metals and emblems', async () => {
   const { COLOR_CHOICES, METAL_CHOICES, EMBLEM_CHOICES, randomCrest, botCrest } = await load();
   assert.deepEqual(Object.keys(METAL_CHOICES), ['gold', 'silver', 'obsidian']);

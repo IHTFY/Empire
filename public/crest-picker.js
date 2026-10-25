@@ -45,7 +45,7 @@ export function createCrestPicker({ getRoom, getUid }) {
     { id: 'shape', label: 'Shape', parts: { shape: { options: SHAPE_CHOICES, order: ['accolade', 'cartouche', 'ogee', 'scallop', 'horsehead', 'pavise', 'vesica', 'lozenge', 'crescent', 'thureos', 'scutum', 'ancile', 'boeotian', 'vexillum', 'gonfanon', 'hoplon', 'heater', 'spanish', 'swiss', 'polish', 'bouche', 'kite', 'standard', 'tablet', 'peltast', 'banner', 'oval', 'pennon'] } } },
     { id: 'color', label: 'Color', parts: { color: { options: COLOR_CHOICES } } },
     { id: 'pattern', label: 'Pattern', parts: { pattern: { options: PATTERNS } } },
-    { id: 'emblem', label: 'Emblem', parts: { emblem: { options: EMBLEM_CHOICES, order: ['dragon', 'wyvern', 'griffin', 'phoenix', 'hydra', 'twinwyrm', 'aquila', 'doubleeagle', 'ouroboros', 'medusa', 'pegasus', 'minotaur', 'unicorn', 'spartan', 'eagle', 'gladius', 'wolf', 'lion', 'spears', 'trident', 'thunder', 'helm', 'serpent', 'crown', 'sword', 'axe', 'laurel', 'horse', 'sun', 'cross', 'botonny', 'maltese', 'letter'] } } },
+    { id: 'emblem', label: 'Emblem', parts: { emblem: { options: EMBLEM_CHOICES, order: ['lion', 'wolf', 'horse', 'pegasus', 'unicorn', 'minotaur', 'griffin', 'aquila', 'doubleeagle', 'phoenix', 'dragon', 'wyvern', 'hydra', 'twinwyrm', 'serpent', 'ouroboros', 'medusa', 'spartan', 'helm', 'sword', 'gladius', 'axe', 'spears', 'trident', 'thunder', 'crown', 'laurel', 'sun', 'cross', 'botonny', 'maltese', 'letter'] } } },
     { id: 'trim', label: 'Trim', parts: { trim: { label: 'Style', options: TRIMS }, metal: { label: 'Metal', options: METAL_CHOICES } } }
   ];
   let activeTab = 'emblem';

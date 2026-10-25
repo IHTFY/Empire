@@ -1,4 +1,4 @@
-import { crestSvg, parseCrest } from './crest.js';
+import { crestSvg, crestDefs, parseCrest } from './crest.js';
 
 const [vTable, vHome, vSetup, vLobby, vReveal, homeCard, homeBtn, table, strip, capSheet, revealName, readPill, lobbyTable, prev, next, play, closeTutorial] = ["vTable", "vHome", "vSetup", "vLobby", "vReveal", "homeCard", "homeBtn", "table", "strip", "capSheet", "revealName", "readPill", "lobbyTable", "prev", "next", "play", "closeTutorial"].map(id => document.getElementById(id));
 
@@ -52,7 +52,7 @@ const STEPS = [
 /* ===== crest shields ===== */
 const CRESTS = {
   frankie: 'heater.blue.plain.dragon.gold.riveted',
-  ana: 'hoplon.crimson.plain.eagle.silver.basic',
+  ana: 'hoplon.crimson.plain.aquila.silver.basic',
   ben: 'banner.ochre.plain.lion.gold.basic',
   cy: 'peltast.teal.plain.trident.silver.basic',
   dee: 'kite.violet.plain.helm.gold.basic',
@@ -182,6 +182,8 @@ next.onclick = () => { pause(); go(cur + 1); };
 // touching or scrolling the rules takes over; tapping a rule jumps to its first step
 ['wheel', 'touchstart', 'pointerdown'].forEach(ev => rulesEl.addEventListener(ev, pause, { passive: true }));
 rulesEl.addEventListener('click', e => { const r = e.target.closest('.rule'); if (!r) return; if (STEPS[cur].rule !== r.dataset.rule) go(STEPS.findIndex(s => s.rule === r.dataset.rule)); });
+// Crest borders and patterns use the shared clip paths and masks.
+document.querySelector('defs').insertAdjacentHTML('beforeend', crestDefs());
 paintCrests(document);
 go(0);
 

@@ -1,4 +1,5 @@
 import { EMBLEM_ART } from './crest-emblems.js';
+import { SHAPE_GEOMETRY } from './crest-geometry.js';
 
 // Crests: each player's avatar is a small coat of arms built from six choices.
 // A crest is stored as "shape.color.pattern.emblem.metal.trim". The last component
@@ -15,7 +16,7 @@ export const SHAPES = {
   banner: { label: 'Banner', d: 'M8 4h32v40l-16-8-16 8z', cx: 24, cy: 19.5, s: 1.02 },
   pennon: { label: 'Pennon', d: 'M4 9h40l-8 15 8 15H4z', cx: 19.5, cy: 24, s: 0.94 },
   oval: { label: 'Oval', d: 'M24 3a16 21 0 1 1 0 42a16 21 0 1 1 0-42z', cx:24, cy:24, s:1 },
-  hoplon: { label: 'Hoplon', d: 'M24 4a20 20 0 1 1 0 40a20 20 0 1 1 0-40z', cx: 24, cy: 24, s: .88, rims: [.86, .76] },
+  hoplon: { label: 'Hoplon', d: 'M24 4a20 20 0 1 1 0 40a20 20 0 1 1 0-40z', cx: 24, cy: 24, s: .88 },
   peltast: { label: 'Pelta', d:'M5 6Q24 19 43 6V23Q41 38 24 44Q7 38 5 23z', cx:24, cy:27, s:.92 },
   kite: { label: 'Kite', d:'M24 3Q43 3 42 17Q39 33 24 45Q9 33 6 17Q5 3 24 3z', cx:24, cy:20, s:1 },
   hexagon: { retired: true, label: 'Hexagon', d:'M14 4h20l11 20-11 20H14L3 24z', cx:24, cy:24, s:1.04 },
@@ -24,14 +25,14 @@ export const SHAPES = {
   boeotian: { label: 'Boeotian', d: 'M24 3Q39 3 42 15Q31 24 42 33Q39 45 24 45Q9 45 6 33Q17 24 6 15Q9 3 24 3z', cx: 24, cy: 24, s: .84 },
   octagon: { retired: true, label: 'Octagon', d: 'M15 4h18l11 11v18L33 44H15L4 33V15z', cx: 24, cy: 24, s: 1.08 },
   vexillum: { label: 'Vexillum', d: 'M7 5h34v38l-10-5-7 7-7-7-10 5z', cx: 24, cy: 21, s: 1.02 },
-  accolade: { label: 'Accolade', d: 'M24 3Q18 9 7 6Q10 13 5 18C5 32 15 39 24 45C33 39 43 32 43 18Q38 13 41 6Q30 9 24 3z', cx: 24, cy: 23, s: .91, rims: [.86] },
-  ogee: { label: 'Ogee', d: 'M6 5Q15 9 24 3Q33 9 42 5C39 13 44 18 40 28C36 38 28 39 24 45C20 39 12 38 8 28C4 18 9 13 6 5z', cx: 24, cy: 23, s: .91, rims: [.84] },
-  scallop: { label: 'Scalloped', d: 'M24 3C28 9 34 4 39 6C37 12 45 12 42 18C48 25 40 28 40 32Q33 39 24 45Q15 39 8 32C8 28 0 25 6 18C3 12 11 12 9 6C14 4 20 9 24 3z', cx: 24, cy: 23, s: .9, rims: [.82] },
-  targe: { retired: true, label: 'Targe', d: 'M24 4a20 20 0 1 1 0 40a20 20 0 1 1 0-40z', cx: 24, cy: 24, s: .85, rims: [.74], studs: [[24, 7], [36, 12], [41, 24], [36, 36], [24, 41], [12, 36], [7, 24], [12, 12]] },
-  vesica: { label: 'Vesica', d: 'M24 3C44 13 44 34 24 45C4 34 4 13 24 3z', cx: 24, cy: 24, s: .82, rims: [.85] },
-  crescent: { label: 'Amazon', d: 'M5 5Q24 22 43 5C47 21 40 39 24 45C8 39 1 21 5 5z', cx: 24, cy: 29, s: .76, rims: [.87] },
-  cartouche: { label: 'Cartouche', d: 'M24 3C29 9 33 4 39 7C33 14 44 15 40 22C46 28 36 30 37 36Q28 39 24 45Q20 39 11 36C12 30 2 28 8 22C4 15 15 14 9 7C15 4 19 9 24 3z', cx: 24, cy: 24, s: .79, rims: [.85] },
-  pavise: { label: 'Pavise', d: 'M6 43V13Q6 4 15 5Q24 1 33 5Q42 4 42 13V43Q33 40 24 45Q15 40 6 43z', cx: 24, cy: 24, s: .95, rims: [.86], studs: [[10, 12], [38, 12], [10, 38], [38, 38]] },
+  accolade: { label: 'Accolade', d: 'M24 3Q18 9 7 6Q10 13 5 18C5 32 15 39 24 45C33 39 43 32 43 18Q38 13 41 6Q30 9 24 3z', cx: 24, cy: 23, s: .91 },
+  ogee: { label: 'Ogee', d: 'M6 5Q15 9 24 3Q33 9 42 5C39 13 44 18 40 28C36 38 28 39 24 45C20 39 12 38 8 28C4 18 9 13 6 5z', cx: 24, cy: 23, s: .91 },
+  scallop: { label: 'Scalloped', d: 'M24 3C28 9 34 4 39 6C37 12 45 12 42 18C48 25 40 28 40 32Q33 39 24 45Q15 39 8 32C8 28 0 25 6 18C3 12 11 12 9 6C14 4 20 9 24 3z', cx: 24, cy: 23, s: .9 },
+  targe: { retired: true, label: 'Targe', d: 'M24 4a20 20 0 1 1 0 40a20 20 0 1 1 0-40z', cx: 24, cy: 24, s: .85 },
+  vesica: { label: 'Vesica', d: 'M24 3C44 13 44 34 24 45C4 34 4 13 24 3z', cx: 24, cy: 24, s: .82 },
+  crescent: { label: 'Amazon', d: 'M5 5Q24 22 43 5C47 21 40 39 24 45C8 39 1 21 5 5z', cx: 24, cy: 29, s: .76 },
+  cartouche: { label: 'Cartouche', d: 'M24 3C29 9 33 4 39 7C33 14 44 15 40 22C46 28 36 30 37 36Q28 39 24 45Q20 39 11 36C12 30 2 28 8 22C4 15 15 14 9 7C15 4 19 9 24 3z', cx: 24, cy: 24, s: .79 },
+  pavise: { label: 'Pavise', d: 'M6 43V13Q6 4 15 5Q24 1 33 5Q42 4 42 13V43Q33 40 24 45Q15 40 6 43z', cx: 24, cy: 24, s: .95 },
   spanish: { label: 'Spanish', d: 'M7 5H41V26A17 18.5 0 0 1 7 26Z', cx: 24, cy: 22, s: 1.04 },
   swiss: { label: 'Swiss', d: 'M7 8Q15 3 24 7Q33 3 41 8V22C41 33 33 40 24 44.5C15 40 7 33 7 22Z', cx: 24, cy: 23, s: .98 },
   polish: { label: 'Polish', d: 'M5 4Q11 9 16 6.5Q20 4.5 24 6.5Q28 4.5 32 6.5Q37 9 43 4Q43.5 14 41 22C39.5 34 33 40 24 44.5C15 40 8.5 34 7 22Q4.5 14 5 4Z', cx: 24, cy: 23, s: .96 },
@@ -97,34 +98,45 @@ export const METALS = {
   platinum: { retired: true, label: 'Platinum', hex: '#BCC9D8' }
 };
 
+// Each trim's inner borders, as distances in from the outline. Riveted shields also carry
+// studs on the line nearer the edge (crest-geometry.js).
 export const TRIMS = {
-  basic: { label: 'Basic' },
-  inset: { label: 'Inset' },
-  double: { label: 'Double' },
-  riveted: { label: 'Riveted' }
-};
-
-// Divisions of the field, drawn as a shade of the field color.
-export const PATTERNS = {
-  plain: { label: 'Plain', d: '' },
-  pale: { label: 'Per pale', d: 'M24 0h24v48H24z' },
-  bend: { label: 'Per bend', d: 'M0 0h48v48z' },
-  chief: { label: 'Chief', d: 'M0 0h48v15H0z' },
-  chevron: { label: 'Chevron', d: 'M0 48L24 22l24 26z' },
-  quarterly: { label: 'Quarterly', d: 'M0 0h24v24H0zM24 24h24v24H24z' },
-  cross: { label: 'Cross', d: 'M20 0h8v48h-8zM0 20h48v8H0z' },
-  saltire: { label: 'Saltire', d: 'M0 5.7L5.7 0 48 42.3 42.3 48zM42.3 0L48 5.7 5.7 48 0 42.3z' },
-  meander: { label: 'Greek key', d: 'M0 17h15v14H3V21h8v6H7v-2h2v-2H5v6h8V19H0zM16 17h15v14H19V21h8v6h-4v-2h2v-2h-4v6h8V19H16zM32 17h15v14H35V21h8v6h-4v-2h2v-2h-4v6h8V19H32z' },
-  fluted: { label: 'Fluted', d: 'M6 0h4v48H6zM16 0h4v48h-4zM28 0h4v48h-4zM38 0h4v48h-4z' },
-  striped: { label: 'Striped', d: 'M0 6h48v6H0zM0 21h48v6H0zM0 36h48v6H0z' },
-  chequer: { label: 'Chequered', d: 'M0 0h12v12H0zM24 0h12v12H24zM12 12h12v12H12zM36 12h12v12H36zM0 24h12v12H0zM24 24h12v12H24zM12 36h12v12H12zM36 36h12v12H36z' },
-  gyronny: { label: 'Radiant', d: 'M24 24 0 0h24zM24 24 48 0v24zM24 24 48 48H24zM24 24 0 48V24z' },
-  lozengy: { label: 'Diamonds', d: 'M12 0 24 12 12 24 0 12zM36 0 48 12 36 24 24 12zM12 24 24 36 12 48 0 36zM36 24 48 36 36 48 24 36z' },
-  fess: { label: 'Fess', d: 'M0 17h48v14H0z' },
-  base: { label: 'Base', d: 'M0 32h48v16H0z' }
+  basic: { label: 'Basic', rims: [] },
+  inset: { label: 'Inset', rims: [3] },
+  double: { label: 'Double', rims: [2.7, 4.8] },
+  riveted: { label: 'Riveted', rims: [4.8] }
 };
 
 const round = n => Math.round(n * 100) / 100;
+
+// Divisions of the field, drawn as a shade of the field color. Each is laid out on the
+// shape: centered on the emblem's point (cx, cy), with the chief and base cut from the
+// shape's own top and bottom. E and F reach past the 48 × 48 box; the shape clips them.
+const E = -24, F = 72;
+const band = (cx, cy, dx, dy, w) => {
+  const nx = -dy * w / 2, ny = dx * w / 2;
+  const at = (t, side) => `${round(cx + dx * t + nx * side)} ${round(cy + dy * t + ny * side)}`;
+  return `M${at(-60, 1)}L${at(60, 1)} ${at(60, -1)} ${at(-60, -1)}z`;
+};
+const repeat = (from, step, fn) => Array.from({ length: Math.ceil((F - E) / step) + 1 }, (_, i) => fn(from + (Math.floor((E - from) / step) + i) * step)).join('');
+export const PATTERNS = {
+  plain: { label: 'Plain' },
+  pale: { label: 'Per pale', d: ({ cx }) => `M${cx} ${E}H${F}V${F}H${cx}z` },
+  bend: { label: 'Per bend', d: ({ cx, cy }) => `M${cx - 60} ${cy - 60}H${cx + 60}V${cy + 60}z` },
+  chief: { label: 'Chief', d: ({ box: [, top, , bottom] }) => `M${E} ${E}H${F}V${round(top + (bottom - top) * .3)}H${E}z` },
+  chevron: { label: 'Chevron', d: ({ cx, cy }) => `M${cx - 60} ${cy + 63}L${cx} ${cy - 2}l60 65z` },
+  quarterly: { label: 'Quarterly', d: ({ cx, cy }) => `M${E} ${E}H${cx}V${cy}H${E}zM${cx} ${cy}H${F}V${F}H${cx}z` },
+  cross: { label: 'Cross', d: ({ cx, cy }) => `M${cx - 4} ${E}h8V${F}h-8zM${E} ${cy - 4}H${F}v8H${E}z` },
+  saltire: { label: 'Saltire', d: ({ cx, cy }) => band(cx, cy, Math.SQRT1_2, Math.SQRT1_2, 8) + band(cx, cy, Math.SQRT1_2, -Math.SQRT1_2, 8) },
+  meander: { label: 'Greek key', d: ({ cx, cy }) => repeat(cx - 24, 16, x => `M${x} ${cy - 7}h15v14h-12v-10h8v6h-4v-2h2v-2h-4v6h8v-10h-13z`) },
+  fluted: { label: 'Fluted', d: ({ cx }) => repeat(cx - 18, 22, x => `M${x} ${E}h4V${F}h-4zM${x + 10} ${E}h4V${F}h-4z`) },
+  striped: { label: 'Striped', d: ({ cy }) => repeat(cy - 3, 15, y => `M${E} ${y}H${F}v6H${E}z`) },
+  chequer: { label: 'Chequered', d: ({ cx, cy }) => repeat(cy, 12, y => repeat(cx + ((y - cy) / 12 % 2 ? 12 : 0), 24, x => `M${x} ${y}h12v12h-12z`)) },
+  gyronny: { label: 'Radiant', d: ({ cx, cy }) => `M${cx} ${cy}l-60-60h60zM${cx} ${cy}l60-60v60zM${cx} ${cy}l60 60h-60zM${cx} ${cy}l-60 60v-60z` },
+  lozengy: { label: 'Diamonds', d: ({ cx, cy }) => repeat(cy - 24, 24, y => repeat(cx - 12, 24, x => `M${x} ${y}l12 12-12 12-12-12z`)) },
+  fess: { label: 'Fess', d: ({ cy, box: [, top, , bottom] }) => `M${E} ${round(cy - (bottom - top) * .16)}H${F}v${round((bottom - top) * .32)}H${E}z` },
+  base: { label: 'Base', d: ({ box: [, top, , bottom] }) => `M${E} ${round(bottom - (bottom - top) * .33)}H${F}V${F}H${E}z` }
+};
 
 function starPath() {
   const pts = [];
@@ -157,7 +169,7 @@ export const EMBLEMS = {
   cross: { label: 'Cross', svg: EMBLEM_ART.cross },
   botonny: { label: 'Botonny cross', svg: EMBLEM_ART.botonny },
   maltese: { label: 'Maltese cross', svg: EMBLEM_ART.maltese },
-  eagle: { label: 'Eagle', svg: EMBLEM_ART.eagle },
+  eagle: { retired: true, label: 'Eagle', svg: EMBLEM_ART.eagle },
   spartan: { label: 'Spartan', svg: EMBLEM_ART.spartan },
   spears: { label: 'Spears', svg: EMBLEM_ART.spears },
   axe: { label: 'Axe', svg: EMBLEM_ART.axe },
@@ -207,14 +219,14 @@ const pick = obj => { const keys = Object.keys(obj); return keys[Math.floor(Math
 export function parseCrest(text) {
   const parts = typeof text === 'string' ? text.split('.') : [];
   const crest = {};
-  PARTS.forEach((part, i) => { crest[part] = PART_OPTIONS[part][parts[i]] ? parts[i] : part === 'emblem' ? 'letter' : Object.keys(PART_OPTIONS[part])[0]; });
-  crest.trim = parts[5] === 'none' ? 'basic' : TRIMS[parts[5]] ? parts[5] : defaultTrim(crest.shape);
+  PARTS.forEach((part, i) => { crest[part] = Object.hasOwn(PART_OPTIONS[part], parts[i]) ? parts[i] : part === 'emblem' ? 'letter' : Object.keys(PART_OPTIONS[part])[0]; });
+  crest.trim = parts[5] === 'none' ? 'basic' : Object.hasOwn(TRIMS, parts[5]) ? parts[5] : defaultTrim(crest.shape);
   // Circular shields share one silhouette; their decoration remains independent.
   if (crest.shape === 'round' || crest.shape === 'targe') crest.shape = 'hoplon';
   return crest;
 }
 
-const defaultTrim = shape => SHAPES[shape]?.studs ? 'riveted' : shape === 'hoplon' ? 'double' : 'inset';
+const defaultTrim = shape => shape === 'pavise' || shape === 'targe' ? 'riveted' : shape === 'hoplon' ? 'double' : 'inset';
 export const crestString = crest => PARTS.map(part => part === 'trim' ? (crest.trim === 'none' ? 'basic' : crest.trim || defaultTrim(crest.shape)) : crest[part]).join('.');
 
 export function randomCrest() {
@@ -238,35 +250,6 @@ export function botCrest(key) {
   const crest = { shape: from(SHAPE_CHOICES), color: from(COLOR_CHOICES), pattern: from(PATTERNS), emblem: 'bot', metal: from(METAL_CHOICES) };
   return { ...crest, trim: defaultTrim(crest.shape) };
 }
-
-const RIVETS = {
-  heater: [[10, 8], [24, 8], [38, 8], [38, 21], [34, 32], [24, 40], [14, 32], [10, 21]],
-  scutum: [[15, 7], [24, 7], [33, 7], [36, 24], [33, 41], [24, 41], [15, 41], [12, 24]],
-  banner: [[11, 7], [24, 7], [37, 7], [37, 23], [37, 39], [24, 33], [11, 39], [11, 23]],
-  pennon: [[7, 12], [23, 12], [39, 12], [33, 24], [39, 36], [23, 36], [7, 36], [7, 24]],
-  oval: [[24, 6], [33, 11], [37, 24], [33, 37], [24, 42], [15, 37], [11, 24], [15, 11]],
-  peltast: [[9, 12], [24, 15], [39, 12], [38, 26], [33, 35], [24, 40], [15, 35], [10, 26]],
-  kite: [[24, 6], [35, 9], [38, 19], [33, 30], [24, 41], [15, 30], [10, 19], [13, 9]],
-  standard: [[12, 7], [24, 7], [36, 7], [36, 22], [36, 34], [24, 41], [12, 34], [12, 22]],
-  tablet: [[11, 7], [24, 7], [37, 7], [39, 24], [37, 41], [24, 41], [11, 41], [9, 24]],
-  boeotian: [[24, 6], [34, 9], [37, 14], [31, 24], [37, 34], [24, 42], [11, 34], [17, 24], [11, 14], [14, 9]],
-  vexillum: [[10, 8], [24, 8], [38, 8], [38, 23], [38, 38], [24, 41], [10, 38], [10, 23]],
-  accolade: [[24, 7], [12, 10], [9, 20], [13, 32], [24, 41], [35, 32], [39, 20], [36, 10]],
-  ogee: [[24, 7], [11, 9], [10, 21], [14, 32], [24, 41], [34, 32], [38, 21], [37, 9]],
-  scallop: [[24, 7], [12, 9], [10, 19], [10, 30], [24, 41], [38, 30], [38, 19], [36, 9]],
-  vesica: [[24, 7], [33, 15], [36, 24], [33, 34], [24, 41], [15, 34], [12, 24], [15, 15]],
-  crescent: [[9, 12], [24, 17], [39, 12], [39, 25], [33, 35], [24, 41], [15, 35], [9, 25]],
-  cartouche: [[24, 7], [14, 10], [12, 21], [15, 32], [24, 41], [33, 32], [36, 21], [34, 10]],
-  spanish: [[10, 8], [24, 8], [38, 8], [38, 23], [34, 35], [24, 41], [14, 35], [10, 23]],
-  swiss: [[10, 10], [24, 10], [38, 10], [38, 21], [34, 32], [24, 40.5], [14, 32], [10, 21]],
-  polish: [[8.5, 9], [24, 9.5], [39.5, 9], [38.5, 20], [34, 32], [24, 41], [14, 32], [9.5, 20]],
-  bouche: [[14, 8], [24, 8], [37.5, 8], [38, 21], [34, 33], [24, 41.5], [14, 33], [10.5, 24]],
-  horsehead: [[14, 8], [24, 6.5], [34, 8], [36.5, 24], [32, 35.5], [24, 41], [16, 35.5], [11.5, 24]],
-  ancile: [[14, 7], [34, 7], [35.5, 11], [35.5, 37], [34, 41], [14, 41], [12.5, 37], [12.5, 11]],
-  thureos: [[24, 6], [32, 11.5], [34.5, 24], [32, 36.5], [24, 42], [16, 36.5], [13.5, 24], [16, 11.5]],
-  lozenge: [[24, 7], [32, 15.5], [40, 24], [32, 32.5], [24, 41], [16, 32.5], [8, 24], [16, 15.5]],
-  gonfanon: [[10, 7], [24, 7], [38, 7], [38, 19], [38, 29], [24, 30.5], [10, 29], [10, 19]]
-};
 
 // Emblems are inked black, or white where the field is too dark for black to reach
 // the 3:1 contrast that graphics need.
@@ -292,9 +275,9 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
   const { cx, cy } = shape;
   const circle = shape.d === SHAPES.hoplon.d;
   const s = circle ? (trim === 'double' ? .88 : trim === 'riveted' ? .85 : 1.1) : shape.s;
-  const inset = shape.rims?.[0] || .85;
-  const rims = trim === 'basic' ? [] : trim === 'double' ? (circle ? [.86, .76] : [inset, inset - .1]) : [trim === 'riveted' && circle ? .74 : inset];
-  const studs = trim === 'riveted' ? (shape.studs || RIVETS[crest.shape] || SHAPES.targe.studs) : [];
+  const geometry = { ...SHAPE_GEOMETRY[crest.shape], cx, cy };
+  const { rims } = TRIMS[trim];
+  const studs = trim === 'riveted' ? geometry.rivets : [];
   let emblem;
   if (crest.emblem === 'letter') {
     emblem = letter
@@ -307,16 +290,27 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
   return `<svg class="crest" viewBox="0 0 48 48" aria-hidden="true">`
     + (ring ? `<path d="${shape.d}" fill="none" stroke="url(#lava-ring)" stroke-width="6" stroke-linejoin="round"/>` : '')
     + `<path d="${shape.d}" fill="${field}"/>`
-    + (PATTERNS[crest.pattern].d ? `<path d="${PATTERNS[crest.pattern].d}" fill="${shade}" clip-path="url(#crest-${crest.shape})"/>` : '')
-    + rims.map(inset => `<path d="${shape.d}" transform="translate(24 24) scale(${inset}) translate(-24 -24)" fill="none" stroke="${metal}" stroke-opacity=".8" stroke-width="1"/>`).join('')
+    + (PATTERNS[crest.pattern].d ? `<path d="${PATTERNS[crest.pattern].d(geometry)}" fill="${shade}" clip-path="url(#crest-${crest.shape})"/>` : '')
+    // The borders are one wide stroke, masked down to lines at their exact distance from the edge.
+    + (rims.length ? `<path d="${shape.d}" fill="none" stroke="${metal}" stroke-opacity=".8" stroke-width="${rimWidth(rims)}" stroke-linejoin="round" clip-path="url(#crest-${crest.shape})" mask="url(#crest-${crest.shape}-${trim})"/>` : '')
     + studs.map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="${metal}"/>`).join('')
     + emblem
     + `<path d="${shape.d}" fill="none" stroke="${metal}" stroke-opacity=".85" stroke-width="1.6" stroke-linejoin="round"/>`
     + '</svg>';
 }
 
-// Clip paths (one per shape) and the lava gradient, added once to the page's icon sprite.
+const RIM_LINE = 1;
+const rimWidth = rims => 2 * Math.max(...rims) + RIM_LINE;
+
+// Clip paths and border masks (per shape) and the lava gradient, added once to the page's icon sprite.
 export function crestDefs() {
+  // A stroke of width 2d covers everything within d of the outline. Painting the borders
+  // from the innermost out, white to each line's far side and black to its near side,
+  // leaves one band per border.
+  const stroke = (d, color, width) => `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round"/>`;
   return '<linearGradient id="lava-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0300B"/><stop offset=".45" stop-color="#FF8A00"/><stop offset="1" stop-color="#FFB23D"/></linearGradient>'
-    + Object.entries(SHAPES).map(([key, shape]) => `<clipPath id="crest-${key}"><path d="${shape.d}"/></clipPath>`).join('');
+    + Object.entries(SHAPES).map(([key, shape]) => `<clipPath id="crest-${key}"><path d="${shape.d}"/></clipPath>`
+      + Object.entries(TRIMS).filter(([, trim]) => trim.rims.length).map(([trim, { rims }]) => `<mask id="crest-${key}-${trim}" maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">`
+        + [...rims].reverse().map(d => stroke(shape.d, 'white', 2 * d + RIM_LINE) + stroke(shape.d, 'black', 2 * d - RIM_LINE)).join('')
+        + '</mask>').join('')).join('');
 }
