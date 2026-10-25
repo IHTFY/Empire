@@ -11,9 +11,11 @@ class FakeScript {
 }
 
 function harness({ onLine = true, key = null, cookie = '', adFree = false } = {}) {
+  const listeners = {};
   const document = {
     cookie,
     activeElement: null,
+    addEventListener: (name, callback) => { listeners[name] = callback; },
     createElement: () => new FakeScript(),
     head: { appendChild: el => { added.push(el); } }
   };
@@ -25,11 +27,14 @@ function harness({ onLine = true, key = null, cookie = '', adFree = false } = {}
     document,
     localStorage: { getItem: name => (name === 'ihtfy-ad-free' ? key : null) },
     sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) },
-    window: { ihtfyAds: { show: (box, key) => shown.push([box, key]), adFree: async () => adFree } }
+    ResizeObserver: class { observe() {} },
+    clearTimeout() {},
+    setTimeout() {},
+    window: { addEventListener: (name, callback) => { listeners[name] = callback; }, ihtfyAds: { show: (box, key) => shown.push([box, key]), adFree: async () => adFree } }
   });
   const source = readFileSync(join(__dirname, '../public/ads.js'), 'utf8').replace(/^export /gm, '');
   vm.runInContext(source, context);
-  return { context, added, shown, document };
+  return { context, added, shown, document, listeners };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
@@ -398,4 +403,22 @@ test('coming back to Home in a window that no longer fits the filled box takes i
   h.context.showHomeAd(home.aside, box);
   assert.equal(home.aside.hidden, true);
   assert.equal(box.isConnected, false);
+});
+
+test('the dialog and resize handlers act on the box Home has now, not the one it started with', () => {
+  const h = harness();
+  const home = fakeHome({ fitting: SIZES });
+  home.aside.querySelector = () => home.box;
+  const first = home.box;
+  h.context.rememberFinishedRound('room/round-1');
+  h.context.showHomeAd(home.aside, first);
+  h.context.closeHomeAd(first);
+  const second = first.copy;
+  assert.notEqual(second, first);
+  home.box = second;
+  h.context.showHomeAd(home.aside, second);
+  h.context.watchHomeAd(home.aside, { children: [] });
+  h.listeners.sheetopen();
+  assert.equal(second.isConnected, false, 'the live box came down');
+  assert.equal(home.aside.hidden, true);
 });

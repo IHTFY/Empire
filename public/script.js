@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeHome: () => closeHomeAd($('homeAdBox'))
   });
   initializeSheets();
-  watchHomeAd($('homeAd'), $('homeAdBox'), $('roomForm'));
+  watchHomeAd($('homeAd'), $('roomForm'));
   initializeFullscreen(ui);
   const audio = createAudio({ db, rollNumber: ui.rollNumber });
   const rooms = createRooms({

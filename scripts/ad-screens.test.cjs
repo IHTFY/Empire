@@ -59,6 +59,6 @@ test('no room script touches the ad code', () => {
 
 test('the app wires the ad to dialogs, resizes and form changes, once', () => {
   const script = publicFile('script.js');
-  assert.match(script, /watchHomeAd\(\$\('homeAd'\), \$\('homeAdBox'\), \$\('roomForm'\)\);/);
+  assert.match(script, /watchHomeAd\(\$\('homeAd'\), \$\('roomForm'\)\);/);
   assert.match(publicFile('sheets.js'), /dispatchEvent\(new CustomEvent\('sheetopen'\)\);\s*dialog\.showModal\(\)/);
 });

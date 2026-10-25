@@ -71,7 +71,7 @@ test('Home carries one ad after a finished round, in view and clear of every con
       const { createHome } = await import('/home.js');
       createHome({ db: {}, ensureSignedIn() {}, enterRoom() {}, setRoomInUrl() {}, ui: { show() {}, toast() {} } });
       const { showHomeAd, watchHomeAd } = await import('/ads.js');
-      watchHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox'), document.querySelector('#roomForm'));
+      watchHomeAd(document.querySelector('#homeAd'), document.querySelector('#roomForm'));
       showHomeAd(document.querySelector('#homeAd'), document.querySelector('#homeAdBox'));
     }, finishedRound);
     return page;

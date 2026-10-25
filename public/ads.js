@@ -168,16 +168,18 @@ export function refitHomeAd(aside, box, resizing = false) {
 
 // Wires the ad to what can happen to Home while it shows: a dialog opening over it, the window
 // resizing, and the form changing size. The form's changes are checked once its animation ends.
-export function watchHomeAd(aside, box, form) {
-  document.addEventListener('sheetopen', () => retireHomeAd(aside, box));
-  window.addEventListener('resize', () => refitHomeAd(aside, box, true));
+// The box is looked up each time, as leaving Home can replace it.
+export function watchHomeAd(aside, form) {
+  const current = () => aside.querySelector('[data-ad-slot]');
+  document.addEventListener('sheetopen', () => retireHomeAd(aside, current()));
+  window.addEventListener('resize', () => refitHomeAd(aside, current(), true));
   let settle = 0;
   let observing = false;
   const formChanged = new ResizeObserver(() => {
     // The first report is the form as it stands, not a change.
     if (!observing) return void (observing = true);
     clearTimeout(settle);
-    settle = setTimeout(() => refitHomeAd(aside, box), 450);
+    settle = setTimeout(() => refitHomeAd(aside, current()), 450);
   });
   for (const part of form.children) formChanged.observe(part);
 }
