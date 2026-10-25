@@ -83,15 +83,15 @@ test('public invitation lookup, authenticated room creation, and joining remain 
   await outsider.ref(`games/${id}/state`).set('resetting');
 });
 
-test('crest saves accept legacy and independent trim formats, rejecting malformed parts', async () => {
+test('crest saves accept legacy, trim, emblem color and tone formats, rejecting malformed parts', async () => {
   await seed('crest-formats');
   const crest = alice.ref('games/crest-formats/users/alice/crest');
-  await Promise.all(['hoplon.crimson.plain.lion.gold', 'hoplon.crimson.plain.lion.gold.riveted'].map(value => crest.set(value)));
+  await Promise.all(['hoplon.crimson.plain.lion.gold', 'hoplon.crimson.plain.lion.gold.riveted', 'hoplon.crimson.plain.lion.gold.riveted.yellow', 'hoplon.lightvermilion.plain.lion.gold.riveted.darkcrimson'].map(value => crest.set(value)));
   await Promise.all([
     'hoplon.crimson.plain.lion',
-    'hoplon.crimson.plain.lion.gold.riveted.extra',
+    'hoplon.crimson.plain.lion.gold.riveted.yellow.extra',
     'hoplon.crimson.plain.lion.gold.a',
-    'hoplon.crimson.plain.lion.gold.abcdefghijklm',
+    'hoplon.crimson.plain.lion.gold.abcdefghijklmno',
     'hoplon.crimson.plain.lion.gold.Riveted',
     'hoplon.crimson.plain.lion.gold.riveted1',
     'hoplon.crimson.plain.lion.gold.',

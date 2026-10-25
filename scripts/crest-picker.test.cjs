@@ -44,53 +44,52 @@ test('The crest editor switches tabs and applies each choice', async t => {
   await page.mouse.click(big.x + big.width * .2, big.y + big.height * .4);
   assert.equal(await page.getAttribute('#crestTab-color', 'aria-selected'), 'true');
   assert.equal(await page.locator('#crestPanel-emblem').isVisible(), false);
-  const wheel = page.locator('.crest-wheel');
-  assert.equal(await wheel.getAttribute('aria-valuetext'), 'None', 'a retired color is not on the wheel');
+  const name = part => page.textContent(`#crestPanel-${part} .crest-pad-name`);
+  const pad = page.locator('#crestPanel-color .crest-pad');
+  assert.match(await pad.getAttribute('class'), /\boff\b/, 'a retired color is not on the grid');
+  assert.equal(await name('color'), 'Rust');
   assert.equal(await page.getAttribute('#crestPanel-color [data-value="rust"]', 'aria-pressed'), 'true', 'the retired color stays as a selected swatch');
-  // The point on the wheel's band at a given step round from the top.
-  const stepAt = step => page.evaluate(step => {
-    const wheel = document.querySelector('.crest-wheel');
-    const box = wheel.getBoundingClientRect();
-    const turn = step / (+wheel.getAttribute('aria-valuemax') + 1) * 2 * Math.PI;
-    const r = box.width / 2 - 8;
-    return { x: box.left + box.width / 2 + Math.sin(turn) * r, y: box.top + box.height / 2 - Math.cos(turn) * r };
-  }, step);
-  // Going round the wheel, the colors run in hue order, each one once.
-  const steps = +await wheel.getAttribute('aria-valuemax') + 1;
-  const hues = [];
-  for (let step = 0; step < steps; step++) {
-    const point = await stepAt(step);
-    await page.mouse.click(point.x, point.y);
-    assert.equal(await wheel.getAttribute('aria-valuenow'), String(step));
-    hues.push(await page.evaluate(async color => {
-      const { PART_OPTIONS } = await import('/crest.js');
-      const [r, g, b] = [1, 3, 5].map(i => parseInt(PART_OPTIONS.color[color].hex.slice(i, i + 2), 16));
-      const max = Math.max(r, g, b), d = max - Math.min(r, g, b);
-      const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-      return h * 60;
-    }, (await value()).split('.')[1]));
-  }
-  if (hues[0] > 300) hues[0] -= 360;
-  assert.deepEqual([...hues].sort((a, b) => a - b), hues, `hues in order: ${hues.map(Math.round)}`);
-  // Dragging the knob around picks each color it passes over.
-  const from = await stepAt(3), to = await stepAt(7);
+  await page.click('#crestPanel-color [data-value="deepblue"]');
+  assert.match(await value(), /^heater\.deepblue\./);
+  assert.equal(await name('color'), 'Deep blue');
+  assert.doesNotMatch(await pad.getAttribute('class'), /\boff\b/);
+  assert.equal(await page.getAttribute('#crestPanel-color [data-value="rust"]', 'aria-pressed'), 'false');
+  // Dragging across the grid picks each color it passes over.
+  const center = async key => {
+    const box = await page.locator(`#crestPanel-color [data-value="${key}"]`).boundingBox();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const from = await center('crimson'), to = await center('lightteal');
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 6 });
   await page.mouse.up();
-  assert.equal(await wheel.getAttribute('aria-valuenow'), '7');
-  await wheel.press('ArrowLeft');
-  assert.equal(await wheel.getAttribute('aria-valuenow'), '6');
-  assert.equal(await page.textContent('.crest-wheel-label'), await wheel.getAttribute('aria-valuetext'));
-  await page.click('#crestPanel-color [data-value="sable"]');
-  assert.match(await value(), /^heater\.sable\./);
-  assert.equal(await wheel.getAttribute('aria-valuetext'), 'None');
-  assert.equal(await page.textContent('.crest-wheel-label'), 'Black');
-  await wheel.press('End');
-  assert.equal(await wheel.getAttribute('aria-valuenow'), String(steps - 1), 'End goes to the last color from a swatch');
-  await page.click('#crestPanel-color [data-value="sable"]');
-  await wheel.press('ArrowRight');
-  assert.equal(await wheel.getAttribute('aria-valuenow'), '0', 'an arrow from a swatch starts at the first color');
+  assert.match(await value(), /^heater\.lightteal\./);
+  // The arrow keys move around the grid without wrapping.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowRight');
+  assert.match(await value(), /^heater\.deepcyan\./);
+  await page.click('#crestPanel-color [data-value="iron"]');
+  await page.keyboard.press('ArrowRight');
+  assert.match(await value(), /^heater\.iron\./);
+  await page.keyboard.press('ArrowUp');
+  assert.match(await value(), /^heater\.gray\./);
+  // The emblem's color has its own grid, starting on Auto.
+  await page.click('#crestTab-ink');
+  assert.equal(await page.getAttribute('#crestPanel-ink [data-value="auto"]', 'aria-pressed'), 'true');
+  assert.equal(await name('ink'), 'Auto');
+  await page.click('#crestPanel-ink [data-value="crimson"]');
+  assert.match(await value(), /^heater\.gray\..*\.crimson$/, 'the field keeps its color');
+  assert.equal(await name('ink'), 'Red');
+  await page.click('#crestPanel-ink [data-value="darkblue"]');
+  assert.match(await value(), /\.darkblue$/);
+  await page.click('#crestPanel-ink [data-value="auto"]');
+  assert.equal((await value()).split('.').length, 6, 'Auto is left out of the saved crest');
+  await page.focus('#crestPanel-ink .crest-pad-cell[tabindex="0"]');
+  await page.keyboard.press('ArrowLeft');
+  assert.match(await value(), /\.palecrimson$/, 'an arrow from Auto starts at the top left');
+  await page.click('#crestPanel-ink [data-value="auto"]');
   // Coming back to a tab mid-animation still scrolls its chosen tile into view.
   await page.click('#crestTab-emblem');
   await page.click('#crestPanel-emblem [data-value="letter"]');

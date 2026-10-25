@@ -1,10 +1,10 @@
 import { EMBLEM_ART } from './crest-emblems.js';
 import { SHAPE_GEOMETRY } from './crest-geometry.js';
 
-// Crests: each player's avatar is a small coat of arms built from six choices.
-// A crest is stored as "shape.color.pattern.emblem.metal.trim". The last component
-// is optional in older saves. Unknown parts fall back to defaults, so older
-// or newer clients never break each other.
+// Crests: each player's avatar is a small coat of arms built from seven choices.
+// A crest is stored as "shape.color.pattern.emblem.metal.trim.ink". Trim is optional in
+// older saves, and ink is left off while it is "auto". Unknown parts fall back to defaults,
+// so older or newer clients never break each other.
 
 // Every shape sits inside a 48 × 48 box, inset so the "you" ring fits around it.
 // cx/cy/s place the emblem (drawn on a 24 × 24 grid) inside the shape.
@@ -43,8 +43,8 @@ export const SHAPES = {
   gonfanon: { label: 'Gonfanon', d: 'M7 4H41V30L35.5 44L29.8 33.5L24 44L18.2 33.5L12.5 44L7 30Z', cx: 24, cy: 19.5, s: 1.04 }
 };
 
-// Saturated rainbow colors, then common shades. Retired colors still render for
-// existing crests but aren't offered.
+// Saturated rainbow colors, then grays. Retired colors still render for existing crests
+// but aren't offered.
 export const COLORS = {
   crimson: { label: 'Red', hex: '#D7262B' },
   vermilion: { label: 'Vermilion', hex: '#EA4E1B' },
@@ -66,13 +66,13 @@ export const COLORS = {
   gray: { label: 'Gray', hex: '#858B95' },
   iron: { label: 'Charcoal', hex: '#42474F' },
   sable: { label: 'Black', hex: '#17181D' },
-  cream: { label: 'Cream', hex: '#EEDFB8' },
-  sand: { label: 'Tan', hex: '#C9A06A' },
-  brown: { label: 'Brown', hex: '#7B4B26' },
-  oxblood: { label: 'Maroon', hex: '#7A1F2B' },
-  midnight: { label: 'Navy', hex: '#1F2D63' },
-  olive: { label: 'Olive', hex: '#7D7F22' },
-  pine: { label: 'Forest', hex: '#1F5A33' },
+  cream: { retired: true, label: 'Cream', hex: '#EEDFB8' },
+  sand: { retired: true, label: 'Tan', hex: '#C9A06A' },
+  brown: { retired: true, label: 'Brown', hex: '#7B4B26' },
+  oxblood: { retired: true, label: 'Maroon', hex: '#7A1F2B' },
+  midnight: { retired: true, label: 'Navy', hex: '#1F2D63' },
+  olive: { retired: true, label: 'Olive', hex: '#7D7F22' },
+  pine: { retired: true, label: 'Forest', hex: '#1F5A33' },
   rust: { retired: true, label: 'Rust', hex: '#C0662B' },
   ochre: { retired: true, label: 'Ochre', hex: '#8F7A14' },
   tyrian: { retired: true, label: 'Tyrian', hex: '#8E2A62' },
@@ -88,7 +88,42 @@ export const COLORS = {
   lapis: { retired: true, label: 'Lapis', hex: '#314D98' }
 };
 
-// Trim metals. Emblems no longer take the metal; they are inked black or white.
+// Players pick from a grid: the rainbow colors across, each from pale at the top to dark at
+// the bottom, and the grays as the last column. The four extra tones of each color were made
+// in OKLCH from the color itself: lightness moved toward white or black, chroma scaled down
+// and kept inside sRGB.
+const HUES = ['crimson', 'vermilion', 'orange', 'amber', 'yellow', 'lime', 'green', 'teal', 'cyan', 'azure', 'blue', 'indigo', 'violet', 'magenta', 'pink'];
+const GRAYS = ['white', 'lightgray', 'gray', 'iron', 'sable'];
+const TONES = ['pale', 'light', '', 'deep', 'dark'];
+const TONE_HEXES = {
+  crimson: ['#F9B6AE', '#F0776D', '#9A0212', '#5A0106'],
+  vermilion: ['#FFC1AF', '#FB8B6B', '#A62E00', '#621801'],
+  orange: ['#FDD5B4', '#FCB170', '#A85F01', '#633601'],
+  amber: ['#FCE6BA', '#FCD077', '#AB7F03', '#654A02'],
+  yellow: ['#FAF3BE', '#F8E97D', '#AA9903', '#645A01'],
+  lime: ['#D8ECBA', '#B9DC7A', '#698B01', '#3C5100'],
+  green: ['#B6DBB8', '#77BF7E', '#066E24', '#013F11'],
+  teal: ['#B3DAD1', '#70BEAE', '#026C5E', '#023E35'],
+  cyan: ['#B8E2EA', '#76CBDC', '#00798A', '#014651'],
+  azure: ['#B9DAF5', '#7DBCEF', '#156AA1', '#013D61'],
+  blue: ['#A9C0EE', '#658EE2', '#103692', '#041B59'],
+  indigo: ['#AFB4E2', '#7679CB', '#2C1F7A', '#160C4A'],
+  violet: ['#CAB8ED', '#A37FE0', '#552190', '#310C57'],
+  magenta: ['#EEB4D9', '#DD75BC', '#89056C', '#50013E'],
+  pink: ['#FEC8DD', '#FB9AC3', '#AA4173', '#672043']
+};
+for (const hue of HUES) {
+  TONES.filter(Boolean).forEach((tone, i) => {
+    COLORS[tone + hue] = { label: `${tone[0].toUpperCase()}${tone.slice(1)} ${COLORS[hue].label.toLowerCase()}`, hex: TONE_HEXES[hue][i] };
+  });
+}
+// Rows of color keys, top to bottom.
+export const COLOR_GRID = TONES.map((tone, row) => [...HUES.map(hue => tone + hue), GRAYS[row]]);
+
+// The emblem's color: auto (black or white, whichever suits the field) or any field color.
+export const INKS = { auto: { label: 'Auto' }, ...COLORS };
+
+// Trim metals.
 export const METALS = {
   gold: { label: 'Gold', hex: '#F2B84B' },
   silver: { label: 'Silver', hex: '#E4E6EF' },
@@ -209,10 +244,10 @@ export const COLOR_CHOICES = Object.fromEntries(Object.entries(COLORS).filter(([
 export const METAL_CHOICES = Object.fromEntries(Object.entries(METALS).filter(([, metal]) => !metal.retired));
 
 // Every option for each part, retired ones included, so saved crests always resolve.
-export const PART_OPTIONS = { shape: SHAPES, color: COLORS, pattern: PATTERNS, emblem: EMBLEMS, metal: METALS, trim: TRIMS };
+export const PART_OPTIONS = { shape: SHAPES, color: COLORS, pattern: PATTERNS, emblem: EMBLEMS, metal: METALS, trim: TRIMS, ink: INKS };
 export const initialOf = name => ([...name.trim()][0] || '').toUpperCase();
 
-export const PARTS = ['shape', 'color', 'pattern', 'emblem', 'metal', 'trim'];
+export const PARTS = ['shape', 'color', 'pattern', 'emblem', 'metal', 'trim', 'ink'];
 
 const pick = obj => { const keys = Object.keys(obj); return keys[Math.floor(Math.random() * keys.length)]; };
 
@@ -227,10 +262,11 @@ export function parseCrest(text) {
 }
 
 const defaultTrim = shape => shape === 'pavise' || shape === 'targe' ? 'riveted' : shape === 'hoplon' ? 'double' : 'inset';
-export const crestString = crest => PARTS.map(part => part === 'trim' ? (crest.trim === 'none' ? 'basic' : crest.trim || defaultTrim(crest.shape)) : crest[part]).join('.');
+export const crestString = crest => PARTS.slice(0, 6).map(part => part === 'trim' ? (crest.trim === 'none' ? 'basic' : crest.trim || defaultTrim(crest.shape)) : crest[part]).join('.')
+  + (crest.ink && crest.ink !== 'auto' ? `.${crest.ink}` : '');
 
 export function randomCrest() {
-  return { shape: pick(SHAPE_CHOICES), color: pick(COLOR_CHOICES), pattern: pick(PATTERNS), emblem: 'letter', metal: pick(METAL_CHOICES), trim: pick(TRIMS) };
+  return { shape: pick(SHAPE_CHOICES), color: pick(COLOR_CHOICES), pattern: pick(PATTERNS), emblem: 'letter', metal: pick(METAL_CHOICES), trim: pick(TRIMS), ink: 'auto' };
 }
 
 // A stable crest for players who never picked one (older clients): a round badge with
@@ -251,15 +287,17 @@ export function botCrest(key) {
   return { ...crest, trim: defaultTrim(crest.shape) };
 }
 
-// Emblems are inked black, or white where the field is too dark for black to reach
-// the 3:1 contrast that graphics need.
+// Auto emblems are inked black, or white where the field is too dark for black to reach
+// the 3:1 contrast that graphics need. A chosen color that falls short of 3:1 on its field
+// gets a black or white outline that does reach it, so the emblem's outline still stands out.
 const INK = { dark: '#15161C', light: '#F5F3EE' };
 function luminance(hex) {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map(v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
   return .2126 * r + .7152 * g + .0722 * b;
 }
-export const inkFor = hex => (luminance(hex) + .05) / (luminance(INK.dark) + .05) >= 3 ? INK.dark : INK.light;
+export const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+export const inkFor = hex => contrast(hex, INK.dark) >= 3 ? INK.dark : INK.light;
 
 const escape = text => String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
@@ -269,8 +307,11 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
   const shape = SHAPES[crest.shape];
   const field = COLORS[crest.color].hex;
   const metal = METALS[crest.metal].hex;
-  const ink = inkFor(field);
-  const shade = ink === INK.light ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.3)';
+  const auto = inkFor(field);
+  const ink = crest.ink && crest.ink !== 'auto' ? INKS[crest.ink].hex : auto;
+  // The outline must stand out from the field; of black and white, take the one further from the ink.
+  const outline = contrast(ink, field) >= 3 ? '' : [INK.dark, INK.light].filter(c => contrast(c, field) >= 3).sort((a, b) => contrast(b, ink) - contrast(a, ink))[0];
+  const shade = auto === INK.light ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.3)';
   const trim = crest.trim === 'none' ? 'basic' : crest.trim || defaultTrim(crest.shape);
   const { cx, cy } = shape;
   const circle = shape.d === SHAPES.hoplon.d;
@@ -280,12 +321,12 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
   const studs = trim === 'riveted' ? geometry.rivets : [];
   let emblem;
   if (crest.emblem === 'letter') {
-    emblem = letter
-      ? `<text x="${cx}" y="${round(cy + 9.4 * s)}" text-anchor="middle" font-family="'Barlow Condensed', 'Arial Narrow', sans-serif" font-style="italic" font-weight="800" font-size="${round(27 * s)}" fill="${ink}">${escape(letter)}</text>`
+    emblem = (color, filter) => letter
+      ? `<text x="${cx}" y="${round(cy + 9.4 * s)}" text-anchor="middle" font-family="'Barlow Condensed', 'Arial Narrow', sans-serif" font-style="italic" font-weight="800" font-size="${round(27 * s)}" fill="${color}"${filter}>${escape(letter)}</text>`
       : '';
   } else {
     const art = crest.emblem === 'bot' ? BOT_EMBLEM : EMBLEMS[crest.emblem].svg;
-    emblem = `<g fill="${ink}" color="${ink}" transform="translate(${round(cx - 12 * s)} ${round(cy - 12 * s)}) scale(${s})">${art}</g>`;
+    emblem = (color, filter) => `<g fill="${color}" color="${color}"${filter} transform="translate(${round(cx - 12 * s)} ${round(cy - 12 * s)}) scale(${s})">${art}</g>`;
   }
   return `<svg class="crest" viewBox="0 0 48 48" aria-hidden="true">`
     + (ring ? `<path d="${shape.d}" fill="none" stroke="url(#lava-ring)" stroke-width="6" stroke-linejoin="round"/>` : '')
@@ -294,7 +335,8 @@ export function crestSvg(crest, { letter = '', ring = false } = {}) {
     // The borders are one wide stroke, masked down to lines at their exact distance from the edge.
     + (rims.length ? `<path d="${shape.d}" fill="none" stroke="${metal}" stroke-opacity=".8" stroke-width="${rimWidth(rims)}" stroke-linejoin="round" clip-path="url(#crest-${crest.shape})" mask="url(#crest-${crest.shape}-${trim})"/>` : '')
     + studs.map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="${metal}"/>`).join('')
-    + emblem
+    + (outline ? emblem(outline, ' filter="url(#crest-outline)"') : '')
+    + emblem(ink, '')
     + `<path d="${shape.d}" fill="none" stroke="${metal}" stroke-opacity=".85" stroke-width="1.6" stroke-linejoin="round"/>`
     + '</svg>';
 }
@@ -308,7 +350,9 @@ export function crestDefs() {
   // from the innermost out, white to each line's far side and black to its near side,
   // leaves one band per border.
   const stroke = (d, color, width) => `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round"/>`;
-  return '<linearGradient id="lava-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0300B"/><stop offset=".45" stop-color="#FF8A00"/><stop offset="1" stop-color="#FFB23D"/></linearGradient>'
+  // Grows an emblem drawn in one color by about a pixel all round, for its outline.
+  return '<filter id="crest-outline" x="-20%" y="-20%" width="140%" height="140%"><feMorphology operator="dilate" radius="1"/></filter>'
+    + '<linearGradient id="lava-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0300B"/><stop offset=".45" stop-color="#FF8A00"/><stop offset="1" stop-color="#FFB23D"/></linearGradient>'
     + Object.entries(SHAPES).map(([key, shape]) => `<clipPath id="crest-${key}"><path d="${shape.d}"/></clipPath>`
       + Object.entries(TRIMS).filter(([, trim]) => trim.rims.length).map(([trim, { rims }]) => `<mask id="crest-${key}-${trim}" maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">`
         + [...rims].reverse().map(d => stroke(shape.d, 'white', 2 * d + RIM_LINE) + stroke(shape.d, 'black', 2 * d - RIM_LINE)).join('')

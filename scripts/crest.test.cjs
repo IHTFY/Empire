@@ -16,7 +16,7 @@ test('every crest key, offered or retired, satisfies the database rule', async (
   const rules = readFileSync(path.join(__dirname, '../database.rules.json'), 'utf8');
   const rule = new RegExp(rules.match(/"crest":.*?matches\(\/(.+?)\/\)/)[1].replaceAll('\\\\', '\\'));
   const base = { shape: 'heater', color: 'crimson', pattern: 'plain', emblem: 'lion', metal: 'gold', trim: 'inset' };
-  const options = { shape: crest.SHAPES, color: crest.COLORS, pattern: crest.PATTERNS, emblem: crest.EMBLEMS, metal: crest.METALS, trim: crest.TRIMS };
+  const options = { shape: crest.SHAPES, color: crest.COLORS, pattern: crest.PATTERNS, emblem: crest.EMBLEMS, metal: crest.METALS, trim: crest.TRIMS, ink: crest.INKS };
   for (const [part, keys] of Object.entries(options)) {
     for (const key of Object.keys(keys)) assert.match(crest.crestString({ ...base, [part]: key }), rule, `${part} ${key}`);
   }
@@ -48,6 +48,18 @@ test('players are offered only current colors, metals and emblems', async () => 
   }
 });
 
+test('the color grid offers every current color once, each column darkening downward', async () => {
+  const { COLOR_GRID, COLOR_CHOICES, COLORS } = await load();
+  const keys = COLOR_GRID.flat();
+  assert.deepEqual([...keys].sort(), Object.keys(COLOR_CHOICES).sort());
+  for (let col = 0; col < COLOR_GRID[0].length; col++) {
+    const column = COLOR_GRID.map(row => relativeLuminance(COLORS[row[col]].hex));
+    assert.deepEqual([...column].sort((a, b) => b - a), column, `column ${COLOR_GRID[2][col]}`);
+  }
+  assert.equal(COLORS.palecrimson.label, 'Pale red');
+  assert.equal(COLORS.darkazure.label, 'Dark sky blue');
+});
+
 test('emblems are inked black or white with at least 3:1 contrast on every color', async () => {
   const { COLORS, inkFor, crestSvg } = await load();
   for (const [key, color] of Object.entries(COLORS)) assert(contrast(inkFor(color.hex), color.hex) >= 3, `${key} ink contrast`);
@@ -55,4 +67,31 @@ test('emblems are inked black or white with at least 3:1 contrast on every color
   assert.equal(inkFor(COLORS.sable.hex), '#F5F3EE');
   const svg = crestSvg({ shape: 'heater', color: 'midnight', pattern: 'plain', emblem: 'griffin', metal: 'gold', trim: 'inset' });
   assert.match(svg, /<g fill="#F5F3EE" color="#F5F3EE" transform/);
+});
+
+test('a chosen emblem color is saved, and auto leaves older crest strings unchanged', async () => {
+  const { parseCrest, crestString } = await load();
+  assert.equal(crestString(parseCrest('heater.crimson.plain.lion.gold.inset')), 'heater.crimson.plain.lion.gold.inset');
+  assert.equal(parseCrest('heater.crimson.plain.lion.gold.inset').ink, 'auto');
+  assert.equal(crestString(parseCrest('heater.crimson.plain.lion.gold.inset.yellow')), 'heater.crimson.plain.lion.gold.inset.yellow');
+  assert.equal(parseCrest('heater.crimson.plain.lion.gold.inset.bogus').ink, 'auto');
+});
+
+test('a chosen emblem color is drawn, outlined in black or white only when it lacks 3:1 contrast', async () => {
+  const { COLORS, crestSvg } = await load();
+  const crest = { shape: 'heater', color: 'midnight', pattern: 'plain', emblem: 'griffin', metal: 'gold', trim: 'inset' };
+  const yellow = crestSvg({ ...crest, ink: 'yellow' });
+  assert.match(yellow, new RegExp(`<g fill="${COLORS.yellow.hex}" color="${COLORS.yellow.hex}" transform`));
+  assert.doesNotMatch(yellow, /crest-outline/);
+  const blue = crestSvg({ ...crest, ink: 'blue' });
+  assert.match(blue, /<g fill="#F5F3EE" color="#F5F3EE" filter="url\(#crest-outline\)" transform[^]*<g fill="#2556C8"/);
+  for (const [field] of Object.entries(COLORS)) {
+    for (const [ink, { hex }] of Object.entries(COLORS)) {
+      const svg = crestSvg({ ...crest, color: field, ink }, { letter: 'A' });
+      const outline = svg.match(/fill="(#\w+)" color="#\w+" filter/)?.[1];
+      if (contrast(hex, COLORS[field].hex) >= 3) assert.equal(outline, undefined, `${ink} on ${field}`);
+      else assert(contrast(outline, COLORS[field].hex) >= 3, `${ink} on ${field} outline`);
+    }
+  }
+  assert.match(crestSvg({ ...crest, emblem: 'letter', color: 'yellow', ink: 'amber' }, { letter: 'A' }), /fill="#15161C" filter="url\(#crest-outline\)">A<\/text>.*fill="#F6B91A">A</);
 });
