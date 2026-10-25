@@ -18,28 +18,44 @@
   background: var(--foil); border: 2px solid var(--bg); color: var(--gold-ink);
 }
 .crest-edit .icon { width: 14px; height: 14px; }
-/* The crest editor: a large crest, one tab per part, and the chosen tab's options. */
+/* The crest editor: a large crest with a pin on each part, and the chosen part's options below. */
 #crestDialog { height: min(88dvh, 820px); }
 #crestDialog .sheet-title { margin: 0; text-align: center; }
-.crest-stage { position: relative; display: flex; justify-content: center; height: clamp(88px, 24dvh, 220px); margin: 4px 0 6px; }
-.crest-big { position: relative; inset: auto; height: 100%; aspect-ratio: 1; }
+.crest-stage { position: relative; flex: none; display: flex; align-items: center; justify-content: center; height: clamp(150px, 32dvh, 300px); margin: 4px 0 6px; container-type: size; }
+/* Leave room either side for the pins' labels. */
+.crest-figure { --reserve: 110px; position: relative; height: min(100cqh, 100cqw - var(--reserve)); aspect-ratio: 1; }
+.crest-big { inset: 0; pointer-events: auto; cursor: pointer; }
 .crest-big .crest { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)); }
+.crest-pins { position: absolute; inset: 0; pointer-events: none; }
+/* Each pin's dot sits at (--x, --y) on the crest; its label points away from the middle. */
+.crest-pin {
+  position: absolute; top: var(--y); left: calc(var(--x) - 6px); display: flex; align-items: center; min-height: 40px; padding: 0;
+  border: none; background: none; color: var(--ink); font: inherit; transform: translateY(-50%); pointer-events: auto;
+}
+.crest-pin::before { content: ""; order: 1; width: 14px; height: 1.5px; background: rgba(244, 241, 232, .6); }
+.crest-pin-dot { order: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px rgba(10, 12, 30, .7); transition: background-color .2s, transform .2s var(--ease); }
+.crest-pin-label {
+  order: 2; padding: 5px 10px; border: 1.5px solid var(--line); border-radius: 999px; background: rgba(20, 26, 58, .92);
+  font-size: 12px; font-weight: 700; letter-spacing: .5px; line-height: 1; text-transform: uppercase; white-space: nowrap;
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.crest-pin[aria-selected="true"] .crest-pin-dot { background: var(--gold-hi); transform: scale(1.25); }
+.crest-pin[aria-selected="true"] .crest-pin-label { border-color: transparent; background: var(--foil); color: var(--gold-ink); }
+.crest-pin:focus-visible { outline: none; }
+.crest-pin:focus-visible .crest-pin-label { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+#crestTab-shape, #crestTab-color { left: auto; right: calc(100% - var(--x) - 6px); flex-direction: row-reverse; }
+#crestTab-shape { --x: 20%; --y: 16%; }
+#crestTab-color { --x: 28%; --y: 54%; }
+#crestTab-pattern { --x: 72%; --y: 26%; }
+#crestTab-emblem { --x: 60%; --y: 50%; }
+#crestTab-trim { --x: 74%; --y: 78%; }
 .crest-note {
   position: absolute; left: 50%; bottom: 0; width: max-content; max-width: 100%; margin: 0; padding: 6px 12px; border-radius: 10px;
   background: var(--surface-2); color: var(--gold-hi); font-weight: 700; text-align: center; box-shadow: 0 6px 16px rgba(0, 0, 0, .4);
   opacity: 0; transform: translate(-50%, 4px); transition: opacity .2s var(--ease), transform .2s var(--ease); pointer-events: none;
 }
 .crest-note.taken { opacity: 1; transform: translate(-50%, 0); }
-.crest-tabs { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
-.crest-tab {
-  height: 44px; padding: 0 2px; border: none; background: none; color: var(--muted);
-  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; transition: color .2s;
-}
-.crest-tab[aria-selected="true"] { color: var(--ink); }
-.crest-tab:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: -2px; border-radius: 8px; }
-.crest-tab-indicator { position: absolute; left: 0; bottom: -1px; height: 3px; border-radius: 2px; background: var(--foil); transition: transform .25s var(--ease), width .25s var(--ease); }
-.crest-tab-indicator.no-motion { transition: none; }
-.crest-options { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; margin: 0 -6px; }
+.crest-options { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; margin: 0 -6px; border-top: 1px solid var(--line); }
 .crest-panel { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 6px; overscroll-behavior: contain; scrollbar-width: thin; }
 .crest-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .crest-grid-label { display: block; margin: 0 2px 8px; }
@@ -57,11 +73,13 @@
 .crest-tile:active { transform: scale(.94); }
 .crest-tile:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .crest-swatch-tile .crest-tile-art { width: 62%; margin: 6px 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25), 0 0 0 1.5px rgba(244, 241, 232, .14); }
-/* The color wheel fills the panel's shorter side; the knob rides an arm turned to the chosen slice. */
-.crest-panel-color { display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; }
+/* The color wheel fills the panel's height, with the swatches beside it: three across, or four
+   when the panel is short. Both size from the panel (--cols, --gap, and --sw for the swatches). */
+.crest-wheel, .crest-swatches { --cols: 3; --gap: 10px; --sw: clamp(22px, min((100cqh - 20px - 3 * var(--gap)) / 4, (45cqw - 2 * var(--gap)) / 3), 40px); }
+.crest-panel-color { display: flex; align-items: center; justify-content: center; gap: 16px; overflow: hidden; container-type: size; }
 .crest-panel-color[hidden] { display: none; }
 .crest-wheel {
-  --size: min(100cqw - 12px, 100cqh - 12px, 340px); --band: clamp(18px, calc(var(--size) * .17), 44px);
+  --size: min(100cqh - 12px, 100cqw - var(--cols) * var(--sw) - (var(--cols) - 1) * var(--gap) - 28px, 260px); --band: clamp(16px, calc(var(--size) * .2), 40px);
   position: relative; flex: none; width: var(--size); height: var(--size); border-radius: 50%; cursor: pointer; touch-action: none;
 }
 .crest-wheel:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
@@ -75,43 +93,52 @@
 .crest-wheel-knob {
   position: absolute; left: 50%; top: calc(var(--band) / 2); width: calc(var(--band) + 10px); height: calc(var(--band) + 10px);
   transform: translate(-50%, -50%); border-radius: 50%; background: var(--c);
-  box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 5px var(--gold), 0 2px 12px rgba(0, 0, 0, .55);
+  box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 5px var(--gold), 0 2px 12px rgba(0, 0, 0, .55); transition: opacity .2s;
 }
-.crest-wheel-center { position: absolute; inset: calc(var(--band) + 6px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: none; }
-.crest-wheel-crest { display: flex; width: 58%; aspect-ratio: 1; }
-.crest-wheel-label { color: var(--ink); font-size: 13px; font-weight: 700; white-space: nowrap; }
-@container (max-height: 150px) { .crest-wheel-label { display: none; } .crest-wheel-crest { width: 80%; } }
+.crest-wheel.off .crest-wheel-knob { opacity: 0; }
+.crest-wheel-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink); font-size: clamp(9px, calc(var(--size) * .1), 14px); font-weight: 700; pointer-events: none; }
+.crest-swatches { display: grid; grid-template-columns: repeat(var(--cols), var(--sw)); gap: var(--gap); }
+.crest-swatch {
+  width: var(--sw); height: var(--sw); padding: 0; border: none; border-radius: 50%; background: var(--c);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25), 0 0 0 1.5px rgba(244, 241, 232, .2); transition: transform .12s cubic-bezier(.3, .7, .4, 1), box-shadow .2s;
+}
+.crest-swatch[aria-pressed="true"] { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .25), 0 0 0 2.5px var(--ink), 0 0 0 5px var(--gold); }
+.crest-swatch:active { transform: scale(.9); }
+.crest-swatch:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 6px; }
+@container (max-height: 220px) {
+  .crest-wheel, .crest-swatches { --cols: 4; --gap: 8px; --sw: clamp(22px, min((100cqh - 20px - 2 * var(--gap)) / 3, (50cqw - 3 * var(--gap)) / 4), 36px); }
+}
 /* Keep native scrolling in the option panels; the sheet grip still drags. */
 #crestDialog .crest-panel { touch-action: pan-y; }
 #crestDialog .sheet-grip, #crestDialog .crest-stage, #crestDialog > .row-2 { touch-action: none; }
 #crestDialog .row-2 { margin-top: 8px; }
 #crestDialog .btn { height: 48px; min-height: 48px; padding-top: 10px; padding-bottom: 10px; font-size: 24px; }
 @media (max-width: 360px) {
-  .crest-tab { font-size: 12px; letter-spacing: 0; }
   .crest-grid { gap: 6px; }
 }
 @media (max-height: 600px) {
   #crestDialog { height: calc(100dvh - 16px); }
   #crestDialog .sheet-title { font-size: 26px; }
-  .crest-stage { height: clamp(64px, 20dvh, 140px); }
+  .crest-stage { height: clamp(110px, 28dvh, 180px); }
 }
 /* Short, wide screens put the crest on the left and the options on the right. */
 @media (orientation: landscape) and (max-height: 560px) {
   #crestDialog { width: min(820px, calc(100% - 24px)); height: calc(100dvh - 16px); max-height: none; }
   #crestDialog[open] {
     display: grid; column-gap: 20px; row-gap: 4px;
-    grid-template: "grip grip" auto "title tabs" auto "stage options" minmax(0, 1fr) "stage actions" auto / minmax(0, 2fr) minmax(0, 3fr);
+    grid-template: "grip grip" auto "stage title" auto "stage options" minmax(0, 1fr) "stage actions" auto / minmax(0, 1fr) minmax(0, 1fr);
   }
   #crestDialog .sheet-grip { grid-area: grip; }
   #crestDialog .sheet-title { grid-area: title; align-self: center; }
-  .crest-stage { grid-area: stage; height: auto; min-height: 0; margin: 0; align-items: center; }
-  .crest-big { height: auto; width: 100%; max-height: 100%; }
-  .crest-tabs { grid-area: tabs; }
+  .crest-stage { grid-area: stage; height: auto; min-height: 0; margin: 0; }
   .crest-options { grid-area: options; }
   #crestDialog > .row-2 { grid-area: actions; margin-top: 4px; }
   .crest-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 }
+/* Small landscape phones: smaller pins, so the crest gets more of its half. */
 @media (orientation: landscape) and (max-height: 560px) and (max-width: 600px) {
-  .crest-tabs { grid-template-columns: repeat(5, auto); justify-content: space-between; }
-  .crest-tab { font-size: 11px; letter-spacing: 0; }
+  .crest-figure { --reserve: 80px; }
+  .crest-pin::before { width: 8px; }
+  .crest-pin-label { padding: 4px 7px; font-size: 10px; letter-spacing: 0; }
+  #crestDialog .btn { font-size: 18px; }
 }
