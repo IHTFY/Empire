@@ -99,7 +99,7 @@ test('Every game screen contains its panels and scrolls only inside them', async
           if (width >= 480 && width / height >= 1.25) assert(crest >= Math.min(height - 100, width / 2 - 60, 360), `Landscape crest should fill the right column: ${crest}`);
         }
         if (id === 'homeScreen') {
-          for (const selector of ['.hero-logo', '.hero-title', '.hero-tagline']) {
+          for (const selector of ['.hero-logo', '.hero-title']) {
             if (await page.locator(selector).isVisible()) await contains(selector, selector);
           }
           if (width === 390 && height === 844) {
@@ -190,7 +190,7 @@ test('Every game screen contains its panels and scrolls only inside them', async
       await page.waitForTimeout(1000);
       for (const mode of ['join', 'create']) {
         const frames = await page.evaluate(async mode => {
-          const measure = () => ['#roomForm', '.hero-logo', '.hero-title', '.hero-tagline', '#roomSubmit'].map(selector => {
+          const measure = () => ['#roomForm', '.hero-logo', '.hero-title', '#roomSubmit'].map(selector => {
             const r = document.querySelector(selector).getBoundingClientRect();
             return [r.y, r.width, r.height];
           });

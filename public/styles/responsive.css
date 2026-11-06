@@ -4,7 +4,6 @@
 .hero { flex: 1; min-height: 0; container: hero / size; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; }
 .hero-logo { display: flex; width: min(168px, max(48px, calc(100cqh - 164px))); height: min(168px, max(48px, calc(100cqh - 164px))); }
 .hero-title { display: block; font-size: 64px; }
-.hero-tagline { display: block; max-width: 280px; font-size: 16px; }
 #roomForm { width: 100%; padding: 20px; gap: 14px; }
 .setup-head { flex-direction: row; align-items: center; }
 .setup-title { font-size: 48px; }
@@ -56,7 +55,6 @@
   .hero { grid-area: hero; }
   .hero-logo { width: min(100cqw, max(64px, calc(100cqh - 120px)), 280px); height: min(100cqw, max(64px, calc(100cqh - 120px)), 280px); }
   .hero-title { font-size: clamp(40px, 12dvh, 96px); }
-  .hero-tagline { font-size: 14px; }
   #roomForm { grid-area: card; align-self: center; padding: 20px; gap: 12px; }
   .screen-setup { grid-template: "bar bar" auto "title crest" auto "form crest" minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr); row-gap: 12px; }
   .screen-setup > .bar { grid-area: bar; }
@@ -90,7 +88,6 @@
 /* Compact spacing and horizontal fields keep ordinary phone forms visible without scrolling. */
 @media (max-height: 600px) {
   .screen { gap: 8px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-  .hero-tagline { font-size: 13px; }
   #roomForm { padding: 12px; gap: 8px; }
   .mode-switch button { height: 36px; }
   .stack-sm { gap: 4px; }
@@ -119,7 +116,6 @@
 @media (max-height: 400px) {
   .names-form { gap: 4px; }
   .names-form .eyebrow { font-size: 12px; }
-  .hero-tagline { display: none; }
   .screen-home #createHint { display: none; }
   .setup-intro > .muted { display: none; }
   .screen-setup .setup-title { font-size: 28px; }
@@ -145,7 +141,6 @@
   .hero { gap: 8px; }
   .hero-logo { width: min(100cqw, max(64px, calc(100cqh - 72px)), 280px); height: min(100cqw, max(64px, calc(100cqh - 72px)), 280px); }
   .hero-title { font-size: clamp(36px, 12dvh, 64px); }
-  .hero-tagline { display: none; }
   #roomForm { padding: 12px; gap: 8px; }
   .screen-setup { row-gap: 8px; }
   .screen-setup .names-form { gap: 8px; }
