@@ -254,6 +254,33 @@ test('members capture humans into an uncaptured leader\'s empire after the revea
   await assert.rejects(bob.ref('games/capture-early/captures/bob').set({ leader: 'alice', via: 'bob' }), /permission/i);
 });
 
+test('a departed leader\'s follower can be claimed and can lead once their record is cleared', async () => {
+  const cara = client('cara', 'cara-orphans');
+  await seed('orphans', {
+    locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara') },
+    captures: { cara: { leader: 'bob', via: 'cara' } }
+  });
+  const { departurePlan, staleCaptures } = await import('../../public/captures.js');
+  // Left behind, the record blocks every claim on Cara although the lobby shows her as free.
+  await seed('orphans-left', { locked: true, captures: { cara: { leader: 'bob', via: 'cara' } }, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara') } });
+  await bobCaptures.ref('games/orphans-left').update({ 'users/bob': null, 'secrets/bob': null });
+  await assert.rejects(alice.ref('games/orphans-left/claims/cara').set({ leader: 'alice', by: 'alice' }), /permission/i);
+  // A claim that clears the record first, as pages now do, goes through.
+  await alice.ref('games/orphans-left').update({
+    ...staleCaptures({ cara: { leader: 'bob', via: 'cara' } }, { alice: player('Alice'), cara: player('Cara') }, ['cara', 'alice']),
+    'claims/cara': { leader: 'alice', by: 'alice' }
+  });
+  // Bob leaves; the update clears what he led.
+  await bobCaptures.ref('games/orphans').update({
+    'users/bob': null, 'secrets/bob': null,
+    ...departurePlan({ cara: { leader: 'bob', via: 'cara' } }, 'bob')
+  });
+  await alice.ref('games/orphans/claims/cara').set({ leader: 'alice', by: 'alice' });
+  await alice.ref('games/orphans/claims/cara').remove();
+  await alice.ref('games/orphans/captures/alice').set({ leader: 'cara', via: 'alice' });
+  assert.equal((await cara.ref('games/orphans/captures/alice/leader').once('value')).val(), 'cara');
+});
+
 test('members claim a capture that the captured empire confirms or declines', async () => {
   await seed('claims', { locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), bot: { ...player('Bot'), fakeBadge: true } } });
   const bob = bobCaptures;
