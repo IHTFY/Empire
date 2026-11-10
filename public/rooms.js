@@ -2,7 +2,7 @@ import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
 import { createRoomPresence } from './room-presence.js';
-import { capturePlan, releasePlan } from './captures.js';
+import { capturePlan, departurePlan, releasePlan, staleCaptures } from './captures.js';
 
 // The room in the address bar is also remembered on this device, so closing the app (or
 // the tab) and opening it again from the home screen goes straight back to the room.
@@ -202,9 +202,12 @@ export function createRooms({
   async function leaveRoom({ goHome = true } = {}) {
     if (!gameID) return;
     const code = gameID;
+    // My followers go free with me.
+    const freed = departurePlan(captures, getUid());
     // Stop listening first so removing myself isn't mistaken for being removed.
     await detachRoom();
     await db.ref(`games/${code}`).update({
+      ...freed,
       [`users/${getUid()}`]: null,
       [`secrets/${getUid()}`]: null,
       [`presence/${getUid()}`]: null
@@ -280,6 +283,7 @@ export function createRooms({
 
   function removePlayer(key, onFail) {
     const update = {
+      ...departurePlan(captures, key),
       [`users/${key}`]: null,
       [`secrets/${key}`]: null
     };
@@ -301,13 +305,14 @@ export function createRooms({
   // Put a player in a leader's empire. A captured leader brings their followers along. Only
   // the captured player or someone in their empire may do this, which settles any claim.
   function capturePlayer(key, leader) {
-    const update = { ...capturePlan(captures, key, leader), [`claims/${key}`]: null };
+    // Clearing stale records also covers ones left by pages from before leaders freed them.
+    const update = { ...staleCaptures(captures, users, [key, leader]), ...capturePlan(captures, key, leader), [`claims/${key}`]: null };
     db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not capture that player'));
   }
 
   // Anyone else says who captured a player; the captured empire confirms or declines it.
   function claimCapture(key, leader) {
-    db.ref(`games/${gameID}/claims/${key}`).set({ leader, by: getUid() })
+    db.ref(`games/${gameID}`).update({ ...staleCaptures(captures, users, [key, leader]), [`claims/${key}`]: { leader, by: getUid() } })
       .catch(() => toast('Could not capture that player'));
   }
 

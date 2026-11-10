@@ -14,6 +14,28 @@ export function capturePlan(captures, key, leader) {
   return update;
 }
 
+// Updates for key leaving the room: their own record and those of everyone they lead go, so
+// their followers are free in the data as well as on screen.
+export function departurePlan(captures, key) {
+  const update = {};
+  Object.entries(captures).forEach(([id, c]) => {
+    if (id === key || (c && c.leader === key)) update[`captures/${id}`] = null;
+  });
+  return update;
+}
+
+// Updates that clear the records of keys that the lobby ignores: the player or their leader
+// has left, or the leader was captured in the meantime. The rules still count such a record,
+// and it would block every capture or claim involving that player.
+export function staleCaptures(captures, users, keys) {
+  const update = {};
+  keys.forEach(id => {
+    const c = captures[id];
+    if (c && !(users[id] && users[c.leader] && !captures[c.leader])) update[`captures/${id}`] = null;
+  });
+  return update;
+}
+
 // Updates for undoing key's capture: key goes free and the followers that moved with them
 // return to their previous empire. Records without history (older rooms) go free.
 export function releasePlan(captures, key) {
