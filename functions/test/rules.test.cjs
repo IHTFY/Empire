@@ -100,16 +100,57 @@ test('crest saves accept legacy, trim, emblem color and tone formats, rejecting 
 });
 
 
+// Bots live under push ids (public/bots.js); sign-in ids never start with "-".
+const botKey = n => `-NbotKey${String(n).padStart(12, '0')}`;
+
 test('only members can manage bots or remove offline players', async () => {
   await seed('players', { presence: { bob: { online: false, lastSeen: Date.now() - 700000 } } });
   const bot = { real: 'Bot', clan: 'Bot', fakeBadge: true };
-  const add = { 'users/bot': bot, 'secrets/bot': 'robot' };
+  const key = botKey(1);
+  const add = { [`users/${key}`]: bot, [`secrets/${key}`]: 'robot' };
   await assert.rejects(outsider.ref('games/players').update(add), /permission/i);
   await alice.ref('games/players').update(add);
-  await assert.rejects(outsider.ref('games/players/users/bot').remove(), /permission/i);
+  await assert.rejects(outsider.ref(`games/players/users/${key}`).remove(), /permission/i);
   await assert.rejects(outsider.ref('games/players/users/bob').remove(), /permission/i);
-  await alice.ref('games/players').update({ 'users/bot': null, 'secrets/bot': null });
+  await alice.ref('games/players').update({ [`users/${key}`]: null, [`secrets/${key}`]: null });
   await alice.ref('games/players').update({ 'users/bob': null, 'secrets/bob': null });
+});
+
+test('the bot flag only sits on bot keys, so no member can mark a player as a bot', async () => {
+  const bot = { real: 'Cara', clan: 'Cara', fakeBadge: true };
+  await seed('flag-other');
+  // A member cannot create another player's entry as a bot, with or without a secret.
+  await assert.rejects(alice.ref('games/flag-other/users/cara').set(bot), /permission/i);
+  await assert.rejects(alice.ref('games/flag-other').update({ 'users/cara': bot, 'secrets/cara': 'pear' }), /permission/i);
+  // A player cannot carry the flag on their own entry.
+  await assert.rejects(alice.ref('games/flag-other/users/alice/fakeBadge').set(true), /permission/i);
+  await assert.rejects(outsider.ref('games/flag-other').update({ 'users/outsider': { ...player('Guest'), fakeBadge: true }, 'secrets/outsider': 'pear' }), /permission/i);
+  // An entry flagged before this rule cannot be used to write, remove, or announce that player.
+  await seed('flag-legacy', { users: { alice: player('Alice'), bob: player('Bob'), cara: bot } });
+  await assert.rejects(alice.ref('games/flag-legacy/secrets/cara').set('pear'), /permission/i);
+  await seed('flag-locked', { locked: true, names: ['otter', 'apple', 'pear'], users: { alice: player('Alice'), bob: player('Bob'), cara: bot }, secrets: { alice: 'otter', bob: 'apple', cara: 'pear' } });
+  await assert.rejects(alice.ref('games/flag-locked').update({ 'eliminated/cara': true, 'users/cara': null, 'secrets/cara': null }), /permission/i);
+  await assert.rejects(alice.ref('games/flag-locked/eliminated/cara').set(true), /permission/i);
+  await assert.rejects(alice.ref('games/flag-locked/users/cara').remove(), /permission/i);
+});
+
+test('bots on push keys can still be added, removed, and announced after the reveal', async () => {
+  const key = botKey(2);
+  await seed('bot-life');
+  await alice.ref('games/bot-life').update({ [`users/${key}`]: { real: 'Bot', clan: 'Bot', fakeBadge: true }, [`secrets/${key}`]: 'robot' });
+  await request('games/bot-life/locked', 'PUT', true, true);
+  await alice.ref('games/bot-life').update({ [`eliminated/${key}`]: true, [`users/${key}`]: null, [`secrets/${key}`]: null });
+  assert.equal((await alice.ref(`games/bot-life/eliminated/${key}`).once('value')).val(), true);
+});
+
+test('a new room cannot carry announcements', async () => {
+  const create = (id, extra = {}) => alice.ref().update({
+    [`games/${id}`]: { state: 'waiting', createdAt: Date.now(), name: id.slice(1), pass: 'ABCDEF', ...extra },
+    [`roomNames/${id.slice(1)}/ABCDEF`]: id
+  });
+  await create('-forgedannounce00000');
+  await assert.rejects(create('-forgedannounce00001', { eliminated: { [botKey(3)]: { name: 'gotcha', at: Date.now() + 1e12 } } }), /permission/i);
+  await assert.rejects(create('-forgedannounce00002', { eliminated: { bob: true } }), /permission/i);
 });
 
 test('a start transaction freezes submissions and admits only one concurrent claim', async () => {

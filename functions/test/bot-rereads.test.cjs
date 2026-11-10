@@ -2,17 +2,21 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { harness } = require('./support/functions.cjs');
 
+// Bots live under push ids (public/bots.js).
+const bot = '-NbotKey000000000001';
+const secondBot = '-NbotKey000000000002';
+
 function room() {
   return { state: 'waiting', locked: true, roundId: 'round', users: { alice: { real: 'Alice' }, bob: { real: 'Bob' } },
-    names: ['shared', 'apple', 'shared', 'robot'], nameOwners: ['bot', 'alice', 'bob', 'second-bot'],
-    voice: { 0: 'clip-bot', 1: 'clip-alice', 2: 'clip-bob', 3: 'clip-second' }, eliminated: { bot: true } };
+    names: ['shared', 'apple', 'shared', 'robot'], nameOwners: [bot, 'alice', 'bob', secondBot],
+    voice: { 0: 'clip-bot', 1: 'clip-alice', 2: 'clip-bob', 3: 'clip-second' }, eliminated: { [bot]: true } };
 }
 async function start(h) { await h.exports.flashNames({ text: 'room' }, { auth: { uid: 'alice' } }); }
 
 test('rereads exclude the exact eliminated bot occurrence while preserving audio indexes', async () => {
   const h = harness({ games: { room: room() } }, { recording: async () => null });
-  await h.exports.revealRemoved(h.snapshot('shared'), { params: { gameId: 'room', userId: 'bot' } });
-  assert.equal(h.data.games.room.eliminated.bot.name, 'shared');
+  await h.exports.revealRemoved(h.snapshot('shared'), { params: { gameId: 'room', userId: bot } });
+  assert.equal(h.data.games.room.eliminated[bot].name, 'shared');
   await start(h);
   assert.deepEqual(h.data.games.room.replay.indexes, [1, 2, 3]);
   assert.deepEqual(h.data.games.room.names, ['shared', 'apple', 'shared', 'robot']);
@@ -27,7 +31,7 @@ test('a removed bot is excluded before its asynchronous announcement finishes', 
   const h = harness({ games: { room: room() } });
   await start(h);
   assert.deepEqual(h.data.games.room.replay.indexes, [1, 2, 3]);
-  await h.ref('games/room').update({ state: 'waiting', 'eliminated/second-bot': true });
+  await h.ref('games/room').update({ state: 'waiting', [`eliminated/${secondBot}`]: true });
   await start(h);
   assert.deepEqual(h.data.games.room.replay.indexes, [1, 2]);
 });
@@ -35,7 +39,7 @@ test('a removed bot is excluded before its asynchronous announcement finishes', 
 test('legacy rereads remove one occurrence per announcement without accumulating removals', async () => {
   const previous = room();
   delete previous.nameOwners;
-  previous.eliminated.bot = { name: 'shared', at: 1 };
+  previous.eliminated[bot] = { name: 'shared', at: 1 };
   const h = harness({ games: { room: previous } });
   await start(h);
   assert.deepEqual(h.data.games.room.replay.indexes, [1, 2, 3]);
@@ -51,4 +55,13 @@ test('human removal never publishes a secret and a reset clears playback ownersh
   await h.ref('games/room/state').set('resetting');
   await h.exports.roomState({ before: h.snapshot('waiting'), after: h.snapshot('resetting') }, { params: { gameId: 'room' } });
   for (const key of ['names', 'nameOwners', 'replay', 'eliminated']) assert.equal(h.data.games.room[key], undefined);
+});
+
+test('a flag on a player key never publishes that player\'s secret', async () => {
+  const flagged = room();
+  flagged.users.alice.fakeBadge = true;
+  flagged.eliminated.alice = true;
+  const h = harness({ games: { room: flagged } }, { recording: async () => null });
+  await h.exports.revealRemoved(h.snapshot('apple'), { params: { gameId: 'room', userId: 'alice' } });
+  assert.equal(h.data.games.room.eliminated.alice, true);
 });
