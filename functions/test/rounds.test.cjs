@@ -98,9 +98,9 @@ test('a bot announcement delayed by recording cannot resurrect reset data', asyn
   let release, reached;
   const began = new Promise(resolve => { reached = resolve; });
   const recorded = new Promise(resolve => { release = resolve; });
-  const previous = { ...game(), locked: true, names: ['otter', 'apple', 'robot'], roundId: 'round', eliminated: { bot: true } };
+  const previous = { ...game(), locked: true, names: ['otter', 'apple', 'robot'], roundId: 'round', eliminated: { '-NbotKey000000000001': true } };
   const h = harness({ games: { room: previous } }, { recording: () => { reached(); return recorded; } });
-  const remove = h.exports.revealRemoved(h.snapshot('robot'), { params: { gameId: 'room', userId: 'bot' } });
+  const remove = h.exports.revealRemoved(h.snapshot('robot'), { params: { gameId: 'room', userId: '-NbotKey000000000001' } });
   await began;
   await h.ref('games/room/state').set('resetting');
   await h.exports.roomState({ before: h.snapshot('waiting'), after: h.snapshot('resetting') }, { params: { gameId: 'room' } });

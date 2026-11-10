@@ -104,13 +104,16 @@ async function flashNames(data, context) {
   return true;
 }
 
+// Bots are stored under push ids, which start with "-"; sign-in ids never do.
+const BOT_KEY = /^-[-0-9A-Za-z_]{19}$/;
+
 // A bot removed after the names were revealed: publish its secret name (and recording) so
-// every device shows and speaks it. Players flag the removal in /eliminated; only that flag
-// makes this a bot, so a player leaving the room never gives away their own secret.
+// every device shows and speaks it. Players flag the removal in /eliminated; only that flag on
+// a bot key makes this a bot, so a player leaving the room never gives away their own secret.
 async function revealRemoved(snapshot, context) {
   const name = snapshot.val();
   const { gameId, userId } = context.params;
-  if (typeof name !== 'string' || name.length === 0) {
+  if (typeof name !== 'string' || name.length === 0 || !BOT_KEY.test(userId)) {
     return null;
   }
   const gameRef = db.ref(`games/${gameId}`);
