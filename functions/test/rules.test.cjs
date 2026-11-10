@@ -281,6 +281,12 @@ test('a departed leader\'s follower can be claimed and can lead once their recor
   assert.equal((await cara.ref('games/orphans/captures/alice/leader').once('value')).val(), 'cara');
 });
 
+test('nobody outside a revealed room can join or reset it, so the server reopens it once empty', async () => {
+  await seed('emptied', { locked: true, users: null, secrets: null });
+  await assert.rejects(outsider.ref('games/emptied/state').set('resetting'), /permission/i);
+  await assert.rejects(outsider.ref('games/emptied/users/outsider').set(player('Otto')), /permission/i);
+});
+
 test('members claim a capture that the captured empire confirms or declines', async () => {
   await seed('claims', { locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), bot: { ...player('Bot'), fakeBadge: true } } });
   const bob = bobCaptures;
