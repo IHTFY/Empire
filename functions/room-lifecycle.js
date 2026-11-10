@@ -4,6 +4,14 @@ const { VOICE, VOICE_DIR } = require('./voice');
 const IDLE_MS = 12 * 60 * 60 * 1000;
 const VOICE_KEEP_MS = 60 * 24 * 60 * 60 * 1000;
 const SWEEP_EVERY_MS = 30 * 60 * 1000;
+// Everything that belongs to one round; a reset clears it and keeps the room's name and presence.
+const ROUND_KEYS = ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated', 'captures', 'claims'];
+
+function openNextRound(game) {
+  for (const key of ROUND_KEYS) delete game[key];
+  game.state = 'waiting';
+  return game;
+}
 
 // Room lifecycle: a new round unlocks the room and forgets the old order; creating a
 // room also sweeps away rooms nobody has been connected to for 12 hours.
@@ -19,14 +27,30 @@ async function roomState(change, context) {
       // Ask the server to retry an empty local cache before checking the room state.
       if (game === null) return null;
       if (!game || game.state !== 'resetting') return undefined;
-      for (const key of ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated', 'captures', 'claims']) delete game[key];
-      game.state = 'waiting';
-      return game;
+      return openNextRound(game);
     });
   }
   if (!change.before.exists() && change.after.exists()) {
     await sweepAbandonedRooms(context.params.gameId);
   }
+  return null;
+}
+
+// Only members can reset a room, and nobody can join one whose names were revealed, so a
+// revealed room that its last player leaves would stay stuck, holding its name, until the
+// sweep. Open the next round instead. Bots don't count as players.
+async function roomEmptied(snapshot, context) {
+  const room = db.ref(`games/${context.params.gameId}`);
+  if ((await room.child('locked').once('value')).val() !== true) return null;
+  const hasPlayers = users => Object.values(users || {}).some(user => user && user.fakeBadge !== true);
+  if (hasPlayers((await room.child('users').once('value')).val())) return null;
+  await room.transaction(game => {
+    // Ask the server to retry an empty local cache before checking the room.
+    if (game === null) return null;
+    if (!game || game.locked !== true || game.state === 'resetting' || game.state === 'deleting') return undefined;
+    if (hasPlayers(game.users)) return undefined;
+    return openNextRound(game);
+  });
   return null;
 }
 
@@ -136,4 +160,4 @@ async function deleteIfStillIdle({ id, name, pass }, seenAt, now) {
   }
 }
 
-module.exports = { roomState, dailySweep, sweepAbandonedRooms };
+module.exports = { roomEmptied, roomState, dailySweep, sweepAbandonedRooms };
