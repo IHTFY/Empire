@@ -1,4 +1,4 @@
-/* global document, window, requestAnimationFrame */
+/* global document, window */
 const { chromium } = require('playwright');
 const { createServer } = require('node:http');
 const { readFile } = require('node:fs/promises');
