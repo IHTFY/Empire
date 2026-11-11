@@ -78,19 +78,33 @@ test('The crest editor switches tabs and applies each choice', async t => {
   // Jumping from one end to the other glides the knob around the arch, not across it.
   await tap('color', 0);
   await page.waitForTimeout(400);
-  const glide = page.evaluate(() => new Promise(resolve => {
-    const ring = document.querySelector('#crestPanel-color .crest-arch-ring');
-    const knob = document.querySelector('#crestPanel-color .crest-arch-knob');
-    const out = [], end = performance.now() + 400;
-    (function frame() {
-      const b = ring.getBoundingClientRect(), k = knob.getBoundingClientRect();
-      out.push([k.left + k.width / 2 - b.left - b.width / 2, k.top + k.height / 2 - b.top - b.width / 2]);
-      if (performance.now() < end) requestAnimationFrame(frame); else resolve(out);
-    })();
-  }));
+  // Catch the glide as it starts and step through it, since a busy machine drops frames
+  // and the knob crosses the middle of the arch in about one frame.
+  await page.evaluate(() => {
+    window.glide = new Promise(resolve => {
+      const ring = document.querySelector('#crestPanel-color .crest-arch-ring');
+      const arm = document.querySelector('#crestPanel-color .crest-arch-arm');
+      const knob = arm.querySelector('.crest-arch-knob');
+      setTimeout(() => resolve([]), 2000);
+      arm.addEventListener('transitionrun', function caught(event) {
+        if (event.target !== arm || event.propertyName !== 'transform') return;
+        arm.removeEventListener('transitionrun', caught);
+        const move = arm.getAnimations().find(a => a.transitionProperty === 'transform');
+        move.pause();
+        const { endTime } = move.effect.getComputedTiming(), out = [];
+        for (let i = 0; i <= 20; i++) {
+          move.currentTime = endTime * i / 20;
+          const b = ring.getBoundingClientRect(), k = knob.getBoundingClientRect();
+          out.push([k.left + k.width / 2 - b.left - b.width / 2, k.top + k.height / 2 - b.top - b.width / 2]);
+        }
+        move.finish();
+        resolve(out);
+      });
+    });
+  });
   await tap('color', 15);
   const { r } = await ring('color');
-  const points = await glide;
+  const points = await page.evaluate(() => window.glide);
   assert.ok(points.some(([x]) => Math.abs(x) < r / 2), 'the knob was sampled mid-glide');
   points.forEach(([x, y]) => assert.ok(Math.abs(Math.hypot(x, y) - r) < 3, `knob at ${x.toFixed(1)},${y.toFixed(1)} is off the arch`));
   assert.match(await value(), /^heater\.iron\./, 'the grays keep the tone too');
