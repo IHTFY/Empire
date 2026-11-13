@@ -24,6 +24,19 @@ export function departurePlan(captures, key) {
   return update;
 }
 
+// Writes key's departure to room (the games/<code> reference), then rest. The records come
+// from this page's copy, which can be out of date: a follower may have joined another empire
+// since. Each record is checked again as it is deleted, so only those key still leads go.
+// The rules let only room members delete records, so they go before rest, which may remove
+// the writer's own entry.
+export async function writeDeparture(room, captures, key, rest) {
+  const own = `captures/${key}`;
+  // An empty local cache (null) is retried against the server.
+  await Promise.all(Object.keys(departurePlan(captures, key)).map(path =>
+    room.child(path).transaction(c => (path === own || !c || c.leader === key ? null : undefined))));
+  await room.update(rest);
+}
+
 // Updates that clear the records of keys that the lobby ignores: the player or their leader
 // has left, or the leader was captured in the meantime. The rules still count such a record,
 // and it would block every capture or claim involving that player.

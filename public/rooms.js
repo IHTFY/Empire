@@ -2,7 +2,7 @@ import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
 import { createRoomPresence } from './room-presence.js';
-import { capturePlan, departurePlan, releasePlan, staleCaptures } from './captures.js';
+import { capturePlan, releasePlan, staleCaptures, writeDeparture } from './captures.js';
 
 // The room in the address bar is also remembered on this device, so closing the app (or
 // the tab) and opening it again from the home screen goes straight back to the room.
@@ -203,11 +203,10 @@ export function createRooms({
     if (!gameID) return;
     const code = gameID;
     // My followers go free with me.
-    const freed = departurePlan(captures, getUid());
+    const known = captures;
     // Stop listening first so removing myself isn't mistaken for being removed.
     await detachRoom();
-    await db.ref(`games/${code}`).update({
-      ...freed,
+    await writeDeparture(db.ref(`games/${code}`), known, getUid(), {
       [`users/${getUid()}`]: null,
       [`secrets/${getUid()}`]: null,
       [`presence/${getUid()}`]: null
@@ -283,7 +282,6 @@ export function createRooms({
 
   function removePlayer(key, onFail) {
     const update = {
-      ...departurePlan(captures, key),
       [`users/${key}`]: null,
       [`secrets/${key}`]: null
     };
@@ -291,11 +289,12 @@ export function createRooms({
     const flagged = locked && users[key] && users[key].fakeBadge;
     if (flagged) update[`eliminated/${key}`] = true;
     const room = db.ref(`games/${gameID}`);
+    const known = captures;
     // If the flag is refused (rules not updated yet), still remove the bot without announcing it.
-    room.update(update).catch(err => {
+    writeDeparture(room, known, key, update).catch(err => {
       if (!flagged) throw err;
       delete update[`eliminated/${key}`];
-      return room.update(update);
+      return writeDeparture(room, known, key, update);
     }).catch(() => {
       toast('Could not remove that player');
       if (onFail) onFail();
