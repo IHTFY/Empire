@@ -54,3 +54,25 @@ test('a revealed room that its last player leaves opens the next round', async (
   await gone.exports.roomEmptied(gone.snapshot({ real: 'Alice', clan: 'Alice' }), left);
   assert.equal(gone.data.games.room, undefined);
 });
+
+test('a room emptied after its reveal stays a full idle spell, however old it is', async () => {
+  const hour = 60 * 60 * 1000;
+  const now = Date.now();
+  const room = extra => ({
+    state: 'waiting', locked: true, name: 'room', pass: 'ABCDEF', names: ['otter'],
+    createdAt: now - 13 * hour, startedAt: now - 5 * 60 * 1000, ...extra
+  });
+  const h = harness({ games: { room: room() }, roomNames: { room: { ABCDEF: 'room' } } });
+  // The last player leaves, taking their presence entry, and the server opens the next round.
+  await h.exports.roomEmptied(h.snapshot({ real: 'Alice', clan: 'Alice' }), { params: { gameId: 'room', userId: 'alice' } });
+  assert.equal(h.data.games.room.startedAt, undefined);
+  await h.exports.dailySweep();
+  assert.equal(h.data.games.room?.name, 'room');
+  assert.equal(h.data.roomNames.room?.ABCDEF, 'room');
+
+  // A room whose last activity is past the threshold still goes.
+  const idle = harness({ games: { room: room({ startedAt: undefined, activeAt: now - 13 * hour }) }, roomNames: { room: { ABCDEF: 'room' } } });
+  await idle.exports.dailySweep();
+  assert.equal(idle.data.games.room, undefined);
+  assert.equal(idle.data.roomNames.room?.ABCDEF, undefined);
+});

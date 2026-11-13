@@ -281,6 +281,23 @@ test('a departed leader\'s follower can be claimed and can lead once their recor
   assert.equal((await cara.ref('games/orphans/captures/alice/leader').once('value')).val(), 'cara');
 });
 
+test('a leader who leaves keeps a capture their follower made after the page last heard', async () => {
+  await seed('departure', {
+    locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), dan: player('Dan') },
+    captures: { bob: { leader: 'alice', via: 'bob' }, dan: { leader: 'alice', via: 'dan' } }
+  });
+  const { writeDeparture } = await import('../../public/captures.js');
+  const room = alice.ref('games/departure');
+  // Alice's page plans her departure from what it last heard.
+  const known = (await room.child('captures').once('value')).val();
+  // Meanwhile Bob undoes his capture and joins Cara.
+  await bobCaptures.ref('games/departure/captures/bob').set({ leader: 'cara', via: 'bob' });
+  await writeDeparture(room, known, 'alice', { 'users/alice': null, 'secrets/alice': null, 'presence/alice': null });
+  const read = async key => (await bobCaptures.ref(`games/departure/${key}`).once('value')).val();
+  assert.deepEqual(await read('captures'), { bob: { leader: 'cara', via: 'bob' } });
+  assert.equal(await read('users/alice'), null);
+});
+
 test('nobody outside a revealed room can join or reset it, so the server reopens it once empty', async () => {
   await seed('emptied', { locked: true, users: null, secrets: null });
   await assert.rejects(outsider.ref('games/emptied/state').set('resetting'), /permission/i);
