@@ -359,6 +359,55 @@ test('removing a player who came back online leaves their empire as it was', asy
   assert.equal(await read('removal-away', 'users/bob'), null);
 });
 
+test('leaving or removing an intermediary keeps nested Undo writes valid without changing consent', async () => {
+  const { capturePlan, writeLeave, writeRemoval, releasePlan } = await import('../../public/captures.js');
+  const cara = client('cara', 'cara-departure');
+  await Promise.all(['leave', 'remove'].map(async action => {
+    const id = `chain-${action}`;
+    await seed(id, {
+      locked: true,
+      users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), dan: player('Dan') },
+      presence: { bob: { version: 2, lastSeen: Date.now() - 700000 } }
+    });
+    const room = alice.ref(`games/${id}`);
+    const read = async key => (await room.child(key).once('value')).val();
+    await room.update(capturePlan({}, 'alice', 'bob'));
+    await bobCaptures.ref(`games/${id}`).update(capturePlan(await read('captures'), 'bob', 'cara'));
+    await cara.ref(`games/${id}`).update(capturePlan(await read('captures'), 'cara', 'dan'));
+    const known = await read('captures');
+    const rest = { 'users/bob': null, 'secrets/bob': null };
+    if (action === 'leave') await writeLeave(bobCaptures.ref(`games/${id}`), known, 'bob', { ...rest, 'presence/bob': null });
+    else await writeRemoval(room, known, 'bob', rest);
+    assert.equal(await read('users/bob'), null);
+    assert.deepEqual(await read('captures/alice'), { leader: 'dan', via: 'cara', back: 'alice' });
+    const update = releasePlan(await read('captures'), 'cara', await read('users'));
+    await assert.rejects(outsider.ref(`games/${id}`).update(update), /permission/i);
+    await room.update(update);
+    assert.deepEqual(await read('captures'), { alice: { leader: 'cara', via: 'alice' } });
+    // A departed via is still rejected, even when the capture already exists.
+    await assert.rejects(room.child('captures/alice/via').set('bob'), /permission/i);
+    await room.update(releasePlan(await read('captures'), 'alice', await read('users')));
+    assert.equal(await read('captures'), null);
+    // Undo did not grant another empire consent to capture a now-free Alice.
+    await assert.rejects(cara.ref(`games/${id}`).update(capturePlan({}, 'alice', 'dan')), /permission/i);
+  }));
+});
+
+test('Undo filters a departed via from legacy history before submitting to the rules', async () => {
+  const { releasePlan } = await import('../../public/captures.js');
+  await seed('legacy-undo', {
+    locked: true,
+    users: { alice: player('Alice'), cara: player('Cara'), dan: player('Dan') },
+    captures: { alice: { leader: 'dan', via: 'cara', back: 'bob/alice' }, cara: { leader: 'dan', via: 'cara' } }
+  });
+  const room = alice.ref('games/legacy-undo');
+  const captures = (await room.child('captures').once('value')).val();
+  const users = (await room.child('users').once('value')).val();
+  await assert.rejects(room.update({ 'captures/cara': null, 'captures/alice': { leader: 'cara', via: 'bob', back: 'alice' } }), /permission/i);
+  await room.update(releasePlan(captures, 'cara', users));
+  assert.deepEqual((await room.child('captures').once('value')).val(), { alice: { leader: 'cara', via: 'alice' } });
+});
+
 test('nobody outside a revealed room can join or reset it, so the server reopens it once empty', async () => {
   await seed('emptied', { locked: true, users: null, secrets: null });
   await assert.rejects(outsider.ref('games/emptied/state').set('resetting'), /permission/i);

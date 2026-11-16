@@ -322,7 +322,7 @@ export function createRooms({
 
   // Undo a capture: the player goes free and their followers come back to them.
   function releasePlayer(key) {
-    const update = releasePlan(captures, key);
+    const update = releasePlan(captures, key, users);
     db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not undo that capture'));
   }
 

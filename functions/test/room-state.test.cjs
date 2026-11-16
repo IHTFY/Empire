@@ -39,7 +39,7 @@ test('a revealed room that its last player leaves opens the next round', async (
 
   // A player still in the room, a room that is not revealed, or one already closing stays as it is.
   await Promise.all([
-    { users: { bob: { real: 'Bob', clan: 'Bob' } } },
+    { users: { bob: { real: 'Bob', clan: 'Bob' } }, captures: {} },
     { locked: undefined },
     { state: 'resetting' },
     { state: 'deleting' }
@@ -53,6 +53,45 @@ test('a revealed room that its last player leaves opens the next round', async (
   const gone = harness({ games: {} });
   await gone.exports.roomEmptied(gone.snapshot({ real: 'Alice', clan: 'Alice' }), left);
   assert.equal(gone.data.games.room, undefined);
+});
+
+test('the deletion trigger repairs captures left by an older page and preserves the next Undo', async () => {
+  const { capturePlan, departurePlan, releasePlan } = await import('../../public/captures.js');
+  const users = Object.fromEntries(['alice', 'bob', 'cara', 'dan'].map(id => [id, { real: id, clan: id }]));
+  const h = harness({ games: { room: { state: 'waiting', locked: true, users } } });
+  const room = h.ref('games/room');
+  await room.update(capturePlan({}, 'alice', 'bob'));
+  await room.update(capturePlan(h.data.games.room.captures, 'bob', 'cara'));
+  await room.update(capturePlan(h.data.games.room.captures, 'cara', 'dan'));
+  const before = structuredClone(h.data.games.room.captures);
+  const expected = departurePlan(before, 'bob');
+  await room.update({ 'users/bob': null });
+  await h.exports.roomEmptied(h.snapshot(users.bob), { params: { gameId: 'room', userId: 'bob' } });
+  const game = h.data.games.room;
+  for (const [path, capture] of Object.entries(expected)) {
+    const id = path.slice('captures/'.length);
+    assert.deepEqual(game.captures[id], capture === null ? undefined : capture);
+  }
+  assert.deepEqual(game.captures.alice, { leader: 'dan', via: 'cara', back: 'alice' });
+  await room.update(releasePlan(game.captures, 'cara', game.users));
+  assert.deepEqual(game.captures.alice, { leader: 'cara', via: 'alice' });
+  // Duplicate delivery and a delayed event after Bob rejoins must preserve valid captures.
+  await room.update({ 'users/bob': { real: 'Bob', clan: 'Bob' }, ...capturePlan(game.captures, 'bob', 'dan') });
+  const rejoined = structuredClone(game);
+  await h.exports.roomEmptied(h.snapshot(users.bob), { params: { gameId: 'room', userId: 'bob' } });
+  assert.deepEqual(h.data.games.room, rejoined);
+});
+
+test('the deletion trigger frees a departed leader\'s followers and normalizes a missing current via', async () => {
+  const h = harness({ games: { room: {
+    state: 'waiting', locked: true,
+    users: { alice: { real: 'Alice' }, cara: { real: 'Cara' }, eve: { real: 'Eve' } },
+    captures: { alice: { leader: 'cara', via: 'bob', back: 'alice' }, eve: { leader: 'bob', via: 'eve' }, bob: { leader: 'cara', via: 'bob' } }
+  } } });
+  await h.exports.roomEmptied(h.snapshot({ real: 'Bob' }), { params: { gameId: 'room', userId: 'bob' } });
+  assert.deepEqual(h.data.games.room.captures, { alice: { leader: 'cara', via: 'alice' } });
+  await h.exports.roomEmptied(h.snapshot({ real: 'Bob' }), { params: { gameId: 'room', userId: 'bob' } });
+  assert.deepEqual(h.data.games.room.captures, { alice: { leader: 'cara', via: 'alice' } });
 });
 
 test('a room emptied after its reveal stays a full idle spell, however old it is', async () => {
