@@ -153,6 +153,36 @@ test('a new room cannot carry announcements', async () => {
   await assert.rejects(create('-forgedannounce00002', { eliminated: { bob: true } }), /permission/i);
 });
 
+test('a new room carries only its base fields and the creator\'s own entries', async () => {
+  const create = (id, extra = {}) => alice.ref().update({
+    [`games/${id}`]: { state: 'waiting', createdAt: Date.now(), name: id.slice(1), pass: 'ABCDEF', ...extra },
+    [`roomNames/${id.slice(1)}/ABCDEF`]: id
+  });
+  const key = botKey(4);
+  const bot = { ...player('Bot'), fakeBadge: true };
+  const both = { alice: player('Alice'), bob: player('Bob') };
+  await Promise.all([
+    { eliminated: { [key]: true } },
+    { users: both, captures: { bob: { leader: 'alice', via: 'bob' } } },
+    { users: both, claims: { bob: { leader: 'alice', by: 'alice' } } },
+    { users: { bob: player('Bob') } },
+    { users: { alice: player('Alice') }, secrets: { alice: 'otter', bob: 'apple' } },
+    { users: { alice: player('Alice'), [key]: bot }, secrets: { alice: 'otter', [key]: 'robot' } },
+    { presence: { bob: { version: 2, lastSeen: Date.now() } } }
+  ].map((extra, i) => assert.rejects(create(`-seededroom00000000${i}`, extra), /permission/i)));
+  const id = '-seededroom000000099';
+  await create(id, { users: { alice: player('Alice') }, secrets: { alice: 'otter' }, presence: { alice: { version: 2, lastSeen: Date.now() } } });
+  // Bots join once the room exists, as public/bots.js adds them.
+  await alice.ref(`games/${id}`).update({ [`users/${key}`]: bot, [`secrets/${key}`]: 'robot' });
+});
+
+test('only a player in the room can write their own secret', async () => {
+  await seed('secret-members');
+  await assert.rejects(outsider.ref('games/secret-members/secrets/outsider').set('pear'), /permission/i);
+  await alice.ref('games/secret-members/secrets/alice').set('tiger');
+  await outsider.ref('games/secret-members').update({ 'users/outsider': player('Guest'), 'secrets/outsider': 'pear' });
+});
+
 test('a start transaction freezes submissions and admits only one concurrent claim', async () => {
   const { harness } = require('./support/functions.cjs');
   const app = initializeApp({ projectId: namespace, databaseURL: `https://${namespace}.firebaseio.com` }, 'rules-admin');
@@ -231,6 +261,17 @@ test('members can remove a watcher with connection entries but cannot remove a c
   await alice.ref('games/watchers/presence/outsider').remove();
   await alice.ref('games/watchers/presence/alice').update({ version: 2, lastSeen: Date.now(), connections: { tab: { away: false, name: 'Alice' } } });
   await assert.rejects(outsider.ref('games/watchers/presence/alice').remove(), /permission/i);
+});
+
+test('presence connections hold only connection entries', async () => {
+  await seed('connection-shape');
+  const ref = alice.ref('games/connection-shape/presence/alice');
+  await ref.set({ version: 2, lastSeen: Date.now(), connections: { tab: { away: false, name: 'Alice' } } });
+  await Promise.all(['junk', 5, true].map(async value => {
+    await assert.rejects(ref.update({ version: 2, lastSeen: Date.now(), connections: value }), /permission/i);
+    await assert.rejects(ref.child('connections').set(value), /permission/i);
+  }));
+  assert.deepEqual((await ref.child('connections').once('value')).val(), { tab: { away: false, name: 'Alice' } });
 });
 
 test('members capture humans into an uncaptured leader\'s empire after the reveal', async () => {
