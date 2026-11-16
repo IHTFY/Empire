@@ -30,7 +30,7 @@ export function fitRevealText(screen) {
 }
 
 // Owns synchronized playback, its cancellation token, and the bot announcement queue.
-export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby }) {
+export function createReveal({ db, flashNames, getRoom, getUid, audio, ui, refreshLobby }) {
   const startButton = $('revealSecrets');
   let revealing = false;
   let revealRun = 0;
@@ -298,8 +298,8 @@ export function createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby 
     releasePlayback(held);
     // The reveal is over (or was already over when this player arrived).
     // The rules check the server's clock, which can be slightly behind this device's estimate,
-    // so retry briefly instead of leaving the room stuck in playing.
-    if (stillHere() && serverNow() - startedAt >= total) {
+    // so retry briefly instead of leaving the room stuck in playing. Only players may write it.
+    if (stillHere() && getRoom().users[getUid()] && serverNow() - startedAt >= total) {
       (async () => {
         for (let attempt = 0; attempt < 5 && stillHere(); attempt++) {
           try {

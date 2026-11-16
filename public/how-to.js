@@ -15,7 +15,7 @@ const SECRETS = { frankie: 'Gandalf', ana: 'Moana', ben: 'Shrek', cy: 'Yoda', de
 const RULES = [
   { id: 'goal', sec: 'Goal', t: 'Goal', p: 'Be the leader of the last empire standing. Everyone starts as the leader of their own empire.' },
   { id: 'create', sec: 'Set up', t: 'Create a room', p: 'Tap <strong>Create</strong> and keep the suggested room name or type your own. The room gets a password to share.' },
-  { id: 'invite', sec: 'Set up', t: 'Invite friends', p: 'Send them the <strong>Share link</strong>, or have them choose <strong>Join</strong> and enter the room name and password. Short on players? Add bots from the room menu.' },
+  { id: 'invite', sec: 'Set up', t: 'Invite friends', p: 'Send them the <strong>Share link</strong>, or have them choose <strong>Join</strong> and enter the room name and password. Short on players? Tap <strong>Add bot</strong> in the lobby.' },
   { id: 'names', sec: 'Set up', t: 'Pick your names', p: 'Enter your real name and a <strong>secret name</strong> you hope nobody will link to you. Tap your crest to customize it.' },
   { id: 'reveal', sec: 'Set up', t: 'Reveal the names', p: 'Once everyone is in, tap <strong>Reveal the names</strong>. Names lock after the first reveal; anyone who joins later plays the next round.' },
   { id: 'memorize', sec: 'Set up', t: 'Memorize', p: 'The names are read twice, in random order. No recording and no writing them down. Remaining leaders can all agree to hear them again.' },
