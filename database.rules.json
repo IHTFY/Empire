@@ -19,8 +19,9 @@
     "games": {
       "$gameId": {
         // Create a new room, together with its /roomNames entry, or delete one that is marked
-        // for deletion (or already gone). Nothing can list every room.
-        ".write": "auth != null && ((!data.child('state').exists() && newData.child('state').val() === 'waiting' && newData.parent().parent().child('roomNames').child(newData.child('name').val()).child(newData.child('pass').val()).val() === $gameId) || (!newData.exists() && (!data.exists() || (data.child('state').val() === 'deleting' && data.child('users').child(auth.uid).exists()))))",
+        // for deletion (or already gone). Nothing can list every room. A new room starts with no
+        // round data, and only its creator's own entries (checked under users and presence).
+        ".write": "auth != null && ((!data.child('state').exists() && newData.child('state').val() === 'waiting' && newData.parent().parent().child('roomNames').child(newData.child('name').val()).child(newData.child('pass').val()).val() === $gameId && !newData.child('eliminated').exists() && !newData.child('captures').exists() && !newData.child('claims').exists()) || (!newData.exists() && (!data.exists() || (data.child('state').val() === 'deleting' && data.child('users').child(auth.uid).exists()))))",
         ".validate": "$gameId.length <= 128 && newData.hasChild('state')",
         "state": {
           // Readable by anyone with the room code (game links load before sign-in finishes).
@@ -40,7 +41,7 @@
             // sit on a real player's entry. Once the names have been revealed the room is locked:
             // no joining, renaming or new bots until the next round (removals still work).
             ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true))) || (data.parent().parent().child('users').child(auth.uid).exists() && ((!data.exists() && newData.child('fakeBadge').val() === true && $userId.matches(/^-[-0-9A-Za-z_]{19}$/) && data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && data.child('fakeBadge').val() === true && $userId.matches(/^-[-0-9A-Za-z_]{19}$/)) || (!newData.exists() && ((data.parent().parent().child('presence').child($userId).child('version').val() === 2 && !data.parent().parent().child('presence').child($userId).child('connections').hasChildren()) || (data.parent().parent().child('presence').child($userId).child('version').val() !== 2 && data.parent().parent().child('presence').child($userId).child('online').val() === false)) && data.parent().parent().child('presence').child($userId).child('lastSeen').val() < now - 600000))))",
-            ".validate": "newData.hasChildren(['real', 'clan'])",
+            ".validate": "newData.hasChildren(['real', 'clan']) && (data.parent().parent().child('state').exists() || $userId === auth.uid)",
             "real": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "clan": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 100" },
             "game": { ".validate": "newData.isString() && newData.val() === $gameId" },
@@ -57,9 +58,10 @@
           ".write": false,
           "$userId": {
             // Your own secret, a new fake player's secret (written together with the fake),
-            // or cleanup of a secret whose player is being removed in the same update.
+            // or cleanup of a secret whose player is being removed in the same update. A secret
+            // is only kept for a player in the room.
             ".write": "auth != null && (($userId === auth.uid && (!newData.exists() || (data.parent().parent().child('state').val() === 'waiting' && data.parent().parent().child('locked').val() !== true))) || (data.parent().parent().child('users').child(auth.uid).exists() && newData.exists() && !data.exists() && newData.parent().parent().child('users').child($userId).child('fakeBadge').val() === true && $userId.matches(/^-[-0-9A-Za-z_]{19}$/) && data.parent().parent().child('locked').val() !== true) || (!newData.exists() && !newData.parent().parent().child('users').child($userId).exists()))",
-            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24"
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24 && newData.parent().parent().child('users').child($userId).exists()"
           }
         },
         "presence": {
@@ -67,9 +69,10 @@
           "$userId": {
             // Players in the room can also remove a watcher (someone present but not a player).
             ".write": "auth != null && ($userId === auth.uid || (!newData.exists() && !data.parent().parent().child('users').child($userId).exists() && data.parent().parent().child('users').child(auth.uid).exists()))",
-            ".validate": "newData.hasChild('lastSeen') && (newData.child('version').val() === 2 || (data.child('version').val() !== 2 && newData.hasChild('online')))",
+            ".validate": "newData.hasChild('lastSeen') && (newData.child('version').val() === 2 || (data.child('version').val() !== 2 && newData.hasChild('online'))) && (data.parent().parent().child('state').exists() || $userId === auth.uid)",
             "version": { ".validate": "newData.val() === 2" },
             "connections": {
+              ".validate": "newData.hasChildren()",
               "$connectionId": {
                 ".validate": "newData.hasChildren(['away', 'name'])",
                 "away": { ".validate": "newData.isBoolean()" },
