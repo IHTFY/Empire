@@ -408,6 +408,48 @@ test('Undo filters a departed via from legacy history before submitting to the r
   assert.deepEqual((await room.child('captures').once('value')).val(), { alice: { leader: 'cara', via: 'alice' } });
 });
 
+for (const scenario of [
+  {
+    name: 'a departed player in older history', key: 'cara',
+    users: { alice: player('Alice'), cara: player('Cara'), dan: player('Dan') },
+    captures: { alice: { leader: 'dan', via: 'cara', back: 'bob/alice' }, cara: { leader: 'dan', via: 'cara' } }
+  },
+  {
+    name: 'a leader captured since the page last heard', key: 'bob',
+    users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), dan: player('Dan') },
+    captures: { alice: { leader: 'cara', via: 'bob', back: 'alice' }, cara: { leader: 'dan', via: 'cara' } }
+  }
+]) {
+  for (const action of ['leave', 'remove']) {
+    test(`${action} succeeds despite refused capture cleanup with ${scenario.name}`, async () => {
+      const { departurePlan, writeLeave, writeRemoval } = await import('../../public/captures.js');
+      const id = `refused-${scenario.key}-${action}`;
+      const key = scenario.key;
+      const leaver = client(key, id);
+      await seed(id, {
+        locked: true, users: scenario.users, captures: scenario.captures,
+        secrets: { [key]: 'pear' },
+        presence: { [key]: { version: 2, lastSeen: Date.now() - 700000 } }
+      });
+      const room = alice.ref(`games/${id}`);
+      const known = (await room.child('captures').once('value')).val();
+      // The same validation failure must not stop the membership removal.
+      await assert.rejects(room.update(departurePlan(known, key)), /permission/i);
+      const rest = { [`users/${key}`]: null, [`secrets/${key}`]: null };
+      if (action === 'leave') {
+        await writeLeave(leaver.ref(`games/${id}`), known, key, { ...rest, [`presence/${key}`]: null });
+        assert.equal((await room.child(`presence/${key}`).once('value')).val(), null);
+      } else {
+        await writeRemoval(room, known, key, rest);
+      }
+      assert.equal((await room.child(`users/${key}`).once('value')).val(), null);
+      const secret = await request(`games/${id}/secrets/${key}`, 'GET', undefined, true);
+      assert.equal(secret.status, 200);
+      assert.equal(await secret.json(), null);
+    });
+  }
+}
+
 test('nobody outside a revealed room can join or reset it, so the server reopens it once empty', async () => {
   await seed('emptied', { locked: true, users: null, secrets: null });
   await assert.rejects(outsider.ref('games/emptied/state').set('resetting'), /permission/i);

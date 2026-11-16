@@ -37,7 +37,9 @@ export function departurePlan(captures, key) {
 // The rules let only room members delete records.
 function cleanDeparture(room, captures, key) {
   // An empty local cache (null) is retried against the server.
-  return Promise.all(Object.keys(captures).map(id => {
+  // Stale history can fail validation. The deletion trigger repairs it, so cleanup failure
+  // must not block leaving or report a successful removal as refused.
+  return Promise.allSettled(Object.keys(captures).map(id => {
     const path = `captures/${id}`;
     return room.child(path).transaction(c => c ? departurePlan({ [id]: c }, key)[path] : null);
   }));

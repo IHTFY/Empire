@@ -94,6 +94,47 @@ test('the deletion trigger frees a departed leader\'s followers and normalizes a
   assert.deepEqual(h.data.games.room.captures, { alice: { leader: 'cara', via: 'alice' } });
 });
 
+test('a departure with valid captures avoids a whole-room transaction', async () => {
+  let ref;
+  let transactions = 0;
+  const database = { ref: target => ref(target) };
+  const h = harness({ games: { room: {
+    state: 'waiting', locked: true, users: { alice: { real: 'Alice' }, cara: { real: 'Cara' } },
+    captures: { alice: { leader: 'cara', via: 'alice' } }, voice: { 0: 'clip' }, replay: { count: 2 }
+  } } }, {}, { database });
+  ref = target => {
+    const base = h.ref(target);
+    return { ...base, transaction: callback => { transactions++; return base.transaction(callback); } };
+  };
+  const before = structuredClone(h.data.games.room);
+  await h.exports.roomEmptied(h.snapshot({ real: 'Bob' }), { params: { gameId: 'room', userId: 'bob' } });
+  assert.equal(transactions, 0);
+  assert.deepEqual(h.data.games.room, before);
+});
+
+test('capture cleanup rechecks the roster after the preliminary reads', async () => {
+  let ref;
+  let transactions = 0;
+  const database = { ref: target => ref(target) };
+  const captures = { alice: { leader: 'cara', via: 'bob', back: 'alice' } };
+  const h = harness({ games: { room: {
+    state: 'waiting', locked: true, users: { alice: { real: 'Alice' }, cara: { real: 'Cara' } }, captures
+  } } }, {}, { database });
+  ref = target => {
+    const base = h.ref(target);
+    return { ...base, transaction: async callback => {
+      transactions++;
+      // A delayed deletion event races with Bob rejoining before the transaction.
+      await base.update({ 'users/bob': { real: 'Bob' } });
+      return base.transaction(callback);
+    } };
+  };
+  await h.exports.roomEmptied(h.snapshot({ real: 'Bob' }), { params: { gameId: 'room', userId: 'bob' } });
+  assert.equal(transactions, 1);
+  assert.deepEqual(h.data.games.room.captures, captures);
+  assert.equal(h.data.games.room.users.bob.real, 'Bob');
+});
+
 test('a room emptied after its reveal stays a full idle spell, however old it is', async () => {
   const hour = 60 * 60 * 1000;
   const now = Date.now();

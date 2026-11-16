@@ -66,6 +66,9 @@ async function roomEmptied(snapshot, context) {
   const room = db.ref(`games/${context.params.gameId}`);
   if ((await room.child('locked').once('value')).val() !== true) return null;
   const hasPlayers = users => Object.values(users || {}).some(user => user && user.fakeBadge !== true);
+  const [users, captures] = await Promise.all([room.child('users').once('value'), room.child('captures').once('value')]);
+  const known = { users: users.val(), captures: captures.val() };
+  if (hasPlayers(known.users) && !cleanCaptures(known)) return null;
   await room.transaction(game => {
     // Ask the server to retry an empty local cache before checking the room.
     if (game === null) return null;
