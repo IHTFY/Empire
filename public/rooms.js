@@ -1,3 +1,4 @@
+import { readStored, writeStored, removeStored } from './storage.js';
 import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
@@ -10,14 +11,14 @@ const LAST_ROOM_KEY = 'lastRoom';
 
 export function rememberRoom(name, pass) {
   try {
-    if (name) localStorage.setItem(LAST_ROOM_KEY, JSON.stringify(pass ? { room: name, pass } : { code: name }));
-    else localStorage.removeItem(LAST_ROOM_KEY);
+    if (name) writeStored(LAST_ROOM_KEY, JSON.stringify(pass ? { room: name, pass } : { code: name }));
+    else removeStored(LAST_ROOM_KEY);
   } catch (err) { /* private mode */ }
 }
 
 export function rememberedRoom() {
   try {
-    const saved = JSON.parse(localStorage.getItem(LAST_ROOM_KEY));
+    const saved = JSON.parse(readStored(LAST_ROOM_KEY));
     return saved && typeof saved === 'object' ? saved : null;
   } catch (err) {
     return null;
@@ -191,7 +192,7 @@ export function createRooms({
       show('lobby');
     } else if (users[getUid()]) {
       realName.value = users[getUid()].real;
-      setSecret(localStorage.getItem(`secret:${gameID}`) || '');
+      setSecret(readStored(`secret:${gameID}`) || '');
       show('lobby');
     } else {
       openSetup();
@@ -211,7 +212,7 @@ export function createRooms({
       [`secrets/${getUid()}`]: null,
       [`presence/${getUid()}`]: null
     }).catch(err => console.error(err));
-    localStorage.removeItem(`secret:${code}`);
+    removeStored(`secret:${code}`);
     if (goHome) {
       setRoomInUrl(null);
       show('home');
@@ -261,7 +262,7 @@ export function createRooms({
       const gone = { [`games/${code}`]: null };
       if (pass) gone[`roomNames/${name}/${pass}`] = null;
       await db.ref().update(gone).catch(() => {});
-      localStorage.removeItem(`secret:${code}`);
+      removeStored(`secret:${code}`);
       rememberRoom(null);
       window.location.replace('/');
     }
@@ -271,7 +272,7 @@ export function createRooms({
       captures = {};
       claims = {};
       setSecret('');
-      localStorage.removeItem(`secret:${code}`);
+      removeStored(`secret:${code}`);
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
       $('submitLabel').textContent = 'Enter the lobby';
       onRoundReset();

@@ -1,3 +1,4 @@
+import { readStored } from './storage.js';
 import { AWAY_AFTER_MS } from './config.js';
 
 // Owns one room connection and its away timer; the room controller owns subscription cleanup.
@@ -24,7 +25,7 @@ export function createRoomPresence({ db, getRoom, getUid, listen }) {
       if (snapshot.val() !== true || ref !== presenceRef) return;
       const connection = ref.child('connections').push();
       presenceConnection = connection;
-      const name = (localStorage.getItem('realName') || 'Guest').slice(0, 100);
+      const name = (readStored('realName') || 'Guest').slice(0, 100);
       try {
         // Establish the schema before registering a multi-path disconnect write. No online
         // entry is published until its cleanup is registered.

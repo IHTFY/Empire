@@ -1,8 +1,9 @@
 import { $ } from '../dom.js';
+import { readStored, writeStored } from '../storage.js';
 
 // Owns view preference and transition animations; roster elements and seating stay with the lobby renderer.
 export function createLobbyTransitions({ lobby }) {
-  let view = localStorage.getItem('lobbyView') === 'list' ? 'list' : 'table';
+  let view = readStored('lobbyView') === 'list' ? 'list' : 'table';
   // Switching views moves each player as one group. Names and remove controls
   // stay attached to their avatar, and the real player appears only when it lands.
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -202,7 +203,7 @@ export function createLobbyTransitions({ lobby }) {
     // The views' own fade-in would shift the landing spots, so it only plays without the morph.
     document.querySelector('.lobby-body').classList.toggle('morphing', animate);
     view = next;
-    try { localStorage.setItem('lobbyView', view); } catch (err) { /* private mode */ }
+    writeStored('lobbyView', view);
     const toggle = $('viewToggle');
     toggle.classList.toggle('is-list', view === 'list');
     toggle.setAttribute('aria-label', view === 'list' ? 'List view. Show the table' : 'Table view. Show the list');

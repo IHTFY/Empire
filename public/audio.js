@@ -1,15 +1,17 @@
 import { $ } from './dom.js';
+import { readStored, writeStored } from './storage.js';
 
 // Owns device sound settings, audio resources, and decoded clip lifetime.
 export function createAudio({ db, rollNumber }) {
   // Sound: two volumes (0-100) kept per device. Effects are the join chime and countdown
   // ticks; voice reads the names aloud during the reveal.
   function readVolume(key, fallback) {
-    const value = Number(localStorage.getItem(key));
-    return localStorage.getItem(key) === null || Number.isNaN(value) ? fallback : Math.min(100, Math.max(0, value));
+    const stored = readStored(key);
+    const value = Number(stored);
+    return stored === null || Number.isNaN(value) ? fallback : Math.min(100, Math.max(0, value));
   }
   // Defaults: effects 40%, voice 100%, reverb on (until the device saves a choice).
-  const volume = { sfx: readVolume('sfxVolume', 40), voice: readVolume('voiceVolume', 100), reverb: localStorage.getItem('reverb') !== 'off' };
+  const volume = { sfx: readVolume('sfxVolume', 40), voice: readVolume('voiceVolume', 100), reverb: readStored('reverb') !== 'off' };
 
   let audioContext = null;
   function audio() {
@@ -125,19 +127,19 @@ export function createAudio({ db, rollNumber }) {
   }
   $('sfxVolume').addEventListener('input', event => {
     volume.sfx = Number(event.target.value);
-    localStorage.setItem('sfxVolume', volume.sfx);
+    writeStored('sfxVolume', volume.sfx);
     renderSound();
   });
   $('sfxVolume').addEventListener('change', () => chime());
   $('voiceVolume').addEventListener('input', event => {
     volume.voice = Number(event.target.value);
-    localStorage.setItem('voiceVolume', volume.voice);
+    writeStored('voiceVolume', volume.voice);
     renderSound();
   });
   $('voiceVolume').addEventListener('change', () => sayEmpire());
   $('reverbToggle').addEventListener('click', () => {
     volume.reverb = !volume.reverb;
-    try { localStorage.setItem('reverb', volume.reverb ? 'on' : 'off'); } catch (err) { /* private mode */ }
+    writeStored('reverb', volume.reverb ? 'on' : 'off');
     renderSound();
     sayEmpire();
   });
