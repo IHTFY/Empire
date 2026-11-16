@@ -3,8 +3,12 @@ const { test } = require('node:test');
 const { harness } = require('../functions/test/support/functions.cjs');
 
 function element() {
-  return { hidden: false, value: '', textContent: '', classList: { add() {}, remove() {} },
-    addEventListener() {}, querySelector: () => element() };
+  const handlers = new Map();
+  return { hidden: false, value: '', textContent: '', dataset: {}, style: {},
+    classList: { add() {}, remove() {} }, setAttribute() {}, replaceChildren() {},
+    addEventListener(type, callback) { handlers.set(type, callback); },
+    dispatch(type, event = {}) { return handlers.get(type)(event); },
+    querySelector: () => element(), querySelectorAll: () => [], getClientRects: () => [] };
 }
 
 async function roomHarness({ pauseSignIn = false } = {}) {
@@ -18,23 +22,24 @@ async function roomHarness({ pauseSignIn = false } = {}) {
   let screen = 'home';
   global.document = { location: new URL('https://example.test/'),
     getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
-    addEventListener() {}, querySelectorAll: selector => selector === '.room-name' ? roomNames : [] };
+    addEventListener() {}, querySelector: () => element(), querySelectorAll: selector => selector === '.room-name' ? roomNames : [] };
   global.history = { replaceState(_state, _title, url) { global.document.location = new URL(url); } };
   global.window = { location: { replace: url => events.push(['replace', url]) } };
   global.localStorage = { getItem: key => stored.get(key) ?? null,
     setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
   global.requestAnimationFrame = () => {};
+  global.ResizeObserver = class { observe() {} };
   global.firebase = { database: { ServerValue: { TIMESTAMP: 1 } } };
   const h = harness({ games: {
     A: { name: 'alpha', pass: 'ABCDEF', state: 'waiting', locked: true, roundId: 'round-a', users: { me: { real: 'Alice' } } },
     B: { name: 'bravo', pass: 'UVWXYZ', state: 'waiting', users: { me: { real: 'Bob' } } },
     C: { name: 'charlie', pass: 'GHJKMN', state: 'waiting' }
-  } });
+  }, roomNames: { alpha: { ABCDEF: 'A' }, bravo: { UVWXYZ: 'B' } } });
   function pause(operation, path = '') {
     const reached = Promise.withResolvers();
     const gate = Promise.withResolvers();
     delays.set(`${operation}:${path}`, { reached, gate });
-    return { reached: reached.promise, release: gate.resolve };
+    return { reached: reached.promise, release: gate.resolve, reject: gate.reject };
   }
   async function wait(operation, path = '') {
     const key = `${operation}:${path}`;
@@ -81,7 +86,17 @@ async function roomHarness({ pauseSignIn = false } = {}) {
     listeners: [...subscriptions].filter(([, callbacks]) => callbacks.size).map(([path, callbacks]) => [path, callbacks.size]),
     events
   });
-  return { rooms, pause, signIn, view, reads };
+  const { createHome } = await import('../public/home.js');
+  const home = createHome({ db, ensureSignedIn: () => wait('signIn'), enterRoom: rooms.enter,
+    beginEntry: rooms.begin, isEntryCurrent: rooms.isCurrent, setRoomInUrl: rooms.setRoomInUrl,
+    ui: { show: next => { screen = next; }, toast: record('toast') } });
+  async function joinFromForm() {
+    elements.get('modeJoin').dispatch('click');
+    elements.get('userGameCode').value = 'bravo';
+    elements.get('roomPass').value = 'UVWXYZ';
+    await elements.get('roomForm').dispatch('submit', { preventDefault() {} });
+  }
+  return { rooms, home, joinFromForm, pause, signIn, view, reads, data: h.data };
 }
 
 test('a delayed automatic room entry cannot overwrite a newer room choice', async () => {
@@ -222,4 +237,61 @@ test('a newer entry to the same room also supersedes a pending entry', async () 
   gate.release();
   await oldEntry;
   assert.deepEqual(view(), alpha);
+});
+
+for (const [name, start, path] of [
+  ['saved room', home => home.resume({ room: 'alpha', pass: 'ABCDEF' }), 'games/A/state'],
+  ['saved legacy room', home => home.resume({ code: 'A' }), 'games/A/state'],
+  ['invitation', home => home.join('alpha', 'ABCDEF'), 'roomNames/alpha/ABCDEF'],
+  ['legacy invitation', home => home.joinOldLink('A'), 'games/A/state']
+]) {
+  test(`a slow ${name} lookup cannot replace the room chosen from Home`, async () => {
+    const { home, joinFromForm, pause, view, data } = await roomHarness();
+    const gate = pause('read', path);
+    const startup = start(home);
+    await gate.reached;
+    await joinFromForm();
+    const bravo = view();
+    assert.equal(bravo.room.id, 'B');
+    gate.release();
+    await startup;
+    assert.deepEqual(view(), bravo);
+    assert.deepEqual(data.games.B.users.me, { real: 'Bob' });
+  });
+}
+
+for (const [name, start, path] of [
+  ['saved room', home => home.resume({ room: 'gone', pass: 'ABCDEF' }), 'roomNames/gone/ABCDEF'],
+  ['saved legacy room', home => home.resume({ code: 'gone' }), 'games/gone/state'],
+  ['invitation', home => home.join('gone', 'ABCDEF'), 'roomNames/gone/ABCDEF'],
+  ['legacy invitation', home => home.joinOldLink('gone'), 'games/gone/state']
+]) {
+  test(`a slow closed ${name} lookup cannot send a newer room back home`, async () => {
+    const { home, joinFromForm, pause, view } = await roomHarness();
+    const gate = pause('read', path);
+    const startup = start(home);
+    await gate.reached;
+    await joinFromForm();
+    const bravo = view();
+    gate.release();
+    await startup;
+    assert.deepEqual(view(), bravo);
+  });
+}
+
+test('a stale entry detaches its listeners and presence when the next sign-in fails', async () => {
+  const { rooms, pause, view } = await roomHarness();
+  const oldRead = pause('read', 'games/A/locked');
+  const oldEntry = rooms.enter('A');
+  await oldRead.reached;
+  const signIn = pause('signIn');
+  const nextEntry = rooms.enter('B');
+  await signIn.reached;
+  const failedEntry = assert.rejects(nextEntry, /sign-in failed/);
+  signIn.reject(new Error('sign-in failed'));
+  await failedEntry;
+  oldRead.release();
+  await oldEntry;
+  assert.equal(view().room.id, null);
+  assert.deepEqual(view().listeners, []);
 });

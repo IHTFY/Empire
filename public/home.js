@@ -2,7 +2,7 @@ import { $ } from './dom.js';
 import { suggestRoomName } from './room-names.js';
 
 // Owns the create/join form and credential lookup; room entry and exit belong to rooms.js.
-export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) {
+export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryCurrent, setRoomInUrl, ui }) {
   const userGameCode = $('userGameCode');
   const userGameCodeHelper = $('userGameCodeHelper');
   const { show, toast } = ui;
@@ -234,7 +234,7 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
   }
 
   let busy = false;
-  async function tryCreating() {
+  async function tryCreating(attempt = beginEntry()) {
     const typed = userGameCode.value.trim();
     const name = slugify(typed);
     if (!name) {
@@ -244,12 +244,14 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
     // Show exactly the name being created, and keep it there until the room opens.
     userGameCode.value = name;
     await ensureSignedIn();
+    if (!isEntryCurrent(attempt)) return;
     const id = await claimRoom(name);
+    if (!isEntryCurrent(attempt)) return;
     if (!id) {
       codeError(`A room called ${name} is already open. Pick another name, or join it with its password.`);
       return;
     }
-    await enterRoom(id);
+    await enterRoom(id, attempt);
   }
 
   // Finds a room by name and password; null when nothing matches.
@@ -264,7 +266,7 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
     }
   }
 
-  async function tryJoining(rawName = userGameCode.value, rawPass = roomPassInput.value) {
+  async function tryJoining(rawName = userGameCode.value, rawPass = roomPassInput.value, attempt = beginEntry()) {
     const name = slugify(rawName.trim());
     const pass = cleanPass(rawPass);
     const backHome = () => {
@@ -285,13 +287,15 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
       return;
     }
     await ensureSignedIn();
+    if (!isEntryCurrent(attempt)) return;
     const id = await findRoom(name, pass);
+    if (!isEntryCurrent(attempt)) return;
     if (!id) {
       backHome();
       passError(`No open room matches ${name} with that password.`);
       return;
     }
-    await enterRoom(id);
+    await enterRoom(id, attempt);
   }
 
   // Rooms from before passwords are looked up by their key; false when it has closed.
@@ -301,10 +305,13 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
   }
 
   // Links from before rooms had passwords: ?code=<room key>.
-  async function joinOldLink(code) {
+  async function joinOldLink(code, attempt = beginEntry()) {
     await ensureSignedIn();
-    if (await roomExists(code)) {
-      await enterRoom(code);
+    if (!isEntryCurrent(attempt)) return;
+    const exists = await roomExists(code);
+    if (!isEntryCurrent(attempt)) return;
+    if (exists) {
+      await enterRoom(code, attempt);
     } else {
       setRoomInUrl(null);
       show('home');
@@ -313,16 +320,18 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
   }
 
   // Reopening the app goes back to the last room, quietly landing on home if it has closed.
-  async function resume(saved) {
+  async function resume(saved, attempt = beginEntry()) {
     await ensureSignedIn();
+    if (!isEntryCurrent(attempt)) return;
     let id = null;
     if (typeof saved.room === 'string' && typeof saved.pass === 'string') {
       id = await findRoom(slugify(saved.room), cleanPass(saved.pass));
     } else if (typeof saved.code === 'string' && await roomExists(saved.code)) {
       id = saved.code;
     }
+    if (!isEntryCurrent(attempt)) return;
     if (id) {
-      await enterRoom(id);
+      await enterRoom(id, attempt);
     } else {
       setRoomInUrl(null);
       show('home');
@@ -335,9 +344,11 @@ export function createHome({ db, ensureSignedIn, enterRoom, setRoomInUrl, ui }) 
     busy = true;
     lockForm(true);
     $('roomSubmit').classList.add('is-busy');
+    const attempt = beginEntry();
     try {
-      await (roomMode === 'join' ? tryJoining() : tryCreating());
+      await (roomMode === 'join' ? tryJoining(undefined, undefined, attempt) : tryCreating(attempt));
     } catch (err) {
+      if (!isEntryCurrent(attempt)) return;
       console.error(err);
       // The code (e.g. auth/network-request-failed), or a script error's text, lets a player's
       // screenshot say what failed.

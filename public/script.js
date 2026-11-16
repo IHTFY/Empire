@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setSecret: value => setup.setSecret(value)
   });
   const getRoom = rooms.getSnapshot;
-  home = createHome({ db, ensureSignedIn, enterRoom: rooms.enter, setRoomInUrl: rooms.setRoomInUrl, ui });
+  home = createHome({ db, ensureSignedIn, enterRoom: rooms.enter, beginEntry: rooms.begin, isEntryCurrent: rooms.isCurrent, setRoomInUrl: rooms.setRoomInUrl, ui });
   initializeSharing({ getRoom, roomLink: rooms.roomLink, toast: ui.toast });
   const crestPicker = createCrestPicker({ getRoom, getUid });
   setup = createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePresenceName: rooms.savePresenceName });
@@ -122,17 +122,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // room this device was last in.
   const params = new URL(document.location).searchParams;
   const lastRoom = rememberedRoom();
+  const attempt = rooms.begin();
   const failedToOpen = err => {
+    if (!rooms.isCurrent(attempt)) return;
     console.error(err);
     ui.show('home');
     ui.toast('Could not open that room. Try again.');
   };
   if (params.get('room')) {
-    home.join(params.get('room'), params.get('pass') || '').catch(failedToOpen);
+    home.join(params.get('room'), params.get('pass') || '', attempt).catch(failedToOpen);
   } else if (params.get('code')) {
-    home.joinOldLink(params.get('code')).catch(failedToOpen);
+    home.joinOldLink(params.get('code'), attempt).catch(failedToOpen);
   } else if (lastRoom) {
-    home.resume(lastRoom).catch(err => {
+    home.resume(lastRoom, attempt).catch(err => {
+      if (!rooms.isCurrent(attempt)) return;
       console.error(err);
       rememberRoom(null);
       ui.show('home');
