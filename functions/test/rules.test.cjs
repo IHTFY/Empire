@@ -286,16 +286,36 @@ test('a leader who leaves keeps a capture their follower made after the page las
     locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara'), dan: player('Dan') },
     captures: { bob: { leader: 'alice', via: 'bob' }, dan: { leader: 'alice', via: 'dan' } }
   });
-  const { writeDeparture } = await import('../../public/captures.js');
+  const { writeLeave } = await import('../../public/captures.js');
   const room = alice.ref('games/departure');
   // Alice's page plans her departure from what it last heard.
   const known = (await room.child('captures').once('value')).val();
   // Meanwhile Bob undoes his capture and joins Cara.
   await bobCaptures.ref('games/departure/captures/bob').set({ leader: 'cara', via: 'bob' });
-  await writeDeparture(room, known, 'alice', { 'users/alice': null, 'secrets/alice': null, 'presence/alice': null });
+  await writeLeave(room, known, 'alice', { 'users/alice': null, 'secrets/alice': null, 'presence/alice': null });
   const read = async key => (await bobCaptures.ref(`games/departure/${key}`).once('value')).val();
   assert.deepEqual(await read('captures'), { bob: { leader: 'cara', via: 'bob' } });
   assert.equal(await read('users/alice'), null);
+});
+
+test('removing a player who came back online leaves their empire as it was', async () => {
+  const away = { version: 2, lastSeen: Date.now() - 20 * 60 * 1000 };
+  const room = { locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara') }, captures: { cara: { leader: 'bob', via: 'cara' } } };
+  const { writeRemoval } = await import('../../public/captures.js');
+  const read = async (id, key) => (await alice.ref(`games/${id}/${key}`).once('value')).val();
+  const rest = { 'users/bob': null, 'secrets/bob': null };
+  // Bob has been away long enough to be removed, so Alice's page offers it, but he reconnects first.
+  await seed('removal-back', { ...room, presence: { bob: away } });
+  const known = await read('removal-back', 'captures');
+  await bobCaptures.ref('games/removal-back/presence/bob').update({ lastSeen: Date.now(), connections: { tab: { away: false, name: 'Bob' } } });
+  await assert.rejects(writeRemoval(alice.ref('games/removal-back'), known, 'bob', rest), /permission/i);
+  assert.deepEqual(await read('removal-back', 'captures'), { cara: { leader: 'bob', via: 'cara' } });
+  assert.ok(await read('removal-back', 'users/bob'));
+  // Still away, Bob is removed and Cara goes free.
+  await seed('removal-away', { ...room, presence: { bob: away } });
+  await writeRemoval(alice.ref('games/removal-away'), known, 'bob', rest);
+  assert.equal(await read('removal-away', 'captures'), null);
+  assert.equal(await read('removal-away', 'users/bob'), null);
 });
 
 test('nobody outside a revealed room can join or reset it, so the server reopens it once empty', async () => {

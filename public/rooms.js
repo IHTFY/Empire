@@ -2,7 +2,7 @@ import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
 import { createRoomPresence } from './room-presence.js';
-import { capturePlan, releasePlan, staleCaptures, writeDeparture } from './captures.js';
+import { capturePlan, releasePlan, staleCaptures, writeLeave, writeRemoval } from './captures.js';
 
 // The room in the address bar is also remembered on this device, so closing the app (or
 // the tab) and opening it again from the home screen goes straight back to the room.
@@ -206,7 +206,7 @@ export function createRooms({
     const known = captures;
     // Stop listening first so removing myself isn't mistaken for being removed.
     await detachRoom();
-    await writeDeparture(db.ref(`games/${code}`), known, getUid(), {
+    await writeLeave(db.ref(`games/${code}`), known, getUid(), {
       [`users/${getUid()}`]: null,
       [`secrets/${getUid()}`]: null,
       [`presence/${getUid()}`]: null
@@ -291,10 +291,10 @@ export function createRooms({
     const room = db.ref(`games/${gameID}`);
     const known = captures;
     // If the flag is refused (rules not updated yet), still remove the bot without announcing it.
-    writeDeparture(room, known, key, update).catch(err => {
+    writeRemoval(room, known, key, update).catch(err => {
       if (!flagged) throw err;
       delete update[`eliminated/${key}`];
-      return writeDeparture(room, known, key, update);
+      return writeRemoval(room, known, key, update);
     }).catch(() => {
       toast('Could not remove that player');
       if (onFail) onFail();
