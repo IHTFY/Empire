@@ -57,6 +57,15 @@ export function createAudio({ db, rollNumber }) {
   // Recorded voice: the server records each name (MP3, base64) so every device hears the
   // same natural voice.
   const decoded = new Map();
+  const activeSources = new Set();
+  let speechRun = 0;
+  function clearClips() {
+    speechRun++;
+    decoded.clear();
+    activeSources.forEach(source => source.stop());
+    activeSources.clear();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+  }
   function decodeClip(base64) {
     if (!decoded.has(base64)) {
       const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
@@ -94,7 +103,9 @@ export function createAudio({ db, rollNumber }) {
   // Plays a recorded clip if there is one; otherwise the device reads the text.
   async function speak(text, base64) {
     if (!volume.voice) return;
+    const run = speechRun;
     const buffer = base64 ? await decodeClip(base64).catch(() => null) : null;
+    if (run !== speechRun) return;
     if (!buffer) { say(text); return; }
     try {
       const ctx = audio();
@@ -105,7 +116,9 @@ export function createAudio({ db, rollNumber }) {
       source.connect(level);
       level.connect(ctx.destination);
       if (volume.reverb) level.connect(reverb(ctx));
+      source.onended = () => activeSources.delete(source);
       source.start();
+      activeSources.add(source);
     } catch (err) { say(text); }
   }
   let voiceSample = null;
@@ -151,6 +164,6 @@ export function createAudio({ db, rollNumber }) {
     speak,
     decodeClip,
     isVoiceEnabled: () => Boolean(volume.voice),
-    clearClips: () => decoded.clear()
+    clearClips
   };
 }
