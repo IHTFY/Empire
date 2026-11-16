@@ -5,11 +5,14 @@ const IDLE_MS = 12 * 60 * 60 * 1000;
 const VOICE_KEEP_MS = 60 * 24 * 60 * 60 * 1000;
 const SWEEP_EVERY_MS = 30 * 60 * 1000;
 // Everything that belongs to one round; a reset clears it and keeps the room's name and presence.
+// activeAt, the time of the last automatic reset, stays: it is the room's last sign of use
+// when its last player has left.
 const ROUND_KEYS = ['users', 'secrets', 'names', 'startedAt', 'revealEndsAt', 'roundId', 'revealId', 'nameOwners', 'replay', 'locked', 'voice', 'eliminated', 'captures', 'claims'];
 
 function openNextRound(game) {
   for (const key of ROUND_KEYS) delete game[key];
   game.state = 'waiting';
+  game.activeAt = Date.now();
   return game;
 }
 
@@ -134,7 +137,7 @@ function activityStatus(game, seenAt, now) {
   if (presence.some(p => p.version === 2 ? Object.keys(p.connections || {}).length > 0 : p.online)) {
     return 'live';
   }
-  const times = presence.map(p => p.lastSeen).concat([game.startedAt, game.createdAt, seenAt])
+  const times = presence.map(p => p.lastSeen).concat([game.startedAt, game.activeAt, game.createdAt, seenAt])
     .filter(t => typeof t === 'number');
   if (times.length === 0) return 'unknown';
   return now - Math.max(...times) > IDLE_MS ? 'idle' : 'recent';

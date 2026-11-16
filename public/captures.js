@@ -24,6 +24,31 @@ export function departurePlan(captures, key) {
   return update;
 }
 
+// Deletes the capture records of key's departure from room (the games/<code> reference). They
+// come from this page's copy, which can be out of date: a follower may have joined another
+// empire since. Each record is checked again as it is deleted, so only those key still leads go.
+// The rules let only room members delete records.
+function freeFollowers(room, captures, key) {
+  const own = `captures/${key}`;
+  // An empty local cache (null) is retried against the server.
+  return Promise.all(Object.keys(departurePlan(captures, key)).map(path =>
+    room.child(path).transaction(c => (path === own || !c || c.leader === key ? null : undefined))));
+}
+
+// key leaves the room, writing rest (their own entries). Their records go first, while key is
+// still a member; removing yourself is never refused.
+export async function writeLeave(room, captures, key, rest) {
+  await freeFollowers(room, captures, key);
+  await room.update(rest);
+}
+
+// Another member removes key, writing rest. The removal can be refused (key came back online),
+// so key's records go only once it has gone through.
+export async function writeRemoval(room, captures, key, rest) {
+  await room.update(rest);
+  await freeFollowers(room, captures, key);
+}
+
 // Updates that clear the records of keys that the lobby ignores: the player or their leader
 // has left, or the leader was captured in the meantime. The rules still count such a record,
 // and it would block every capture or claim involving that player.

@@ -146,6 +146,8 @@
         "pass": { ".read": true, ".validate": "newData.isString() && newData.val().matches(/^[A-HJKMNP-Z]{6}$/)" },
         // Set when the room is created; used to clean up abandoned rooms.
         "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        // Set by the server when it opens the next round on its own; also used for cleanup.
+        "activeAt": { ".validate": false },
         "$other": { ".validate": false }
       }
     }
