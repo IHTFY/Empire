@@ -1,3 +1,4 @@
+import { readStored, writeStored } from './storage.js';
 import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 
@@ -129,8 +130,8 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
       return;
     }
     if (getRoom().id !== code) return;
-    localStorage.setItem('realName', userRealName);
-    localStorage.setItem(`secret:${code}`, userFakeName);
+    writeStored('realName', userRealName);
+    writeStored(`secret:${code}`, userFakeName);
     savePresenceName(userRealName);
     // Written on its own so a database without crest support still accepts the names.
     db.ref(`games/${getRoom().id}/users/${getUid()}/crest`).set(crestPicker.value()).catch(() => {});
@@ -149,7 +150,7 @@ export function createPlayerSetup({ db, getRoom, getUid, ui, crestPicker, savePr
     if (room.users[uid]) {
       realName.value = room.users[uid].real;
     }
-    setSecret(localStorage.getItem(`secret:${room.id}`) || '');
+    setSecret(readStored(`secret:${room.id}`) || '');
     openSetup();
   });
 

@@ -1,3 +1,4 @@
+import { readStored } from './storage.js';
 import { $ } from './dom.js';
 import { createUI } from './ui.js';
 import { initializeSheets } from './sheets.js';
@@ -35,8 +36,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const adopt = user => {
     // Anonymous identity persists in this browser, including after a reload.
     uid = user.uid;
-    if (localStorage.getItem('realName') && !$('realName').value) {
-      $('realName').value = localStorage.getItem('realName');
+    const savedName = readStored('realName');
+    if (savedName && !$('realName').value) {
+      $('realName').value = savedName;
     }
   };
   // Resolves once signed in. A failed attempt rejects and is forgotten, so the next

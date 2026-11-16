@@ -1,18 +1,19 @@
 import { $ } from './dom.js';
 import { openSheet } from './sheets.js';
+import { readStored, writeStored } from './storage.js';
 import { initialOf, SHAPE_CHOICES, COLOR_CHOICES, COLOR_GRID, INKS, METAL_CHOICES, TRIMS, PATTERNS, EMBLEM_CHOICES, PART_OPTIONS, parseCrest, crestString, randomCrest, defaultCrest, crestSvg, crestDefs } from './crest.js';
 
 // Owns the editable crest and its device persistence; crest.js remains the drawing library.
 export function createCrestPicker({ getRoom, getUid }) {
   $('crestDefs').innerHTML = crestDefs();
-  const stored = localStorage.getItem('crest');
+  const stored = readStored('crest');
   let crest = stored ? parseCrest(stored) : randomCrest();
   // A random crest stands in until a room shows the one this player already wears.
   let placeholder = !stored;
   const realName = $('realName');
 
   function saveCrest() {
-    try { localStorage.setItem('crest', crestString(crest)); } catch (err) { /* private mode */ }
+    writeStored('crest', crestString(crest));
   }
   saveCrest();
   // Ask the browser not to evict the saved crest and names under storage pressure.
