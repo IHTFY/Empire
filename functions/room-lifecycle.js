@@ -39,6 +39,26 @@ async function roomState(change, context) {
   return null;
 }
 
+// Older pages can leave capture references behind. Filter current and historical vias just
+// as the client's departurePlan does, using the roster inside the room transaction.
+function cleanCaptures(game) {
+  const users = game.users || {};
+  let changed = false;
+  Object.entries(game.captures || {}).forEach(([id, capture]) => {
+    if (!users[id] || !users[capture.leader]) {
+      delete game.captures[id];
+      changed = true;
+      return;
+    }
+    const history = [capture.via, ...(capture.back ? capture.back.split('/') : [])];
+    const [via = id, ...back] = history.filter(via => users[via]);
+    if (via === capture.via && back.join('/') === (capture.back || '')) return;
+    game.captures[id] = back.length ? { leader: capture.leader, via, back: back.join('/') } : { leader: capture.leader, via };
+    changed = true;
+  });
+  return changed;
+}
+
 // Only members can reset a room, and nobody can join one whose names were revealed, so a
 // revealed room that its last player leaves would stay stuck, holding its name, until the
 // sweep. Open the next round instead. Bots don't count as players.
@@ -46,12 +66,14 @@ async function roomEmptied(snapshot, context) {
   const room = db.ref(`games/${context.params.gameId}`);
   if ((await room.child('locked').once('value')).val() !== true) return null;
   const hasPlayers = users => Object.values(users || {}).some(user => user && user.fakeBadge !== true);
-  if (hasPlayers((await room.child('users').once('value')).val())) return null;
+  const [users, captures] = await Promise.all([room.child('users').once('value'), room.child('captures').once('value')]);
+  const known = { users: users.val(), captures: captures.val() };
+  if (hasPlayers(known.users) && !cleanCaptures(known)) return null;
   await room.transaction(game => {
     // Ask the server to retry an empty local cache before checking the room.
     if (game === null) return null;
     if (!game || game.locked !== true || game.state === 'resetting' || game.state === 'deleting') return undefined;
-    if (hasPlayers(game.users)) return undefined;
+    if (hasPlayers(game.users)) return cleanCaptures(game) ? game : undefined;
     return openNextRound(game);
   });
   return null;

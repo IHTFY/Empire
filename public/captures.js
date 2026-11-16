@@ -14,31 +14,41 @@ export function capturePlan(captures, key, leader) {
   return update;
 }
 
-// Updates for key leaving the room: their own record and those of everyone they lead go, so
-// their followers are free in the data as well as on screen.
+// A departure frees the player's followers and removes them from other empires' undo history.
 export function departurePlan(captures, key) {
   const update = {};
   Object.entries(captures).forEach(([id, c]) => {
-    if (id === key || (c && c.leader === key)) update[`captures/${id}`] = null;
+    const path = `captures/${id}`;
+    if (id === key || (c && c.leader === key)) {
+      update[path] = null;
+      return;
+    }
+    if (!c) return;
+    const history = [c.via, ...(c.back ? c.back.split(SEP) : [])];
+    if (!history.includes(key)) return;
+    const [via = id, ...back] = history.filter(via => via !== key);
+    update[path] = back.length ? { leader: c.leader, via, back: back.join(SEP) } : { leader: c.leader, via };
   });
   return update;
 }
 
-// Deletes the capture records of key's departure from room (the games/<code> reference). They
-// come from this page's copy, which can be out of date: a follower may have joined another
-// empire since. Each record is checked again as it is deleted, so only those key still leads go.
+// Recheck each record in the transaction: a follower may have changed empires since this
+// page last heard. Rewriting from that old copy would lose the newer capture and its history.
 // The rules let only room members delete records.
-function freeFollowers(room, captures, key) {
-  const own = `captures/${key}`;
+function cleanDeparture(room, captures, key) {
   // An empty local cache (null) is retried against the server.
-  return Promise.all(Object.keys(departurePlan(captures, key)).map(path =>
-    room.child(path).transaction(c => (path === own || !c || c.leader === key ? null : undefined))));
+  // Stale history can fail validation. The deletion trigger repairs it, so cleanup failure
+  // must not block leaving or report a successful removal as refused.
+  return Promise.allSettled(Object.keys(captures).map(id => {
+    const path = `captures/${id}`;
+    return room.child(path).transaction(c => c ? departurePlan({ [id]: c }, key)[path] : null);
+  }));
 }
 
 // key leaves the room, writing rest (their own entries). Their records go first, while key is
 // still a member; removing yourself is never refused.
 export async function writeLeave(room, captures, key, rest) {
-  await freeFollowers(room, captures, key);
+  await cleanDeparture(room, captures, key);
   await room.update(rest);
 }
 
@@ -46,7 +56,7 @@ export async function writeLeave(room, captures, key, rest) {
 // so key's records go only once it has gone through.
 export async function writeRemoval(room, captures, key, rest) {
   await room.update(rest);
-  await freeFollowers(room, captures, key);
+  await cleanDeparture(room, captures, key);
 }
 
 // Updates that clear the records of keys that the lobby ignores: the player or their leader
@@ -63,15 +73,15 @@ export function staleCaptures(captures, users, keys) {
 
 // Updates for undoing key's capture: key goes free and the followers that moved with them
 // return to their previous empire. Records without history (older rooms) go free.
-export function releasePlan(captures, key) {
+export function releasePlan(captures, key, users) {
   const update = {};
   Object.entries(captures).forEach(([id, c]) => {
     if (!c || c.via !== key) return;
-    if (id === key || !c.back) {
+    if (id === key || !c.back || (users && (!users[id] || !users[key]))) {
       update[`captures/${id}`] = null;
       return;
     }
-    const [via, ...rest] = c.back.split(SEP);
+    const [via = id, ...rest] = c.back.split(SEP).filter(via => !users || users[via]);
     update[`captures/${id}`] = rest.length ? { leader: key, via, back: rest.join(SEP) } : { leader: key, via };
   });
   return update;
