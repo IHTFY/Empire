@@ -45,6 +45,7 @@ export function createRooms({
   let locked = false;
   let roomName = null;
   let roomPass = null;
+  let entryAttempt = 0;
 
   // Snapshots expose room data without giving another controller ownership of it.
   function getSnapshot() {
@@ -104,15 +105,20 @@ export function createRooms({
   }
 
   async function enterRoom(code) {
+    const attempt = ++entryAttempt;
     await ensureSignedIn();
+    if (attempt !== entryAttempt) return;
     if (gameID && gameID !== code) {
-      await leaveRoom({ goHome: false });
+      await leaveCurrentRoom({ goHome: false });
+      if (attempt !== entryAttempt) return;
     }
     await detachRoom();
+    if (attempt !== entryAttempt) return;
     gameID = code;
     const [nameSnap, passSnap] = await Promise.all([
       db.ref(`games/${code}/name`).once('value'), db.ref(`games/${code}/pass`).once('value')
     ]);
+    if (attempt !== entryAttempt) return;
     roomName = nameSnap.val() || code;
     roomPass = passSnap.val();
     document.title = `Empire: ${roomName}`;
@@ -129,11 +135,12 @@ export function createRooms({
 
     roomPresence.start();
 
-    const me = await db.ref(`games/${gameID}/users/${getUid()}`).once('value');
+    const me = await db.ref(`games/${code}/users/${getUid()}`).once('value');
+    if (attempt !== entryAttempt) return;
     users = me.exists() ? { [getUid()]: me.val() } : {};
 
     let first = true;
-    listen(db.ref(`games/${gameID}/users`), snapshot => {
+    listen(db.ref(`games/${code}/users`), snapshot => {
       const hadMe = Boolean(users[getUid()]);
       const previous = users;
       users = snapshot.val() || {};
@@ -151,7 +158,7 @@ export function createRooms({
         openSetup();
       }
     });
-    listen(db.ref(`games/${gameID}/presence`), snapshot => {
+    listen(db.ref(`games/${code}/presence`), snapshot => {
       const hadPresence = Boolean(presence[getUid()]);
       presence = Object.fromEntries(Object.entries(snapshot.val() || {}).map(([key, seen]) => [key, summarizePresence(seen)]));
       // A player removed my watching entry: leave the room.
@@ -162,27 +169,28 @@ export function createRooms({
       }
       onChange();
     });
-    listen(db.ref(`games/${gameID}/captures`), snapshot => {
+    listen(db.ref(`games/${code}/captures`), snapshot => {
       captures = snapshot.val() || {};
       capturesReady = true;
       onChange();
     });
-    listen(db.ref(`games/${gameID}/claims`), snapshot => {
+    listen(db.ref(`games/${code}/claims`), snapshot => {
       claims = snapshot.val() || {};
       onChange();
     });
-    listen(db.ref(`games/${gameID}/state`), onStateChange);
+    listen(db.ref(`games/${code}/state`), onStateChange);
     onEnter();
-    listen(db.ref(`games/${gameID}/eliminated`), onEliminated);
-    locked = (await db.ref(`games/${gameID}/locked`).once('value')).val() === true;
-    listen(db.ref(`games/${gameID}/locked`), snapshot => {
+    listen(db.ref(`games/${code}/eliminated`), onEliminated);
+    const lockedSnap = await db.ref(`games/${code}/locked`).once('value');
+    if (attempt !== entryAttempt) return;
+    locked = lockedSnap.val() === true;
+    listen(db.ref(`games/${code}/locked`), snapshot => {
       locked = snapshot.val() === true;
       onChange();
       // A player whose names were revealed has played this round; Home may show an ad after it.
       if (locked && users[getUid()]) {
-        const code = gameID;
         db.ref(`games/${code}/roundId`).once('value')
-          .then(round => { if (round.val()) onRoundLocked(`${code}/${round.val()}`); })
+          .then(round => { if (attempt === entryAttempt && round.val()) onRoundLocked(`${code}/${round.val()}`); })
           .catch(err => console.error(err));
       }
     });
@@ -192,7 +200,7 @@ export function createRooms({
       show('lobby');
     } else if (users[getUid()]) {
       realName.value = users[getUid()].real;
-      setSecret(readStored(`secret:${gameID}`) || '');
+      setSecret(readStored(`secret:${code}`) || '');
       show('lobby');
     } else {
       openSetup();
@@ -200,7 +208,13 @@ export function createRooms({
   }
 
   // Leave the current room: remove my entry so nobody waits on me.
-  async function leaveRoom({ goHome = true } = {}) {
+  function leaveRoom(options) {
+    ++entryAttempt;
+    return leaveCurrentRoom(options);
+  }
+
+  async function leaveCurrentRoom({ goHome = true } = {}) {
+    const attempt = entryAttempt;
     if (!gameID) return;
     const code = gameID;
     // My followers go free with me.
@@ -213,7 +227,7 @@ export function createRooms({
       [`presence/${getUid()}`]: null
     }).catch(err => console.error(err));
     removeStored(`secret:${code}`);
-    if (goHome) {
+    if (goHome && attempt === entryAttempt) {
       setRoomInUrl(null);
       show('home');
     }
