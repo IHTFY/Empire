@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Refresh offline durations and removal eligibility as time passes.
   setInterval(lobby.render, 30000);
   createBots({ db, getRoom, getUid, toast: ui.toast });
-  reveal = createReveal({ db, flashNames, getRoom, audio, ui, refreshLobby: lobby.render });
+  reveal = createReveal({ db, flashNames, getRoom, getUid, audio, ui, refreshLobby: lobby.render });
 
   // Open the room from a link (a reload keeps it in the address bar), or go back to the
   // room this device was last in.
