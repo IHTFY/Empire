@@ -217,10 +217,18 @@ export function createRooms({
     }
   }
 
-  // Leave the current room: remove my entry so nobody waits on me.
+  // Leave the current room: remove my entry so nobody waits on me. Tapping Leave again before
+  // that finishes, including reopening the room after a failure, waits for the same departure.
+  let departure = null;
   function leaveRoom(options) {
-    ++entryAttempt;
-    return leaveCurrentRoom(options);
+    if (departure?.attempt !== entryAttempt) {
+      const attempt = ++entryAttempt;
+      const done = leaveCurrentRoom(options).finally(() => {
+        if (departure?.done === done) departure = null;
+      });
+      departure = { attempt, done };
+    }
+    return departure.done;
   }
 
   async function leaveCurrentRoom({ goHome = true } = {}) {
@@ -231,14 +239,46 @@ export function createRooms({
     const known = captures;
     // Stop listening first so removing myself isn't mistaken for being removed.
     await detachRoom();
-    await writeLeave(db.ref(`games/${code}`), known, getUid(), {
-      [`users/${getUid()}`]: null,
-      [`secrets/${getUid()}`]: null,
-      [`presence/${getUid()}`]: null
-    }).catch(err => console.error(err));
+    try {
+      await writeLeave(db.ref(`games/${code}`), known, getUid(), {
+        [`users/${getUid()}`]: null,
+        [`secrets/${getUid()}`]: null,
+        [`presence/${getUid()}`]: null
+      });
+    } catch (err) {
+      // The server still lists the player, so the saved name stays. Switching rooms carries on
+      // to the room just chosen; Leave reopens this one so it can be tried again.
+      console.error(err);
+      if (goHome && attempt === entryAttempt) await reopenAfterFailedLeave(code, attempt);
+      return;
+    }
     removeStored(`secret:${code}`);
     if (goHome && attempt === entryAttempt) {
       setRoomInUrl(null);
+      show('home');
+    }
+  }
+
+  async function reopenAfterFailedLeave(code, attempt) {
+    try {
+      const open = (await db.ref(`games/${code}/state`).once('value')).exists();
+      if (!isEntryCurrent(attempt)) return;
+      if (!open) {
+        // The room closed meanwhile, which leaves nothing to leave.
+        removeStored(`secret:${code}`);
+        setRoomInUrl(null);
+        show('home');
+        return;
+      }
+      toast('Could not leave the room. Try again.');
+      await enterRoom(code, attempt);
+    } catch (err) {
+      console.error(err);
+      if (!isEntryCurrent(attempt)) return;
+      // Drop whatever the reopening attached; the room stays saved for the next visit.
+      await detachRoom();
+      if (!isEntryCurrent(attempt)) return;
+      toast('Could not leave the room.');
       show('home');
     }
   }
