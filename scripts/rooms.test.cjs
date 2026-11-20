@@ -24,7 +24,8 @@ async function roomHarness({ pauseSignIn = false } = {}) {
     getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
     addEventListener() {}, querySelector: () => element(), querySelectorAll: selector => selector === '.room-name' ? roomNames : [] };
   global.history = { state: null, replaceState(state, _title, url) { this.state = state; if (url !== undefined) global.document.location = new URL(url); } };
-  global.window = { location: { replace: url => events.push(['replace', url]) } };
+  global.window = { location: { replace: url => events.push(['replace', url]) }, listeners: {},
+    addEventListener(type, listener) { (this.listeners[type] ??= []).push(listener); } };
   global.localStorage = { getItem: key => stored.get(key) ?? null,
     setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
   global.requestAnimationFrame = () => {};
@@ -297,6 +298,14 @@ test('coming back to Home with the browser Back button stays on Home, also after
     assert.equal(view().room.id, null, navigation);
     assert.deepEqual(reads, [], navigation);
   }
+});
+
+test('a Home page restored from the back/forward cache stays on Home after a reload', async () => {
+  const { home, view, reads } = await roomHarness();
+  global.window.listeners.pageshow.forEach(listener => listener({ persisted: true }));
+  await home.start({ params: new URLSearchParams(), lastRoom: { room: 'bravo', pass: 'UVWXYZ' }, navigation: 'reload' });
+  assert.equal(view().screen, 'home');
+  assert.deepEqual(reads, []);
 });
 
 test('a saved room that fails to reopen is forgotten and Home shows', async () => {

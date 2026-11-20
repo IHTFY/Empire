@@ -339,6 +339,13 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     }
   }
 
+  // The browser's Back button to Home, or a reload after it, stays on Home: the player was
+  // leaving the room. A new visit has no mark and goes back to the saved room. Entering or
+  // leaving a room rewrites the history entry, which drops the mark.
+  const markBackToHome = () => history.replaceState({ home: true }, '');
+  // A page the browser restores from its back/forward cache does not start again.
+  window.addEventListener('pageshow', event => { if (event.persisted) markBackToHome(); });
+
   // Open the room from a link (a reload keeps it in the address bar), or go back to the room
   // this device was last in.
   function start({ params, lastRoom, navigation }) {
@@ -351,9 +358,7 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     };
     if (params.get('room')) return tryJoining(params.get('room'), params.get('pass') || '', attempt).catch(failedToOpen);
     if (params.get('code')) return joinOldLink(params.get('code'), attempt).catch(failedToOpen);
-    // The browser's Back button to Home, or a reload after it, stays on Home: the player was
-    // leaving the room. A new visit has no mark and goes back to the saved room.
-    if (navigation === 'back_forward') history.replaceState({ home: true }, '');
+    if (navigation === 'back_forward') markBackToHome();
     if (lastRoom && !history.state?.home) {
       return resume(lastRoom, attempt).catch(err => {
         if (!isEntryCurrent(attempt)) return;
