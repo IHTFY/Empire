@@ -1,5 +1,6 @@
 import { $ } from './dom.js';
 import { suggestRoomName } from './room-names.js';
+import { rememberRoom } from './rooms.js';
 
 // Owns the create/join form and credential lookup; room entry and exit belong to rooms.js.
 export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryCurrent, setRoomInUrl, ui }) {
@@ -339,8 +340,7 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
   }
 
   // Open the room from a link (a reload keeps it in the address bar), or go back to the room
-  // this device was last in. Coming back to Home with the browser's Back button stays on Home,
-  // since the player was leaving the room.
+  // this device was last in.
   function start({ params, lastRoom, navigation }) {
     const attempt = beginEntry();
     const failedToOpen = err => {
@@ -351,11 +351,14 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     };
     if (params.get('room')) return tryJoining(params.get('room'), params.get('pass') || '', attempt).catch(failedToOpen);
     if (params.get('code')) return joinOldLink(params.get('code'), attempt).catch(failedToOpen);
-    if (lastRoom && navigation !== 'back_forward') {
+    // The browser's Back button to Home, or a reload after it, stays on Home: the player was
+    // leaving the room. A new visit has no mark and goes back to the saved room.
+    if (navigation === 'back_forward') history.replaceState({ home: true }, '');
+    if (lastRoom && !history.state?.home) {
       return resume(lastRoom, attempt).catch(err => {
         if (!isEntryCurrent(attempt)) return;
         console.error(err);
-        setRoomInUrl(null);
+        rememberRoom(null);
         show('home');
       });
     }

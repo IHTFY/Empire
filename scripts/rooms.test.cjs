@@ -23,7 +23,7 @@ async function roomHarness({ pauseSignIn = false } = {}) {
   global.document = { location: new URL('https://example.test/'),
     getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
     addEventListener() {}, querySelector: () => element(), querySelectorAll: selector => selector === '.room-name' ? roomNames : [] };
-  global.history = { replaceState(_state, _title, url) { global.document.location = new URL(url); } };
+  global.history = { state: null, replaceState(state, _title, url) { this.state = state; if (url !== undefined) global.document.location = new URL(url); } };
   global.window = { location: { replace: url => events.push(['replace', url]) } };
   global.localStorage = { getItem: key => stored.get(key) ?? null,
     setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
@@ -288,12 +288,15 @@ test('opening the app again goes back to the saved room', async () => {
   assert.equal(view().room.id, 'B');
 });
 
-test('coming back to Home with the browser Back button stays on Home', async () => {
+test('coming back to Home with the browser Back button stays on Home, also after a reload', async () => {
   const { home, view, reads } = await roomHarness();
-  await home.start({ params: new URLSearchParams(), lastRoom: { room: 'bravo', pass: 'UVWXYZ' }, navigation: 'back_forward' });
-  assert.equal(view().screen, 'home');
-  assert.equal(view().room.id, null);
-  assert.deepEqual(reads, []);
+  const lastRoom = { room: 'bravo', pass: 'UVWXYZ' };
+  for (const navigation of ['back_forward', 'reload']) {
+    await home.start({ params: new URLSearchParams(), lastRoom, navigation });
+    assert.equal(view().screen, 'home', navigation);
+    assert.equal(view().room.id, null, navigation);
+    assert.deepEqual(reads, [], navigation);
+  }
 });
 
 test('a saved room that fails to reopen is forgotten and Home shows', async () => {
@@ -305,7 +308,6 @@ test('a saved room that fails to reopen is forgotten and Home shows', async () =
   await startup;
   assert.equal(view().screen, 'home');
   assert.equal(view().remembered, undefined);
-  assert.equal(view().url, 'https://example.test/');
 });
 
 test('a stale entry detaches its listeners and presence when the next sign-in fails', async () => {
