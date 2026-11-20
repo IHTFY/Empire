@@ -93,7 +93,9 @@ export function createReveal({ db, flashNames, getRoom, getUid, audio, ui, refre
   let botNames = {};
 
   // Announcements have their own token: it changes when the room is left or a round resets,
-  // which hides any overlay at once and ends queued and running announcements early.
+  // which hides any overlay at once, silences a name being spoken, and ends queued and running
+  // announcements early. The old room's or round's reveal stops at the same time, so clearing
+  // every voice clip cuts nothing that should still play.
   let announceRun = 0;
   const wakers = new Set();
   const announceScreens = () => [$('eliminatedScreen'), $('captureScreen')];
@@ -107,6 +109,7 @@ export function createReveal({ db, flashNames, getRoom, getUid, audio, ui, refre
     announceRun++;
     announceScreens().forEach(screen => { screen.hidden = true; });
     [...wakers].forEach(wake => wake());
+    audio.clearClips();
   }
   // Returns a check for whether this announcement still belongs to the room and round it began in.
   function announcementScope() {

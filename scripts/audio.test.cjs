@@ -72,6 +72,25 @@ for (const failsDecoding of [false, true]) {
   });
 }
 
+for (const playing of [false, true]) {
+  test(`leaving the room stops a bot announcement whose recording is ${playing ? 'playing' : 'still decoding'}`, async t => {
+    const m = await mount(t);
+    if (playing) m.decoding.resolve({ duration: 1 });
+    m.reveal.observeEliminated({ val: () => ({ bot1: { name: 'apple', at: Date.now(), voice: 'YQ==' } }) });
+    await m.beganDecoding.promise;
+    await flush();
+    assert.equal(m.sources.length, playing ? 1 : 0);
+    // Leaving the room cancels the announcements (see onDetach in public/script.js).
+    m.room.id = null;
+    m.reveal.cancelAnnouncements();
+    m.decoding.resolve({ duration: 1 });
+    await flush();
+    assert.deepEqual(m.sources.map(source => [source.starts, source.stops]), playing ? [[1, 1]] : [],
+      'The announcement kept speaking after the room had been left');
+    assert.deepEqual(m.spoken, []);
+  });
+}
+
 test('clearing clips stops active recordings and device speech', async t => {
   const m = await mount(t);
   m.decoding.resolve({ duration: 1 });
