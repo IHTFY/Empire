@@ -487,7 +487,8 @@ export function createLobby({ getRoom, getUid, ui, isRevealing, removePlayer, re
       entry.leaving = true;
       entry.el.classList.remove('pop');
       entry.el.classList.add('gone');
-      setTimeout(() => { entry.el.remove(); seatEls.delete(key); }, 420);
+      // The player may have sat back down meanwhile; their new seat stays.
+      setTimeout(() => { entry.el.remove(); if (seatEls.get(key) === entry) seatEls.delete(key); }, 420);
     });
 
     const lh = Math.round(L.f * 1.3);
