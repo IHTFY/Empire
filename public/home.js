@@ -1,5 +1,6 @@
 import { $ } from './dom.js';
 import { suggestRoomName } from './room-names.js';
+import { rememberRoom } from './rooms.js';
 
 // Owns the create/join form and credential lookup; room entry and exit belong to rooms.js.
 export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryCurrent, setRoomInUrl, ui }) {
@@ -338,6 +339,37 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     }
   }
 
+  // The browser's Back button to Home, or a reload after it, stays on Home: the player was
+  // leaving the room. A new visit has no mark and goes back to the saved room. Entering or
+  // leaving a room rewrites the history entry, which drops the mark.
+  const markBackToHome = () => history.replaceState({ home: true }, '');
+  // A page the browser restores from its back/forward cache does not start again.
+  window.addEventListener('pageshow', event => { if (event.persisted) markBackToHome(); });
+
+  // Open the room from a link (a reload keeps it in the address bar), or go back to the room
+  // this device was last in.
+  function start({ params, lastRoom, navigation }) {
+    const attempt = beginEntry();
+    const failedToOpen = err => {
+      if (!isEntryCurrent(attempt)) return;
+      console.error(err);
+      show('home');
+      toast('Could not open that room. Try again.');
+    };
+    if (params.get('room')) return tryJoining(params.get('room'), params.get('pass') || '', attempt).catch(failedToOpen);
+    if (params.get('code')) return joinOldLink(params.get('code'), attempt).catch(failedToOpen);
+    if (navigation === 'back_forward') markBackToHome();
+    if (lastRoom && !history.state?.home) {
+      return resume(lastRoom, attempt).catch(err => {
+        if (!isEntryCurrent(attempt)) return;
+        console.error(err);
+        rememberRoom(null);
+        show('home');
+      });
+    }
+    show('home');
+  }
+
   $('roomForm').addEventListener('submit', async event => {
     event.preventDefault();
     if (busy) return;
@@ -361,5 +393,5 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     }
   });
 
-  return { reset: resetHomeForm, join: tryJoining, joinOldLink, resume };
+  return { reset: resetHomeForm, start };
 }

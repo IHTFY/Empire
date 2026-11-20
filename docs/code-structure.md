@@ -6,12 +6,13 @@ The source files are organized by responsibility. There is no frontend framework
 ## Browser code
 
 `public/script.js` is the entry point. It waits for Firebase initialization, starts
-anonymous authentication, creates the controllers, and opens the room from the URL.
+anonymous authentication, creates the controllers, and asks `home.js` to open the room
+from the URL or the room saved on this device.
 Read it first to see how the app is connected.
 
 | Source | Owns |
 | --- | --- |
-| `home.js` | Create/join form, suggested room names, credential lookup |
+| `home.js` | Create/join form, suggested room names, credential lookup, the room to open at startup |
 | `rooms.js` | Current room data, room subscriptions, entry/exit, room and player actions |
 | `room-presence.js` | Current connection, disconnect cleanup, away timer |
 | `player-setup.js` | Name inputs, secret field, validation, submission |

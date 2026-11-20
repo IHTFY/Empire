@@ -3,7 +3,7 @@ import { $ } from './dom.js';
 import { createUI } from './ui.js';
 import { initializeSheets } from './sheets.js';
 import { createAudio } from './audio.js';
-import { createRooms, rememberRoom, rememberedRoom } from './rooms.js';
+import { createRooms, rememberedRoom } from './rooms.js';
 import { createHome } from './home.js';
 import { createCrestPicker } from './crest-picker.js';
 import { createPlayerSetup } from './player-setup.js';
@@ -118,29 +118,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   createBots({ db, getRoom, getUid, toast: ui.toast });
   reveal = createReveal({ db, flashNames, getRoom, getUid, audio, ui, refreshLobby: lobby.render });
 
-  // Open the room from a link (a reload keeps it in the address bar), or go back to the
-  // room this device was last in.
-  const params = new URL(document.location).searchParams;
-  const lastRoom = rememberedRoom();
-  const attempt = rooms.begin();
-  const failedToOpen = err => {
-    if (!rooms.isCurrent(attempt)) return;
-    console.error(err);
-    ui.show('home');
-    ui.toast('Could not open that room. Try again.');
-  };
-  if (params.get('room')) {
-    home.join(params.get('room'), params.get('pass') || '', attempt).catch(failedToOpen);
-  } else if (params.get('code')) {
-    home.joinOldLink(params.get('code'), attempt).catch(failedToOpen);
-  } else if (lastRoom) {
-    home.resume(lastRoom, attempt).catch(err => {
-      if (!rooms.isCurrent(attempt)) return;
-      console.error(err);
-      rememberRoom(null);
-      ui.show('home');
-    });
-  } else {
-    ui.show('home');
-  }
+  home.start({
+    params: new URL(document.location).searchParams,
+    lastRoom: rememberedRoom(),
+    navigation: performance.getEntriesByType('navigation')[0]?.type
+  });
 });
