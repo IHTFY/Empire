@@ -402,6 +402,46 @@ test('a failed departure that cannot reopen the room goes home and keeps the roo
   assert.equal(home.room.id, null);
   assert.deepEqual(home.listeners, []);
   assert.deepEqual(JSON.parse(home.remembered), { room: 'bravo', pass: 'UVWXYZ' });
+  assert.ok(home.events.some(([name, text]) => name === 'toast' && text === 'Could not leave the room.'));
   assert.deepEqual(data.games.B.users.me, { real: 'Bob' });
   assert.equal(global.localStorage.getItem('secret:B'), 'pear');
+});
+
+test('tapping Leave while the room reopens waits for it, and the next tap leaves', async () => {
+  const { rooms, pause, view, data } = await roomHarness();
+  await rooms.enter('B');
+  const failed = pause('update', 'games/B');
+  const first = rooms.leave();
+  await failed.reached;
+  const signIn = pause('signIn');
+  failed.reject(new Error('Simulated write failure'));
+  await signIn.reached;
+  const second = rooms.leave();
+  signIn.release();
+  await Promise.all([first, second]);
+  assert.equal(view().screen, 'lobby');
+  assert.equal(view().room.id, 'B');
+
+  await rooms.leave();
+  assert.equal(view().screen, 'home');
+  assert.equal(data.games.B.users?.me, undefined);
+});
+
+test('a reopening that fails cannot send a room chosen during its cleanup back home', async () => {
+  const { rooms, pause, view } = await roomHarness();
+  await rooms.enter('B');
+  const failed = pause('update', 'games/B');
+  const reopen = pause('read', 'games/B/locked');
+  const departure = rooms.leave();
+  await failed.reached;
+  failed.reject(new Error('Simulated write failure'));
+  await reopen.reached;
+  const cleanup = pause('cancel', 'games/B/presence/me');
+  reopen.reject(new Error('Simulated read failure'));
+  await cleanup.reached;
+  await rooms.enter('C');
+  const charlie = view();
+  cleanup.release();
+  await departure;
+  assert.deepEqual(view(), charlie);
 });

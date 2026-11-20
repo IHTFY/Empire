@@ -218,10 +218,16 @@ export function createRooms({
   }
 
   // Leave the current room: remove my entry so nobody waits on me. Tapping Leave again before
-  // that finishes waits for the same departure.
+  // that finishes, including reopening the room after a failure, waits for the same departure.
   let departure = null;
   function leaveRoom(options) {
-    if (departure?.attempt !== entryAttempt) departure = { attempt: ++entryAttempt, done: leaveCurrentRoom(options) };
+    if (departure?.attempt !== entryAttempt) {
+      const attempt = ++entryAttempt;
+      const done = leaveCurrentRoom(options).finally(() => {
+        if (departure?.done === done) departure = null;
+      });
+      departure = { attempt, done };
+    }
     return departure.done;
   }
 
@@ -254,7 +260,6 @@ export function createRooms({
   }
 
   async function reopenAfterFailedLeave(code, attempt) {
-    let current = attempt;
     try {
       const open = (await db.ref(`games/${code}/state`).once('value')).exists();
       if (!isEntryCurrent(attempt)) return;
@@ -266,14 +271,14 @@ export function createRooms({
         return;
       }
       toast('Could not leave the room. Try again.');
-      // A new entry, so tapping Leave again starts a new departure.
-      current = beginEntry();
-      await enterRoom(code, current);
+      await enterRoom(code, attempt);
     } catch (err) {
       console.error(err);
-      if (!isEntryCurrent(current)) return;
+      if (!isEntryCurrent(attempt)) return;
       // Drop whatever the reopening attached; the room stays saved for the next visit.
       await detachRoom();
+      if (!isEntryCurrent(attempt)) return;
+      toast('Could not leave the room.');
       show('home');
     }
   }
