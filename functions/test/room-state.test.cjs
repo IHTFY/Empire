@@ -23,6 +23,38 @@ test('delayed reset handler cannot clear an already reopened room or recreate a 
   assert.equal(h.data.games.room, undefined);
 });
 
+test('the server finishes ending a room that no page is open to finish', async () => {
+  const room = { state: 'deleting', name: 'audit', pass: 'ABCDEF', users: { alice: { real: 'Alice', clan: 'Alice' } }, secrets: { alice: 'apple' } };
+  const end = (h, gameId = 'room') => h.exports.roomState({ before: h.snapshot('waiting'), after: h.snapshot('deleting') }, { params: { gameId } });
+  // As in the real database, a transaction first runs on an empty local cache, and only an
+  // answer other than undefined goes to the server, which retries it with the stored value.
+  let h;
+  const database = { ref: target => {
+    const base = h.ref(target);
+    return { ...base, transaction: async callback => callback(null) === undefined ? { committed: false } : base.transaction(callback) };
+  } };
+  h = harness({ games: { room }, roomNames: { audit: { ABCDEF: 'room' } }, meta: { seen: { room: 1 } } }, {}, { database });
+  await end(h);
+  assert.equal(h.data.games.room, undefined);
+  assert.equal(h.data.roomNames.audit.ABCDEF, undefined);
+  assert.equal(h.data.meta.seen.room, undefined);
+
+  // A delayed or repeated event, after a page ended the room and someone reused the name,
+  // leaves the new room and its name alone.
+  const next = { state: 'waiting', name: 'audit', pass: 'ABCDEF', users: { bob: { real: 'Bob', clan: 'Bob' } } };
+  const reused = harness({ games: { room2: next }, roomNames: { audit: { ABCDEF: 'room2' } } });
+  await end(reused);
+  assert.deepEqual(reused.data, { games: { room2: next }, roomNames: { audit: { ABCDEF: 'room2' } } });
+
+  // A room that is not being ended stays, and a name that points at another room is kept.
+  const stray = harness({ games: { room: { ...room, state: 'waiting' }, other: { ...room } }, roomNames: { audit: { ABCDEF: 'room' } } });
+  await end(stray);
+  assert.equal(stray.data.games.room.state, 'waiting');
+  await end(stray, 'other');
+  assert.equal(stray.data.games.other, undefined);
+  assert.equal(stray.data.roomNames.audit.ABCDEF, 'room');
+});
+
 test('a revealed room that its last player leaves opens the next round', async () => {
   const room = extra => ({
     state: 'waiting', locked: true, name: 'room', pass: 'ABCDEF', names: ['otter'], startedAt: 1,

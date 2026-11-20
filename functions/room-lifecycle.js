@@ -33,6 +33,11 @@ async function roomState(change, context) {
       return openNextRound(game);
     });
   }
+  if (after === 'deleting' && before !== 'deleting') {
+    // A page that sees End removes the room and frees its name, but the last member may have
+    // closed the page first. Finish it here, and ignore a delayed trigger for a room already gone.
+    await deleteRoom(context.params.gameId, game => game.state === 'deleting');
+  }
   if (!change.before.exists() && change.after.exists()) {
     await sweepAbandonedRooms(context.params.gameId);
   }
@@ -133,7 +138,7 @@ async function sweepAbandonedRooms(skipId) {
       // No sign of activity yet (a room from before presence tracking): start its clock now.
       updates[`meta/seen/${id}`] = now;
     } else if (status === 'idle') {
-      candidates.push({ id, name: game.name, pass: game.pass });
+      candidates.push(id);
     }
   });
   // Names whose room has gone some other way.
@@ -149,7 +154,7 @@ async function sweepAbandonedRooms(skipId) {
   if (Object.keys(updates).length > 0) {
     await db.ref().update(updates);
   }
-  await Promise.all(candidates.map(candidate => deleteIfStillIdle(candidate, seen[candidate.id], now)));
+  await Promise.all(candidates.map(id => deleteIfStillIdle(id, seen[id], now)));
 }
 
 // 'live' (someone is connected), 'unknown' (no timestamps yet), 'idle' (past the threshold)
@@ -166,22 +171,30 @@ function activityStatus(game, seenAt, now) {
 }
 
 // The sweep's snapshot can be stale by the time it deletes: a player may have reconnected
-// since. Recheck the room's current state inside the transaction that removes it, and free
-// its name only if that deletion happened and the name still points at this room.
-async function deleteIfStillIdle({ id, name, pass }, seenAt, now) {
-  let deleted = false;
+// since, so the room is rechecked when it is removed.
+function deleteIfStillIdle(id, seenAt, now) {
+  return deleteRoom(id, game => activityStatus(game, seenAt, now) === 'idle');
+}
+
+// Remove a room if it still qualifies inside the transaction that removes it, then free its
+// name only if that deletion happened and the name still points at this room.
+async function deleteRoom(id, qualifies) {
+  let deleted = null;
   await db.ref(`games/${id}`).transaction(game => {
-    deleted = false;
+    deleted = null;
     // An empty local cache is retried against the server; a missing room needs no change.
     if (!game) return game;
-    if (activityStatus(game, seenAt, now) !== 'idle') return undefined;
-    deleted = true;
+    if (!qualifies(game)) return undefined;
+    deleted = game;
     return null;
   });
   if (!deleted) return;
   await db.ref(`meta/seen/${id}`).set(null);
+  const { name, pass } = deleted;
   if (name && pass) {
-    await db.ref(`roomNames/${name}/${pass}`).transaction(current => (current === id ? null : undefined));
+    // The first attempt sees an empty local cache: answering null makes the server retry with
+    // the stored value, which is freed only while it still points at this room.
+    await db.ref(`roomNames/${name}/${pass}`).transaction(current => (current === null || current === id ? null : undefined));
   }
 }
 

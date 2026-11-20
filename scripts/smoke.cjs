@@ -92,9 +92,12 @@ async function run() {
   const second = await waitFor(`games/${id}`, room => room?.state === 'playing');
   assert.deepEqual([...second.names].sort(), ['pear', 'tiger']);
   assert.notEqual(second.roundId, first.roundId);
+  // Ending with no page left to remove the room: the server finishes it and frees the name.
   await bob.db.ref(`games/${id}/state`).set('deleting');
+  await waitFor(`games/${id}`, room => room === null);
+  await waitFor(`roomNames/${name}/ABCDEF`, room => room === null);
+  // A page that saw End too may still send its own cleanup afterward.
   await bob.db.ref().update({ [`games/${id}`]: null, [`roomNames/${name}/ABCDEF`]: null });
-  assert.equal(await read(`games/${id}/state`), null);
   console.log('Whole-game smoke passed: create, invitation lookup, join, authenticated reveal, outsider denial, reset, new round, and end.');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { await Promise.all(apps.map(app => deleteApp(app))); });
