@@ -239,11 +239,14 @@ test('a newer entry to the same room also supersedes a pending entry', async () 
   assert.deepEqual(view(), alpha);
 });
 
+// Starts the app as if opened at /?<query>, with lastRoom saved on this device.
+const opening = (query, lastRoom = null) => home => home.start({ params: new URLSearchParams(query), lastRoom, navigation: 'navigate' });
+
 for (const [name, start, path] of [
-  ['saved room', home => home.resume({ room: 'alpha', pass: 'ABCDEF' }), 'games/A/state'],
-  ['saved legacy room', home => home.resume({ code: 'A' }), 'games/A/state'],
-  ['invitation', home => home.join('alpha', 'ABCDEF'), 'roomNames/alpha/ABCDEF'],
-  ['legacy invitation', home => home.joinOldLink('A'), 'games/A/state']
+  ['saved room', opening('', { room: 'alpha', pass: 'ABCDEF' }), 'games/A/state'],
+  ['saved legacy room', opening('', { code: 'A' }), 'games/A/state'],
+  ['invitation', opening('room=alpha&pass=ABCDEF'), 'roomNames/alpha/ABCDEF'],
+  ['legacy invitation', opening('code=A'), 'games/A/state']
 ]) {
   test(`a slow ${name} lookup cannot replace the room chosen from Home`, async () => {
     const { home, joinFromForm, pause, view, data } = await roomHarness();
@@ -261,10 +264,10 @@ for (const [name, start, path] of [
 }
 
 for (const [name, start, path] of [
-  ['saved room', home => home.resume({ room: 'gone', pass: 'ABCDEF' }), 'roomNames/gone/ABCDEF'],
-  ['saved legacy room', home => home.resume({ code: 'gone' }), 'games/gone/state'],
-  ['invitation', home => home.join('gone', 'ABCDEF'), 'roomNames/gone/ABCDEF'],
-  ['legacy invitation', home => home.joinOldLink('gone'), 'games/gone/state']
+  ['saved room', opening('', { room: 'gone', pass: 'ABCDEF' }), 'roomNames/gone/ABCDEF'],
+  ['saved legacy room', opening('', { code: 'gone' }), 'games/gone/state'],
+  ['invitation', opening('room=gone&pass=ABCDEF'), 'roomNames/gone/ABCDEF'],
+  ['legacy invitation', opening('code=gone'), 'games/gone/state']
 ]) {
   test(`a slow closed ${name} lookup cannot send a newer room back home`, async () => {
     const { home, joinFromForm, pause, view } = await roomHarness();
@@ -278,6 +281,32 @@ for (const [name, start, path] of [
     assert.deepEqual(view(), bravo);
   });
 }
+
+test('opening the app again goes back to the saved room', async () => {
+  const { home, view } = await roomHarness();
+  await opening('', { room: 'bravo', pass: 'UVWXYZ' })(home);
+  assert.equal(view().room.id, 'B');
+});
+
+test('coming back to Home with the browser Back button stays on Home', async () => {
+  const { home, view, reads } = await roomHarness();
+  await home.start({ params: new URLSearchParams(), lastRoom: { room: 'bravo', pass: 'UVWXYZ' }, navigation: 'back_forward' });
+  assert.equal(view().screen, 'home');
+  assert.equal(view().room.id, null);
+  assert.deepEqual(reads, []);
+});
+
+test('a saved room that fails to reopen is forgotten and Home shows', async () => {
+  const { home, rooms, signIn, view } = await roomHarness({ pauseSignIn: true });
+  rooms.setRoomInUrl('bravo', 'UVWXYZ');
+  const startup = opening('', { room: 'bravo', pass: 'UVWXYZ' })(home);
+  await signIn.reached;
+  signIn.reject(new Error('sign-in failed'));
+  await startup;
+  assert.equal(view().screen, 'home');
+  assert.equal(view().remembered, undefined);
+  assert.equal(view().url, 'https://example.test/');
+});
 
 test('a stale entry detaches its listeners and presence when the next sign-in fails', async () => {
   const { rooms, pause, view } = await roomHarness();

@@ -338,6 +338,30 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     }
   }
 
+  // Open the room from a link (a reload keeps it in the address bar), or go back to the room
+  // this device was last in. Coming back to Home with the browser's Back button stays on Home,
+  // since the player was leaving the room.
+  function start({ params, lastRoom, navigation }) {
+    const attempt = beginEntry();
+    const failedToOpen = err => {
+      if (!isEntryCurrent(attempt)) return;
+      console.error(err);
+      show('home');
+      toast('Could not open that room. Try again.');
+    };
+    if (params.get('room')) return tryJoining(params.get('room'), params.get('pass') || '', attempt).catch(failedToOpen);
+    if (params.get('code')) return joinOldLink(params.get('code'), attempt).catch(failedToOpen);
+    if (lastRoom && navigation !== 'back_forward') {
+      return resume(lastRoom, attempt).catch(err => {
+        if (!isEntryCurrent(attempt)) return;
+        console.error(err);
+        setRoomInUrl(null);
+        show('home');
+      });
+    }
+    show('home');
+  }
+
   $('roomForm').addEventListener('submit', async event => {
     event.preventDefault();
     if (busy) return;
@@ -361,5 +385,5 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
     }
   });
 
-  return { reset: resetHomeForm, join: tryJoining, joinOldLink, resume };
+  return { reset: resetHomeForm, start };
 }
