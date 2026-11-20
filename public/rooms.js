@@ -115,7 +115,8 @@ export function createRooms({
       await ensureSignedIn();
       if (attempt !== entryAttempt) return;
       if (gameID && gameID !== code) {
-        await leaveCurrentRoom({ goHome: false });
+        // A failed departure reopens the current room instead of opening this one.
+        if (!await leaveCurrentRoom({ goHome: false })) return;
         if (attempt !== entryAttempt) return;
       }
       await detachRoom();
@@ -223,24 +224,40 @@ export function createRooms({
     return leaveCurrentRoom(options);
   }
 
+  // Resolves false when the departure failed and the player is still in the room.
   async function leaveCurrentRoom({ goHome = true } = {}) {
     const attempt = entryAttempt;
-    if (!gameID) return;
-    const code = gameID;
+    if (!gameID) return true;
+    const [code, name] = [gameID, roomName];
     // My followers go free with me.
     const known = captures;
     // Stop listening first so removing myself isn't mistaken for being removed.
     await detachRoom();
-    await writeLeave(db.ref(`games/${code}`), known, getUid(), {
-      [`users/${getUid()}`]: null,
-      [`secrets/${getUid()}`]: null,
-      [`presence/${getUid()}`]: null
-    }).catch(err => console.error(err));
+    try {
+      await writeLeave(db.ref(`games/${code}`), known, getUid(), {
+        [`users/${getUid()}`]: null,
+        [`secrets/${getUid()}`]: null,
+        [`presence/${getUid()}`]: null
+      });
+    } catch (err) {
+      console.error(err);
+      // The server still lists the player: keep the saved name, and reopen the room so Leave can
+      // be tried again, unless the player has chosen another room since.
+      if (attempt === entryAttempt) {
+        toast(`Could not leave ${name}. Try again.`);
+        await enterRoom(code, attempt).catch(reopenErr => {
+          console.error(reopenErr);
+          if (attempt === entryAttempt) show('home');
+        });
+      }
+      return false;
+    }
     removeStored(`secret:${code}`);
     if (goHome && attempt === entryAttempt) {
       setRoomInUrl(null);
       show('home');
     }
+    return true;
   }
 
   $('leaveRoom').addEventListener('click', () => {
