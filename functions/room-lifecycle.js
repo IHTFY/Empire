@@ -189,13 +189,13 @@ async function deleteRoom(id, qualifies) {
     return null;
   });
   if (!deleted) return;
-  await db.ref(`meta/seen/${id}`).set(null);
   const { name, pass } = deleted;
   if (name && pass) {
     // The first attempt sees an empty local cache: answering null makes the server retry with
     // the stored value, which is freed only while it still points at this room.
     await db.ref(`roomNames/${name}/${pass}`).transaction(current => (current === null || current === id ? null : undefined));
   }
+  await db.ref(`meta/seen/${id}`).set(null);
 }
 
 module.exports = { roomEmptied, roomState, dailySweep, sweepAbandonedRooms };
