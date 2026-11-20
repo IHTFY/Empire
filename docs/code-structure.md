@@ -81,7 +81,7 @@ Implementation is split into:
 - `reveal.js`: authenticated reveal claims, reread indexes, bot-secret announcements.
 - `reveal-state.js`: transaction guard for asynchronous writes to a specific reveal.
 - `voice.js`: speech recording, cache, quota, readiness deadline, advance recording.
-- `room-lifecycle.js`: round reset and abandoned-room/voice-cache cleanup.
+- `room-lifecycle.js`: round reset, finishing an ended room, and abandoned-room/voice-cache cleanup.
 
 The reveal guard is separate so both playback preparation and late voice recordings
 use it without a circular dependency. Database schemas, rules, function names, and
