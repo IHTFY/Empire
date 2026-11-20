@@ -41,8 +41,7 @@ test('A player who leaves the table and comes straight back keeps one seat', asy
   await page.evaluate(() => window.seat(['sage', 'quinn']));
   // A new round clears the roster, then both players sit back down before Quinn's seat
   // finishes fading out.
-  await page.evaluate(() => window.seat(['sage']));
-  await page.evaluate(() => window.seat(['sage', 'quinn']));
+  await page.evaluate(() => { window.seat(['sage']); window.seat(['sage', 'quinn']); });
   await page.waitForTimeout(600);
   await page.evaluate(() => window.lobby.render());
   assert.deepEqual(await labels(), ['Quinn', 'Sage']);
