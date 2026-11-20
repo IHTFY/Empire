@@ -23,6 +23,7 @@ test('A player who leaves the table and comes straight back keeps one seat', asy
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.evaluate(async () => {
     const { createLobby } = await import('/lobby/render.js');
@@ -42,7 +43,8 @@ test('A player who leaves the table and comes straight back keeps one seat', asy
   // A new round clears the roster, then both players sit back down before Quinn's seat
   // finishes fading out.
   await page.evaluate(() => { window.seat(['sage']); window.seat(['sage', 'quinn']); });
-  await page.waitForTimeout(600);
+  // A longer page timer, set after the fade-out's, fires after it.
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 600)));
   await page.evaluate(() => window.lobby.render());
   assert.deepEqual(await labels(), ['Quinn', 'Sage']);
   assert.equal(await page.evaluate(() => window.lobby.getSeats().size), 2);
