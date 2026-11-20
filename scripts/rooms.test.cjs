@@ -283,6 +283,26 @@ for (const [name, start, path] of [
   });
 }
 
+for (const [name, start] of [
+  ['saved room', opening('', { room: 'alpha', pass: 'ABCDEF' })],
+  ['saved legacy room', opening('', { code: 'A' })],
+  ['invitation', opening('room=alpha&pass=ABCDEF')],
+  ['legacy invitation', opening('code=A')]
+]) {
+  test(`a failed ${name} entry leaves the newer room choice open`, async () => {
+    const { home, joinFromForm, pause, view } = await roomHarness();
+    const gate = pause('read', 'games/A/name');
+    const startup = start(home);
+    await gate.reached;
+    await joinFromForm();
+    const bravo = view();
+    assert.equal(bravo.room.id, 'B');
+    gate.reject(new Error('read failed'));
+    await startup;
+    assert.deepEqual(view(), bravo);
+  });
+}
+
 test('opening the app again goes back to the saved room', async () => {
   const { home, view } = await roomHarness();
   await opening('', { room: 'bravo', pass: 'UVWXYZ' })(home);
