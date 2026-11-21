@@ -1,6 +1,5 @@
 import { $ } from './dom.js';
 import { suggestRoomName } from './room-names.js';
-import { rememberRoom } from './rooms.js';
 
 // Owns the create/join form and credential lookup; room entry and exit belong to rooms.js.
 export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryCurrent, setRoomInUrl, ui }) {
@@ -363,7 +362,7 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
       return resume(lastRoom, attempt).catch(err => {
         if (!isEntryCurrent(attempt)) return;
         console.error(err);
-        rememberRoom(null);
+        setRoomInUrl(null);
         show('home');
       });
     }
@@ -385,6 +384,8 @@ export function createHome({ db, ensureSignedIn, enterRoom, beginEntry, isEntryC
       // The code (e.g. auth/network-request-failed), or a script error's text, lets a player's
       // screenshot say what failed.
       const detail = err?.code || (err?.name && err.message ? `${err.name}: ${err.message}`.slice(0, 160) : err?.name);
+      // A round that restarted during the entry may have opened name entry over the form.
+      show('home');
       codeError(`Something went wrong${detail ? ` (${detail})` : ''}. Try again.`);
     } finally {
       busy = false;

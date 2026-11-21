@@ -339,11 +339,14 @@ export function createRooms({
       detachRoom();
       removeStored(`secret:${code}`);
       setRoomInUrl(null);
+      document.querySelectorAll('dialog[open]').forEach(d => d.close());
       show('home');
       toast('That room has closed.');
       return;
     }
     if (state === 'deleting' || (state === null && previous !== null)) {
+      // An entry still under way ends here, so it shows nothing for a room that is going away.
+      if (isEntryCurrent(attachedAttempt)) beginEntry();
       // Stop listening first so the room disappearing doesn't trigger this twice.
       const [name, pass] = [roomName, roomPass];
       await detachRoom();
