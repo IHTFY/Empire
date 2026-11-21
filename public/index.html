@@ -33,10 +33,12 @@
       (() => {
         const root = document.documentElement;
         try {
-          const nav = performance.getEntriesByType('navigation')[0];
-          const app = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
-          if (!app || nav?.type !== 'navigate' || sessionStorage.getItem('launched')) return;
+          // The manifest asks for standalone; fullscreen would also match a browser tab in F11.
+          if (!matchMedia('(display-mode: standalone)').matches) return;
+          // Every load marks the app's session, so a reload followed by an in-app navigation never replays it.
+          const seen = sessionStorage.getItem('launched');
           sessionStorage.setItem('launched', '1');
+          if (seen || performance.getEntriesByType('navigation')[0]?.type !== 'navigate') return;
         } catch {
           return;
         }
@@ -50,7 +52,6 @@
         const fallback = setTimeout(end, 4000);
         // play(overlay) starts the game's exit and returns its Web Animations.
         window.launchExit = (play) => {
-          clearTimeout(fallback);
           const overlay = document.getElementById('launch');
           // Too late: the fallback already removed the copy.
           if (!overlay) return;
@@ -62,11 +63,17 @@
               animations = [];
             }
           }
-          if (!animations.length) {
-            animations = [overlay.animate({ opacity: [1, 0] }, { duration: 200, easing: 'ease-out', fill: 'forwards' })];
+          try {
+            if (!animations.length) {
+              animations = [overlay.animate({ opacity: [1, 0] }, { duration: 200, easing: 'ease-out', fill: 'forwards' })];
+            }
+            overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), { once: true });
+            Promise.all(animations.map((a) => a.finished)).then(end, end);
+            // The animations end the copy from here on.
+            clearTimeout(fallback);
+          } catch {
+            end();
           }
-          overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), { once: true });
-          Promise.all(animations.map((a) => a.finished)).then(end, end);
         };
       })();
     </script>
