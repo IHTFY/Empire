@@ -321,4 +321,36 @@ test('Every game screen contains its panels and scrolls only inside them', async
     });
     assert.equal(await page.locator('[data-fullscreen]:not([hidden])').count(), 0);
   });
+  await t.test('The setup button shows its whole label and arrow without the display font', async () => {
+    const fallback = await browser.newPage({ reducedMotion: 'reduce', hasTouch: true });
+    await fallback.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, route => route.abort());
+    await fallback.goto(`http://127.0.0.1:${server.address().port}/`);
+    await fallback.evaluate(async () => {
+      await document.fonts.ready;
+      document.querySelectorAll('.screen, .reveal').forEach(el => el.hidden = el.id !== 'setupScreen');
+    });
+    assert.equal(await fallback.evaluate(() => [...document.fonts].filter(font => font.status === 'loaded').length), 0, 'The web fonts must stay unloaded');
+    for (const [width,height] of sizes) {
+      await fallback.setViewportSize({ width,height });
+      for (const label of ['Enter the lobby', 'Save names']) {
+        const boxes = await fallback.evaluate(async text => {
+          const label = document.querySelector('#submitLabel');
+          label.textContent = text;
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const range = document.createRange();
+          range.selectNodeContents(label);
+          const words = range.getBoundingClientRect();
+          const lines = label.getBoundingClientRect();
+          const box = target => { const r = target.getBoundingClientRect(); return { x: r.x, y: r.y, right: r.right, bottom: r.bottom }; };
+          // The text range gives the width of the words. Its height covers each font's full ascent and descent, which capitals do not use, so the line boxes give the height.
+          return { button: box(document.querySelector('#submitNames')), label: { x: words.x, y: lines.y, right: words.right, bottom: lines.bottom }, arrow: box(document.querySelector('#submitNames .icon')) };
+        }, label);
+        for (const part of ['label', 'arrow']) {
+          const { button, [part]: inner } = boxes;
+          assert(inner.x >= button.x && inner.right <= button.right && inner.y >= button.y && inner.bottom <= button.bottom, `${width}x${height} "${label}" ${part} must stay inside the button: ${JSON.stringify(boxes)}`);
+        }
+      }
+    }
+    await fallback.close();
+  });
 });
