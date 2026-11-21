@@ -321,4 +321,50 @@ test('Every game screen contains its panels and scrolls only inside them', async
     });
     assert.equal(await page.locator('[data-fullscreen]:not([hidden])').count(), 0);
   });
+  await t.test('The setup button shows its whole label and arrow without the display font', async () => {
+    const fallback = await browser.newPage({ reducedMotion: 'reduce', hasTouch: true });
+    await fallback.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, route => route.abort());
+    await fallback.goto(`http://127.0.0.1:${server.address().port}/`);
+    await fallback.evaluate(async () => {
+      await document.fonts.ready;
+      document.querySelectorAll('.screen, .reveal').forEach(el => el.hidden = el.id !== 'setupScreen');
+    });
+    assert.equal(await fallback.evaluate(() => [...document.fonts].filter(font => font.status === 'loaded').length), 0, 'The web fonts must stay unloaded');
+    for (const [width,height] of sizes) {
+      await fallback.setViewportSize({ width,height });
+      for (const label of ['Enter the lobby', 'Save names']) {
+        const boxes = await fallback.evaluate(async text => {
+          const label = document.querySelector('#submitLabel');
+          label.textContent = text;
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const range = document.createRange();
+          range.selectNodeContents(label);
+          const words = range.getBoundingClientRect();
+          const lines = label.getBoundingClientRect();
+          const box = target => { const r = target.getBoundingClientRect(); return { x: r.x, y: r.y, right: r.right, bottom: r.bottom }; };
+          // The text range gives the width of the words. Its height covers each font's full ascent and descent, which capitals do not use, so the line boxes give the height.
+          return { button: box(document.querySelector('#submitNames')), label: { x: words.x, y: lines.y, right: words.right, bottom: lines.bottom }, arrow: box(document.querySelector('#submitNames .icon')) };
+        }, label);
+        for (const part of ['label', 'arrow']) {
+          const { button, [part]: inner } = boxes;
+          assert(inner.x >= button.x && inner.right <= button.right && inner.y >= button.y && inner.bottom <= button.bottom, `${width}x${height} "${label}" ${part} must stay inside the button: ${JSON.stringify(boxes)}`);
+        }
+      }
+    }
+    // A browser text size setting can enlarge the label further, and the button grows to hold its two lines.
+    await fallback.setViewportSize({ width: 640, height: 360 });
+    const enlarged = await fallback.evaluate(async () => {
+      const button = document.querySelector('#submitNames');
+      const label = document.querySelector('#submitLabel');
+      label.textContent = 'Enter the lobby';
+      button.style.fontSize = '28px';
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const box = target => { const r = target.getBoundingClientRect(); return { y: r.y, bottom: r.bottom }; };
+      return { button: box(button), label: box(label), form: box(document.querySelector('#namesForm')) };
+    });
+    assert(enlarged.button.bottom - enlarged.button.y > 44, `Enlarged label should need two lines and a taller button: ${JSON.stringify(enlarged)}`);
+    assert(enlarged.label.y >= enlarged.button.y && enlarged.label.bottom <= enlarged.button.bottom, `Enlarged label must stay inside the button: ${JSON.stringify(enlarged)}`);
+    assert(enlarged.button.y >= enlarged.form.y && enlarged.button.bottom <= enlarged.form.bottom + 1, `Grown button must stay inside the form: ${JSON.stringify(enlarged)}`);
+    await fallback.close();
+  });
 });
