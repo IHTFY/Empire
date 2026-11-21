@@ -97,7 +97,14 @@ async function roomHarness({ pauseSignIn = false } = {}) {
     elements.get('roomPass').value = 'UVWXYZ';
     await elements.get('roomForm').dispatch('submit', { preventDefault() {} });
   }
-  return { rooms, home, joinFromForm, pause, signIn, view, reads, data: h.data };
+  // The stub answers a listener once, when it attaches. This sends a room's current values to
+  // its listeners again, as the database does after a write.
+  function deliver(code) {
+    for (const [path, callbacks] of subscriptions) {
+      if (path.startsWith(`games/${code}/`)) [...callbacks].forEach(callback => callback(h.snapshot(value(path))));
+    }
+  }
+  return { rooms, home, joinFromForm, pause, signIn, view, reads, deliver, data: h.data, server: h.exports, snapshot: h.snapshot };
 }
 
 test('a delayed automatic room entry cannot overwrite a newer room choice', async () => {
@@ -504,4 +511,82 @@ test('a reopening that fails cannot send a room chosen during its cleanup back h
   cleanup.release();
   await departure;
   assert.deepEqual(view(), charlie);
+});
+
+const player = real => ({ real, clan: real });
+const count = (view, name) => view.events.filter(([event]) => event === name).length;
+
+test('someone watching a revealed room goes to name entry when its last player leaves', async () => {
+  const { rooms, view, data, deliver, server, snapshot } = await roomHarness();
+  data.games.D = { name: 'delta', pass: 'PQRSTU', state: 'waiting', locked: true, roundId: 'round-d', names: ['otter'], users: { zed: player('Zed') } };
+  await rooms.enter('D');
+  assert.equal(view().screen, 'lobby');
+  // Zed leaves, and the server opens the next round without anyone asking for a reset.
+  delete data.games.D.users;
+  await server.roomEmptied(snapshot(player('Zed')), { params: { gameId: 'D', userId: 'zed' } });
+  assert.equal(data.games.D.locked, undefined);
+  deliver('D');
+  const opened = view();
+  assert.equal(opened.screen, 'setup');
+  assert.equal(count(opened, 'reset'), 1);
+  // Later values for the open round leave name entry alone.
+  deliver('D');
+  assert.equal(count(view(), 'reset'), 1);
+});
+
+for (const [name, code, start] of [['a player', 'A', 'lobby'], ['someone watching', 'D', 'lobby']]) {
+  test(`a reset from Room options opens name entry once for ${name}`, async () => {
+    const { rooms, view, data, deliver, server, snapshot } = await roomHarness();
+    data.games.D = { name: 'delta', pass: 'PQRSTU', state: 'waiting', locked: true, roundId: 'round-d', names: ['otter'], users: { zed: player('Zed') } };
+    await rooms.enter(code);
+    assert.equal(view().screen, start);
+    data.games[code].state = 'resetting';
+    deliver(code);
+    assert.equal(view().screen, 'setup');
+    // The server then clears the round. Its unlock must not start name entry over.
+    await server.roomState({ before: snapshot('waiting'), after: snapshot('resetting') }, { params: { gameId: code } });
+    assert.equal(data.games[code].locked, undefined);
+    deliver(code);
+    const opened = view();
+    assert.equal(opened.screen, 'setup');
+    assert.equal(count(opened, 'reset'), 1);
+    assert.equal(count(opened, 'secret'), code === 'A' ? 2 : 1);
+  });
+}
+
+test('a claim from a page with an old roster keeps a capture confirmed since', async () => {
+  const { rooms, view, data } = await roomHarness();
+  Object.assign(data.games.A.users, { fay: player('Fay'), kim: player('Kim') });
+  // This page still shows Fay in the empire of Lea, who has left.
+  data.games.A.captures = { fay: { leader: 'lea', via: 'fay' } };
+  await rooms.enter('A');
+  // Meanwhile Fay confirmed her capture by Kim on another page.
+  data.games.A.captures.fay = { leader: 'kim', via: 'fay' };
+  await rooms.claimCapture('fay', 'me');
+  assert.deepEqual(data.games.A.captures, { fay: { leader: 'kim', via: 'fay' } });
+  assert.deepEqual(view().room.captures, { fay: { leader: 'lea', via: 'fay' } }, 'the page was still showing the old capture');
+});
+
+test('a capture from a page with an old roster keeps its leader\'s capture confirmed since', async () => {
+  const { rooms, data } = await roomHarness();
+  Object.assign(data.games.A.users, { fay: player('Fay'), kim: player('Kim') });
+  // This page still shows Fay in the empire of Lea, who has left.
+  data.games.A.captures = { fay: { leader: 'lea', via: 'fay' } };
+  await rooms.enter('A');
+  // Meanwhile Fay confirmed her capture by Kim on another page.
+  data.games.A.captures.fay = { leader: 'kim', via: 'fay' };
+  await rooms.capturePlayer('me', 'fay');
+  assert.deepEqual(data.games.A.captures.fay, { leader: 'kim', via: 'fay' });
+});
+
+test('a claim or capture still clears a record the room has not replaced', async () => {
+  const { rooms, data } = await roomHarness();
+  Object.assign(data.games.A.users, { fay: player('Fay'), kim: player('Kim') });
+  data.games.A.captures = { fay: { leader: 'lea', via: 'fay' }, kim: { leader: 'lea', via: 'kim' } };
+  await rooms.enter('A');
+  await rooms.claimCapture('fay', 'me');
+  assert.deepEqual(data.games.A.captures, { kim: { leader: 'lea', via: 'kim' } });
+  assert.deepEqual(data.games.A.claims, { fay: { leader: 'me', by: 'me' } });
+  await rooms.capturePlayer('me', 'kim');
+  assert.deepEqual(data.games.A.captures, { me: { leader: 'kim', via: 'me' } });
 });

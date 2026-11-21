@@ -64,13 +64,19 @@ function cleanCaptures(game) {
   return changed;
 }
 
+// Bots sit on push-id keys, as the database rules require (sign-in ids never start with "-").
+// A room from before that rule can hold the bot marker on a player's own entry, and that
+// entry is still a player.
+const BOT_KEY = /^-[-0-9A-Za-z_]{19}$/;
+const isBot = (id, user) => user.fakeBadge === true && BOT_KEY.test(id);
+
 // Only members can reset a room, and nobody can join one whose names were revealed, so a
 // revealed room that its last player leaves would stay stuck, holding its name, until the
 // sweep. Open the next round instead. Bots don't count as players.
 async function roomEmptied(snapshot, context) {
   const room = db.ref(`games/${context.params.gameId}`);
   if ((await room.child('locked').once('value')).val() !== true) return null;
-  const hasPlayers = users => Object.values(users || {}).some(user => user && user.fakeBadge !== true);
+  const hasPlayers = users => Object.entries(users || {}).some(([id, user]) => user && !isBot(id, user));
   const [users, captures] = await Promise.all([room.child('users').once('value'), room.child('captures').once('value')]);
   const known = { users: users.val(), captures: captures.val() };
   if (hasPlayers(known.users) && !cleanCaptures(known)) return null;
