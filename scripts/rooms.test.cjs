@@ -20,9 +20,10 @@ async function roomHarness({ pauseSignIn = false } = {}) {
   const reads = [];
   const delays = new Map();
   let screen = 'home';
+  const openDialogs = [];
   global.document = { location: new URL('https://example.test/'),
     getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
-    addEventListener() {}, querySelector: () => element(), querySelectorAll: selector => selector === '.room-name' ? roomNames : [] };
+    addEventListener() {}, querySelector: () => element(), querySelectorAll: selector => ({ '.room-name': roomNames, 'dialog[open]': openDialogs })[selector] ?? [] };
   global.history = { state: null, replaceState(state, _title, url) { this.state = state; if (url !== undefined) global.document.location = new URL(url); } };
   global.window = { location: { replace: url => events.push(['replace', url]) }, listeners: {},
     addEventListener(type, listener) { (this.listeners[type] ??= []).push(listener); } };
@@ -67,7 +68,10 @@ async function roomHarness({ pauseSignIn = false } = {}) {
       on(_type, callback) {
         if (!subscriptions.has(path)) subscriptions.set(path, new Set());
         subscriptions.get(path).add(callback);
-        callback(h.snapshot(path === '.info/connected' ? false : value(path)));
+        const answer = () => callback(h.snapshot(path === '.info/connected' ? false : value(path)));
+        // A paused listener hears its first value later, as it does when the server is slow.
+        if (delays.has(`listen:${path}`)) wait('listen', path).then(() => { if (subscriptions.get(path).has(callback)) answer(); });
+        else answer();
       },
       off(_type, callback) { subscriptions.get(path).delete(callback); },
       onDisconnect: () => ({ cancel: () => wait('cancel', path) })
@@ -106,7 +110,7 @@ async function roomHarness({ pauseSignIn = false } = {}) {
       if (path.startsWith(`games/${code}/`)) [...callbacks].forEach(callback => callback(h.snapshot(value(path))));
     }
   }
-  return { rooms, home, joinFromForm, pause, signIn, view, reads, deliver, data: h.data, server: h.exports, snapshot: h.snapshot };
+  return { rooms, home, joinFromForm, pause, signIn, view, reads, deliver, openDialogs, data: h.data, server: h.exports, snapshot: h.snapshot };
 }
 
 test('a delayed automatic room entry cannot overwrite a newer room choice', async () => {
@@ -363,6 +367,164 @@ test('a stale entry detaches its listeners and presence when the next sign-in fa
   await oldEntry;
   assert.equal(view().room.id, null);
   assert.deepEqual(view().listeners, []);
+});
+
+for (const [name, start] of [
+  ['an invitation', ({ home }) => opening('room=bravo&pass=UVWXYZ')(home)],
+  ['a saved room', ({ home }) => opening('', { room: 'bravo', pass: 'UVWXYZ' })(home)],
+  ['the Home form', ({ joinFromForm }) => joinFromForm()]
+]) {
+  test(`a room that closes while ${name} opens it goes home and is forgotten`, async () => {
+    const harness = await roomHarness();
+    const { pause, view, data } = harness;
+    // The room is still there when the entry looks it up, and gone before its listeners attach.
+    const gate = pause('read', 'games/B/name');
+    const entry = start(harness);
+    await gate.reached;
+    delete data.games.B;
+    gate.release();
+    await entry;
+    const home = view();
+    assert.equal(home.screen, 'home');
+    assert.equal(home.room.id, null);
+    assert.deepEqual(home.listeners, []);
+    assert.equal(home.remembered, undefined);
+    assert.equal(new URL(home.url).search, '');
+    assert.deepEqual(home.events.filter(([type]) => type === 'toast'), [['toast', 'That room has closed.']]);
+    assert.ok(!home.events.some(([type]) => type === 'enter'));
+    assert.equal(global.localStorage.getItem('secret:B'), null);
+  });
+}
+
+test('a room found closed once its entry has finished goes home and is forgotten', async () => {
+  const { rooms, pause, view, data, openDialogs } = await roomHarness();
+  const first = pause('listen', 'games/B/state');
+  await rooms.enter('B');
+  assert.equal(view().screen, 'lobby');
+  // Room options, opened before the room was found closed.
+  const closed = [];
+  openDialogs.push({ close: () => closed.push('options') });
+  delete data.games.B;
+  first.release();
+  await new Promise(resolve => setImmediate(resolve));
+  const home = view();
+  assert.equal(home.screen, 'home');
+  assert.equal(home.room.id, null);
+  assert.deepEqual(home.listeners, []);
+  assert.equal(home.remembered, undefined);
+  assert.deepEqual(home.events.filter(([type]) => type === 'toast'), [['toast', 'That room has closed.']]);
+  assert.deepEqual(closed, ['options']);
+});
+
+test('a room found closed while another opens does not send that one back home', async () => {
+  const { rooms, pause, view, data } = await roomHarness();
+  const first = pause('listen', 'games/B/state');
+  await rooms.enter('B');
+  delete data.games.B;
+  const signIn = pause('signIn');
+  const next = rooms.enter('A');
+  await signIn.reached;
+  first.release();
+  await new Promise(resolve => setImmediate(resolve));
+  signIn.release();
+  await next;
+  assert.equal(view().room.id, 'A');
+  assert.equal(view().screen, 'lobby');
+  assert.ok(!view().events.some(([type]) => type === 'toast'));
+});
+
+test('an entry that fails after its listeners attach leaves nothing attached', async () => {
+  const { rooms, pause, view } = await roomHarness();
+  const gate = pause('read', 'games/B/locked');
+  const entry = rooms.enter('B');
+  await gate.reached;
+  assert.notDeepEqual(view().listeners, []);
+  const failed = assert.rejects(entry, /Simulated read failure/);
+  gate.reject(new Error('Simulated read failure'));
+  await failed;
+  assert.equal(view().room.id, null);
+  assert.deepEqual(view().listeners, []);
+});
+
+for (const [name, start] of [
+  ['an invitation', ({ home }) => opening('room=bravo&pass=UVWXYZ')(home)],
+  ['a saved room', ({ home }) => opening('', { room: 'bravo', pass: 'UVWXYZ' })(home)],
+  ['the Home form', ({ joinFromForm }) => joinFromForm()]
+]) {
+  test(`${name} that fails after its listeners attach shows Home with nothing attached`, async () => {
+    const harness = await roomHarness();
+    const { pause, view } = harness;
+    const gate = pause('read', 'games/B/locked');
+    const entry = start(harness);
+    await gate.reached;
+    gate.reject(new Error('Simulated read failure'));
+    await entry;
+    assert.equal(view().screen, 'home');
+    assert.equal(view().room.id, null);
+    assert.deepEqual(view().listeners, []);
+  });
+}
+
+test('a saved room that fails to open is forgotten in the address too', async () => {
+  const harness = await roomHarness();
+  const { pause, view } = harness;
+  const gate = pause('read', 'games/B/locked');
+  const entry = opening('', { room: 'bravo', pass: 'UVWXYZ' })(harness.home);
+  await gate.reached;
+  assert.equal(new URL(view().url).search, '?room=bravo&pass=UVWXYZ');
+  gate.reject(new Error('Simulated read failure'));
+  await entry;
+  assert.equal(new URL(view().url).search, '');
+  assert.equal(view().remembered, undefined);
+});
+
+test('a Home form entry that fails after the round restarted shows its error on Home', async () => {
+  const { joinFromForm, pause, view, data, deliver } = await roomHarness();
+  const gate = pause('read', 'games/B/locked');
+  const entry = joinFromForm();
+  await gate.reached;
+  data.games.B.state = 'resetting';
+  deliver('B');
+  assert.equal(view().screen, 'setup');
+  gate.reject(new Error('Simulated read failure'));
+  await entry;
+  assert.equal(view().screen, 'home');
+  assert.equal(view().room.id, null);
+  assert.deepEqual(view().listeners, []);
+});
+
+test('a room being deleted while it opens shows no room screen', async () => {
+  const { rooms, pause, view, data } = await roomHarness();
+  const gate = pause('read', 'games/B/name');
+  const entry = rooms.enter('B');
+  await gate.reached;
+  data.games.B.state = 'deleting';
+  gate.release();
+  await entry;
+  await new Promise(resolve => setImmediate(resolve));
+  const gone = view();
+  assert.equal(gone.screen, 'home');
+  assert.equal(gone.room.id, null);
+  assert.deepEqual(gone.listeners, []);
+  assert.ok(!gone.events.some(([type]) => type === 'enter'));
+  assert.deepEqual(gone.events.filter(([type]) => type === 'replace'), [['replace', '/']]);
+});
+
+test('a room deleted while its entry reads the revealed flag shows no room screen', async () => {
+  const { rooms, pause, view, data, deliver } = await roomHarness();
+  const gate = pause('read', 'games/C/locked');
+  const entry = rooms.enter('C');
+  await gate.reached;
+  data.games.C.state = 'deleting';
+  deliver('C');
+  gate.release();
+  await entry;
+  await new Promise(resolve => setImmediate(resolve));
+  const gone = view();
+  assert.equal(gone.screen, 'home');
+  assert.equal(gone.room.id, null);
+  assert.deepEqual(gone.listeners, []);
+  assert.deepEqual(gone.events.filter(([type]) => type === 'replace'), [['replace', '/']]);
 });
 
 const leaveFailed = view => view.events.some(([name, text]) => name === 'toast' && text === 'Could not leave the room. Try again.');
