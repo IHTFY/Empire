@@ -110,7 +110,10 @@ test('The tutorial is hidden during the sheet animation and revealed after it', 
           resolve(dialog.classList.contains('opening'));
           closeSheet(dialog);
         }, 200));
-        await new Promise(resolve => dialog.addEventListener('close', resolve, { once: true }));
+        await new Promise((resolve, reject) => {
+          dialog.addEventListener('close', resolve, { once: true });
+          setTimeout(() => reject(new Error('The sheet never closed')), 3000);
+        });
         return { openingAtDismissal, shownWhileClosing, openingAfterClose: dialog.classList.contains('opening') };
       });
       assert.deepEqual(early, { openingAtDismissal: true, shownWhileClosing: false, openingAfterClose: false }, 'Stays hidden while sliding away');
