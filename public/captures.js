@@ -71,6 +71,19 @@ export function staleCaptures(captures, users, keys) {
   return update;
 }
 
+// Clear those records before a capture or claim, each only while it is still the record this
+// page judged: another page may have confirmed a newer capture since this one last heard.
+// Resolves to whether every one was cleared; if not, the capture or claim must not go ahead.
+export async function clearStaleCaptures(room, captures, users, keys) {
+  const cleared = await Promise.allSettled(Object.keys(staleCaptures(captures, users, keys)).map(path => {
+    const seen = captures[path.slice('captures/'.length)];
+    // An empty local cache (null) is retried against the server.
+    return room.child(path).transaction(c =>
+      (c && (c.leader !== seen.leader || c.via !== seen.via || c.back !== seen.back) ? undefined : null));
+  }));
+  return cleared.every(result => result.status === 'fulfilled' && result.value.committed);
+}
+
 // Updates for undoing key's capture: key goes free and the followers that moved with them
 // return to their previous empire. Records without history (older rooms) go free.
 export function releasePlan(captures, key, users) {

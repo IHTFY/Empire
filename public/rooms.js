@@ -3,7 +3,7 @@ import { $ } from './dom.js';
 import { closeSheet } from './sheets.js';
 import { summarizePresence } from './presence.js';
 import { createRoomPresence } from './room-presence.js';
-import { capturePlan, releasePlan, staleCaptures, writeLeave, writeRemoval } from './captures.js';
+import { capturePlan, clearStaleCaptures, releasePlan, writeLeave, writeRemoval } from './captures.js';
 
 // The room in the address bar is also remembered on this device, so closing the app (or
 // the tab) and opening it again from the home screen goes straight back to the room.
@@ -47,6 +47,8 @@ export function createRooms({
   let roomPass = null;
   let entryAttempt = 0;
   let attachedAttempt = null;
+  // This page shows the lobby of a revealed round to someone who is not playing in it.
+  let watching = false;
 
   // Snapshots expose room data without giving another controller ownership of it.
   function getSnapshot() {
@@ -101,6 +103,7 @@ export function createRooms({
     presence = {};
     state = null;
     locked = false;
+    watching = false;
     document.title = 'Empire';
     onDetach();
     return stopped;
@@ -194,6 +197,9 @@ export function createRooms({
       listen(db.ref(`games/${code}/locked`), snapshot => {
         locked = snapshot.val() === true;
         onChange();
+        // The server opens the next round by itself when the last player leaves, with no
+        // reset for this page to follow, so someone watching goes to name entry here.
+        if (watching && !locked) showNextRound(code);
         // A player whose names were revealed has played this round; Home may show an ad after it.
         if (locked && users[getUid()]) {
           db.ref(`games/${code}/roundId`).once('value')
@@ -204,6 +210,7 @@ export function createRooms({
 
       if (!users[getUid()] && locked) {
         // The names have been revealed: newcomers watch until the next round.
+        watching = true;
         show('lobby');
       } else if (users[getUid()]) {
         realName.value = users[getUid()].real;
@@ -335,14 +342,20 @@ export function createRooms({
       users = {};
       captures = {};
       claims = {};
-      setSecret('');
-      removeStored(`secret:${code}`);
-      document.querySelectorAll('dialog[open]').forEach(d => d.close());
-      $('submitLabel').textContent = 'Enter the lobby';
-      onRoundReset();
-      show('setup');
+      showNextRound(code);
       // The server clears the old roster and opens the next round.
     }
+  }
+
+  // Everyone, playing or watching, enters names again for the next round.
+  function showNextRound(code) {
+    watching = false;
+    setSecret('');
+    removeStored(`secret:${code}`);
+    document.querySelectorAll('dialog[open]').forEach(d => d.close());
+    $('submitLabel').textContent = 'Enter the lobby';
+    onRoundReset();
+    show('setup');
   }
 
   function removePlayer(key, onFail) {
@@ -369,15 +382,27 @@ export function createRooms({
   // Put a player in a leader's empire. A captured leader brings their followers along. Only
   // the captured player or someone in their empire may do this, which settles any claim.
   function capturePlayer(key, leader) {
-    // Clearing stale records also covers ones left by pages from before leaders freed them.
-    const update = { ...staleCaptures(captures, users, [key, leader]), ...capturePlan(captures, key, leader), [`claims/${key}`]: null };
-    db.ref(`games/${gameID}`).update(update).catch(() => toast('Could not capture that player'));
+    return writeCapture([key, leader], () => ({ ...capturePlan(captures, key, leader), [`claims/${key}`]: null }));
   }
 
   // Anyone else says who captured a player; the captured empire confirms or declines it.
   function claimCapture(key, leader) {
-    db.ref(`games/${gameID}`).update({ ...staleCaptures(captures, users, [key, leader]), [`claims/${key}`]: { leader, by: getUid() } })
-      .catch(() => toast('Could not capture that player'));
+    return writeCapture([key, leader], () => ({ [`claims/${key}`]: { leader, by: getUid() } }));
+  }
+
+  // Clearing stale records first also covers ones left by pages from before leaders freed them.
+  // The update is planned afterwards, from the records this page knows by then. A stale record
+  // that another page has replaced, or that could not be cleared, stops the write.
+  async function writeCapture(keys, plan) {
+    const code = gameID;
+    const room = db.ref(`games/${code}`);
+    const cleared = await clearStaleCaptures(room, captures, users, keys);
+    if (gameID !== code) return;
+    if (!cleared) {
+      toast('Could not capture that player');
+      return;
+    }
+    await room.update(plan()).catch(() => toast('Could not capture that player'));
   }
 
   function dropClaim(key) {

@@ -87,6 +87,19 @@ test('a revealed room that its last player leaves opens the next round', async (
   assert.equal(gone.data.games.room, undefined);
 });
 
+test('a human entry carrying a bot marker from an older page still counts as a player', async () => {
+  // Bots sit on push-id keys. Rooms from before the rules required that can still hold the
+  // marker on a signed-in player's entry.
+  const h = harness({ games: { room: {
+    state: 'waiting', locked: true, name: 'room', pass: 'ABCDEF', names: ['otter', 'apple'], startedAt: 1, roundId: 'round',
+    users: { bob: { real: 'Bob', clan: 'Bob', fakeBadge: true }, '-NbotKey000000000001': { real: 'Bot', clan: 'Bot', fakeBadge: true } },
+    secrets: { bob: 'otter', '-NbotKey000000000001': 'apple' }
+  } } });
+  const before = structuredClone(h.data.games.room);
+  await h.exports.roomEmptied(h.snapshot({ real: 'Alice', clan: 'Alice' }), { params: { gameId: 'room', userId: 'alice' } });
+  assert.deepEqual(h.data.games.room, before);
+});
+
 test('the deletion trigger repairs captures left by an older page and preserves the next Undo', async () => {
   const { capturePlan, departurePlan, releasePlan } = await import('../../public/captures.js');
   const users = Object.fromEntries(['alice', 'bob', 'cara', 'dan'].map(id => [id, { real: id, clan: id }]));

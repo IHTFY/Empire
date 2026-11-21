@@ -301,16 +301,15 @@ test('a departed leader\'s follower can be claimed and can lead once their recor
     locked: true, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara') },
     captures: { cara: { leader: 'bob', via: 'cara' } }
   });
-  const { departurePlan, staleCaptures } = await import('../../public/captures.js');
+  const { clearStaleCaptures, departurePlan } = await import('../../public/captures.js');
   // Left behind, the record blocks every claim on Cara although the lobby shows her as free.
   await seed('orphans-left', { locked: true, captures: { cara: { leader: 'bob', via: 'cara' } }, users: { alice: player('Alice'), bob: player('Bob'), cara: player('Cara') } });
   await bobCaptures.ref('games/orphans-left').update({ 'users/bob': null, 'secrets/bob': null });
   await assert.rejects(alice.ref('games/orphans-left/claims/cara').set({ leader: 'alice', by: 'alice' }), /permission/i);
   // A claim that clears the record first, as pages now do, goes through.
-  await alice.ref('games/orphans-left').update({
-    ...staleCaptures({ cara: { leader: 'bob', via: 'cara' } }, { alice: player('Alice'), cara: player('Cara') }, ['cara', 'alice']),
-    'claims/cara': { leader: 'alice', by: 'alice' }
-  });
+  const roster = { alice: player('Alice'), cara: player('Cara') };
+  assert.equal(await clearStaleCaptures(alice.ref('games/orphans-left'), { cara: { leader: 'bob', via: 'cara' } }, roster, ['cara', 'alice']), true);
+  await alice.ref('games/orphans-left/claims/cara').set({ leader: 'alice', by: 'alice' });
   // Bob leaves; the update clears what he led.
   await bobCaptures.ref('games/orphans').update({
     'users/bob': null, 'secrets/bob': null,
@@ -320,6 +319,18 @@ test('a departed leader\'s follower can be claimed and can lead once their recor
   await alice.ref('games/orphans/claims/cara').remove();
   await alice.ref('games/orphans/captures/alice').set({ leader: 'cara', via: 'alice' });
   assert.equal((await cara.ref('games/orphans/captures/alice/leader').once('value')).val(), 'cara');
+});
+
+test('a claim from a page with an old roster keeps a capture confirmed since', async () => {
+  const cara = client('cara', 'cara-stale-claim');
+  const users = { alice: player('Alice'), cara: player('Cara'), dan: player('Dan') };
+  await seed('stale-claim', { locked: true, users, captures: { cara: { leader: 'dan', via: 'cara' } } });
+  const { clearStaleCaptures } = await import('../../public/captures.js');
+  // Alice's page still shows Cara under Bob, who has left, and has not heard that Dan captured her.
+  const seen = { cara: { leader: 'bob', via: 'cara' } };
+  assert.equal(await clearStaleCaptures(alice.ref('games/stale-claim'), seen, { alice: users.alice, cara: users.cara }, ['cara', 'alice']), false);
+  await assert.rejects(alice.ref('games/stale-claim/claims/cara').set({ leader: 'alice', by: 'alice' }), /permission/i);
+  assert.deepEqual((await cara.ref('games/stale-claim/captures').once('value')).val(), { cara: { leader: 'dan', via: 'cara' } });
 });
 
 test('a leader who leaves keeps a capture their follower made after the page last heard', async () => {
