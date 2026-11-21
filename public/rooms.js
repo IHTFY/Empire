@@ -82,9 +82,10 @@ export function createRooms({
     return url.href;
   }
 
+  // Recorded first: a value already in the cache calls back inside on(), and that call may detach.
   function listen(ref, callback) {
-    ref.on('value', callback);
     listeners.push([ref, callback]);
+    ref.on('value', callback);
   }
 
   function detachRoom() {
@@ -114,6 +115,7 @@ export function createRooms({
 
   async function enterRoom(code, attempt = beginEntry()) {
     if (!isEntryCurrent(attempt)) return;
+    let entered = false;
     try {
       await ensureSignedIn();
       if (attempt !== entryAttempt) return;
@@ -189,6 +191,8 @@ export function createRooms({
         onChange();
       });
       listen(db.ref(`games/${code}/state`), onStateChange);
+      // The room was already gone, and this entry ended there.
+      if (attempt !== entryAttempt) return;
       onEnter();
       listen(db.ref(`games/${code}/eliminated`), onEliminated);
       const lockedSnap = await db.ref(`games/${code}/locked`).once('value');
@@ -219,8 +223,10 @@ export function createRooms({
       } else {
         openSetup();
       }
+      entered = true;
     } finally {
-      if (!isEntryCurrent(attempt) && attachedAttempt === attempt) await detachRoom();
+      // An entry that failed or was replaced leaves no listeners or presence behind.
+      if (!entered && attachedAttempt === attempt) await detachRoom();
     }
   }
 
@@ -324,6 +330,18 @@ export function createRooms({
     if (state === 'shuffling' || previous === 'shuffling') {
       if (previous === 'shuffling') startButton.querySelector('.spinner').hidden = true;
       onChange();
+    }
+    if (state === null && previous === null) {
+      // The room was removed after the check that it exists and before this first value.
+      // When another room is already being opened, that entry detaches this one.
+      if (!isEntryCurrent(attachedAttempt)) return;
+      beginEntry();
+      detachRoom();
+      removeStored(`secret:${code}`);
+      setRoomInUrl(null);
+      show('home');
+      toast('That room has closed.');
+      return;
     }
     if (state === 'deleting' || (state === null && previous !== null)) {
       // Stop listening first so the room disappearing doesn't trigger this twice.
