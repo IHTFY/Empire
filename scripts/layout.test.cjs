@@ -351,6 +351,19 @@ test('Every game screen contains its panels and scrolls only inside them', async
         }
       }
     }
+    // A browser text size setting can enlarge the label further, and the button grows to hold its two lines.
+    await fallback.setViewportSize({ width: 736, height: 375 });
+    const enlarged = await fallback.evaluate(async () => {
+      const button = document.querySelector('#submitNames');
+      const label = document.querySelector('#submitLabel');
+      label.textContent = 'Enter the lobby';
+      button.style.fontSize = '28px';
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const box = target => { const r = target.getBoundingClientRect(); return { y: r.y, bottom: r.bottom }; };
+      return { button: box(button), label: box(label), form: box(document.querySelector('#namesForm')) };
+    });
+    assert(enlarged.label.y >= enlarged.button.y && enlarged.label.bottom <= enlarged.button.bottom, `Enlarged label must stay inside the button: ${JSON.stringify(enlarged)}`);
+    assert(enlarged.button.y >= enlarged.form.y && enlarged.button.bottom <= enlarged.form.bottom + 1, `Grown button must stay inside the form: ${JSON.stringify(enlarged)}`);
     await fallback.close();
   });
 });

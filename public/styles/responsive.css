@@ -68,8 +68,8 @@
   .names-form { grid-area: form; display: flex; gap: 12px; min-width: 0; }
   .names-form > .grow { display: none; }
   .names-form > .btn { margin-top: auto; }
-  /* A fallback font is wider than the display font, so this label may take two lines in the narrow column. */
-  .names-form > .btn-xl { padding: 0 10px; white-space: normal; }
+  /* A fallback font is wider than the display font, so this label may take two lines in the narrow column, and the button grows when they need more height. */
+  .screen-setup .names-form > .btn-xl { height: auto; min-height: 64px; padding: 0 10px; white-space: normal; }
   #submitLabel { min-width: 0; line-height: .95; }
   .screen-lobby {
     display: grid; column-gap: 16px; row-gap: 0;
@@ -148,6 +148,7 @@
   .screen-setup { row-gap: 8px; }
   .screen-setup .names-form { gap: 8px; }
   .screen-setup #secretHint { display: none; }
+  .screen-setup .names-form > .btn-xl { min-height: 44px; }
   .screen-lobby { gap: 0 12px; }
 }
 @media (min-width: 480px) and (min-aspect-ratio: 5/4) and (max-height: 400px) {
