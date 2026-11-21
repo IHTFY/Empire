@@ -493,21 +493,25 @@
         // Chrome fades its own launch screen out over about 300 ms after first paint; the copy
         // waits under it, so the fade shows no second icon.
         const delay = 300;
-        // Moves the icon's center and size onto the logo's.
-        const from = icon.getBoundingClientRect();
+        // Moves the icon's center and size onto the logo's. The overlay centers the untransformed
+        // icon, so its start is read from the overlay, which a rotation also moves.
+        const size = icon.getBoundingClientRect().width;
         const target = () => {
           const box = logo.getBoundingClientRect();
-          const dx = box.left + box.width / 2 - (from.left + from.width / 2);
-          const dy = box.top + box.height / 2 - (from.top + from.height / 2);
-          return { transform: ['none', `translate(${dx}px, ${dy}px) scale(${box.width / from.width})`] };
+          const start = overlay.getBoundingClientRect();
+          const dx = box.left + box.width / 2 - (start.left + start.width / 2);
+          const dy = box.top + box.height / 2 - (start.top + start.height / 2);
+          return { transform: ['none', `translate(${dx}px, ${dy}px) scale(${box.width / size})`] };
         };
         const flight = icon.animate(target(), { duration: 900, delay, easing, fill: 'forwards' });
-        // Home's logo settles its size with a short transition after first paint, so the flight
-        // follows it rather than landing on a box that then grows.
-        const logoSize = new ResizeObserver(() => {
+        // Home's logo settles its size and place with short transitions after first paint, and a
+        // rotation moves it too, so the flight re-aims every frame until it lands.
+        const follow = () => {
+          if (flight.playState !== 'running') return;
           if (logo.getBoundingClientRect().width) flight.effect.setKeyframes(target());
-        });
-        logoSize.observe(logo);
+          requestAnimationFrame(follow);
+        };
+        requestAnimationFrame(follow);
         const animations = [
           overlay.animate({ backgroundColor: ['#0B0D26', 'rgb(11 13 38 / 0)'] }, { duration: 600, delay, easing: 'ease-in', fill: 'forwards' }),
           flight
@@ -520,10 +524,7 @@
         // A saved room can open before the flight lands; it then ends at once.
         const leftHome = new MutationObserver(() => animations.forEach((a) => a.finish()));
         leftHome.observe(document.getElementById('homeScreen'), { attributeFilter: ['hidden'] });
-        const stop = () => {
-          leftHome.disconnect();
-          logoSize.disconnect();
-        };
+        const stop = () => leftHome.disconnect();
         Promise.all(animations.map((a) => a.finished)).then(stop, stop);
         return animations;
       });
