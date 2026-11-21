@@ -520,6 +520,11 @@
             titleEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: 900 })
           );
         }
+        // A saved room can open before the flight lands; it then ends at once.
+        const leftHome = new MutationObserver(() => animations.forEach((a) => a.finish()));
+        leftHome.observe(document.getElementById('homeScreen'), { attributeFilter: ['hidden'] });
+        const stop = () => leftHome.disconnect();
+        Promise.all(animations.map((a) => a.finished)).then(stop, stop);
         return animations;
       });
     </script>
