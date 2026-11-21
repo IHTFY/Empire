@@ -493,6 +493,9 @@
         // A short landscape window hides the logo; the plain fade covers that.
         if (!logo.width) return [];
         const easing = 'cubic-bezier(0.5, 0, 0.2, 1)';
+        // Chrome fades its own launch screen out over about 300 ms after first paint; the copy
+        // waits under it, so the fade shows no second icon.
+        const delay = 300;
         // Moves el's center onto box's center, scaled, over the same 900 ms path.
         const fly = (el, box, scale) => {
           const from = el.getBoundingClientRect();
@@ -500,24 +503,24 @@
           const dy = box.top + box.height / 2 - (from.top + from.height / 2);
           return el.animate(
             { transform: ['none', `translate(${dx}px, ${dy}px) scale(${scale})`] },
-            { duration: 900, easing, fill: 'forwards' }
+            { duration: 900, delay, easing, fill: 'forwards' }
           );
         };
         const animations = [
-          overlay.animate({ backgroundColor: ['#0B0D26', 'rgb(11 13 38 / 0)'] }, { duration: 600, easing: 'ease-in', fill: 'forwards' }),
+          overlay.animate({ backgroundColor: ['#0B0D26', 'rgb(11 13 38 / 0)'] }, { duration: 600, delay, easing: 'ease-in', fill: 'forwards' }),
           fly(icon, logo, logo.width / icon.getBoundingClientRect().width)
         ];
         const titleEl = document.querySelector('.hero-title');
         const title = titleEl.getBoundingClientRect();
         // The name hands over to the real title, which stays hidden until the name arrives.
-        animations.push(name.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 900, fill: 'forwards' }));
+        animations.push(name.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 900, delay, fill: 'forwards' }));
         if (title.width) {
           // The title may still be in its rise animation; aim for where it settles.
           const style = getComputedStyle(titleEl);
           const settled = { left: title.left, top: title.top - new DOMMatrix(style.transform).m42, width: title.width, height: title.height };
           animations.push(
             fly(name, settled, parseFloat(style.fontSize) / 24),
-            titleEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: 900 })
+            titleEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: 900, delay, fill: 'backwards' })
           );
         }
         // A saved room can open before the flight lands; it then ends at once.
