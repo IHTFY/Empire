@@ -4,6 +4,8 @@ import { $ } from './dom.js';
 // event tidies up however the dialog actually closed.
 export function closeSheet(dialog) {
   if (!dialog.open || dialog.classList.contains('closing')) return;
+  // A tutorial closed before its sheet landed stays hidden while it slides away.
+  if (dialog.classList.contains('opening')) stopReveal();
   dialog.classList.add('closing');
   const fallback = setTimeout(() => dialog.close(), 400);
   const done = event => {
@@ -65,7 +67,11 @@ export function openSheet(dialog) {
 export function initializeSheets() {
   const tutorial = document.getElementById('rulesDialog');
   tutorial.addEventListener('close', () => {
-    if (!tutorial.open) document.getElementById('tutorialFrame').removeAttribute('src');
+    // The event comes a task late, so a reopen may already be showing the sheet again.
+    if (tutorial.open) return;
+    stopReveal();
+    tutorial.classList.remove('opening');
+    document.getElementById('tutorialFrame').removeAttribute('src');
   });
   window.addEventListener('message', event => {
     const frame = document.getElementById('tutorialFrame');

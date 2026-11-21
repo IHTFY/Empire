@@ -1,4 +1,4 @@
-/* global document, getComputedStyle */
+/* global document, getComputedStyle, MutationObserver */
 const { chromium } = require('playwright');
 const { createServer } = require('node:http');
 const { readFile } = require('node:fs/promises');
@@ -41,7 +41,6 @@ test('The tutorial is hidden during the sheet animation and revealed after it', 
         initializeSheets();
       });
       const opener = page.locator('#homeScreen [data-open="rulesDialog"]');
-      const frameVisibility = () => page.evaluate(() => getComputedStyle(document.getElementById('tutorialFrame')).visibility);
       const focusOnTutorial = () => page.waitForFunction(() => document.activeElement.id === 'tutorialFrame', null, { timeout: 2000 });
       // Reduced motion gives every property a near-instant transition, so the style catches up a frame late.
       const revealed = async () => {
@@ -51,12 +50,17 @@ test('The tutorial is hidden during the sheet animation and revealed after it', 
       // The close event, which clears the closing class, comes a moment after the dialog stops being open.
       const closed = () => page.waitForFunction(() => !document.getElementById('rulesDialog').open && !document.getElementById('rulesDialog').classList.contains('closing'));
       const landed = () => page.waitForFunction(() => !document.getElementById('rulesDialog').classList.contains('opening'));
+      // Clicks and reads the state in one go: with reduced motion the reveal can follow within a frame.
+      const openNow = () => page.evaluate(() => {
+        document.querySelector('#homeScreen [data-open="rulesDialog"]').click();
+        const dialog = document.getElementById('rulesDialog');
+        const visibility = getComputedStyle(document.getElementById('tutorialFrame')).visibility;
+        return { open: dialog.open, opening: dialog.classList.contains('opening'), visibility };
+      });
+      const hiddenAtOpen = { open: true, opening: true, visibility: 'hidden' };
 
       // A plain open: hidden at first, then revealed with focus on the frame, as before.
-      await opener.evaluate(el => el.click());
-      assert.equal(await page.evaluate(() => document.getElementById('rulesDialog').open), true);
-      assert.equal(await page.evaluate(() => document.getElementById('rulesDialog').classList.contains('opening')), true, 'Opens in the hidden state');
-      assert.equal(await frameVisibility(), 'hidden');
+      assert.deepEqual(await openNow(), hiddenAtOpen, 'Opens in the hidden state');
       await revealed();
       await focusOnTutorial();
       await page.frameLocator('#tutorialFrame').locator('.seat').first().waitFor();
@@ -67,8 +71,7 @@ test('The tutorial is hidden during the sheet animation and revealed after it', 
       await opener.evaluate(el => el.click());
       await page.keyboard.press('Escape');
       await closed();
-      await opener.evaluate(el => el.click());
-      assert.equal(await frameVisibility(), 'hidden', 'A reopen starts hidden');
+      assert.deepEqual(await openNow(), hiddenAtOpen, 'A reopen starts hidden');
       await revealed();
       await focusOnTutorial();
 
@@ -83,11 +86,35 @@ test('The tutorial is hidden during the sheet animation and revealed after it', 
       // A sheet whose animation never ends is revealed by the timer.
       await page.keyboard.press('Escape');
       await closed();
-      await page.addStyleTag({ content: 'dialog.sheet[open] { animation: none !important; }' });
-      await opener.evaluate(el => el.click());
-      assert.equal(await frameVisibility(), 'hidden');
+      const still = await page.addStyleTag({ content: 'dialog.sheet[open] { animation: none !important; }' });
+      assert.deepEqual(await openNow(), hiddenAtOpen);
       await revealed();
       await focusOnTutorial();
+      await page.keyboard.press('Escape');
+      await closed();
+      await still.evaluate(el => el.remove());
+
+      // Dismissed before it lands, the tutorial stays hidden while the sheet slides away, even past
+      // the reveal timer. The sheet's motion is slowed so it can't land first, and page timers
+      // order the steps: the dismissal at 200 ms, the reveal timer at 450, the close timer at 600.
+      const slow = await page.addStyleTag({ content: 'dialog.sheet[open] { animation-duration: 2s !important; }' });
+      const early = await page.evaluate(async () => {
+        const { closeSheet } = await import('/sheets.js');
+        const dialog = document.getElementById('rulesDialog');
+        let shownWhileClosing = false;
+        new MutationObserver(() => {
+          if (dialog.open && dialog.classList.contains('closing') && !dialog.classList.contains('opening')) shownWhileClosing = true;
+        }).observe(dialog, { attributes: true, attributeFilter: ['class'] });
+        document.querySelector('#homeScreen [data-open="rulesDialog"]').click();
+        const openingAtDismissal = await new Promise(resolve => setTimeout(() => {
+          resolve(dialog.classList.contains('opening'));
+          closeSheet(dialog);
+        }, 200));
+        await new Promise(resolve => dialog.addEventListener('close', resolve, { once: true }));
+        return { openingAtDismissal, shownWhileClosing, openingAfterClose: dialog.classList.contains('opening') };
+      });
+      assert.deepEqual(early, { openingAtDismissal: true, shownWhileClosing: false, openingAfterClose: false }, 'Stays hidden while sliding away');
+      await slow.evaluate(el => el.remove());
       assert.deepEqual(errors, []);
     });
   }
