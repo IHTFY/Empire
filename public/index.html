@@ -24,7 +24,6 @@
       .launching #launch { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #0B0D26; }
       /* The maskable icon's art spans 67% of its 128px box; the art spans 96% of 256.png. */
       #launch-icon { width: 89.2px; height: 89.2px; }
-      #launch-name { position: absolute; inset: auto 0 56px; font: 24px/1 Roboto, system-ui, sans-serif; text-align: center; color: #fff; }
       /* The home logo waits, unmoved, for the launch icon to land on it. */
       .launching .hero-logo img { visibility: hidden; animation-play-state: paused; }
     </style>
@@ -103,7 +102,6 @@
   <body>
     <div id="launch" aria-hidden="true">
       <img id="launch-icon" src="images/icons/256.png" alt="" />
-      <span id="launch-name">Empire</span>
     </div>
     <noscript>
       <div class="noscript">Oops! Javascript required here! Allow it and try again!</div>
@@ -485,48 +483,47 @@
 
     <script>
       // Home is static markup, so the launch exit starts at first paint instead of waiting for
-      // the game scripts and the server. The icon lands on the home logo and the name on the title.
+      // the game scripts and the server. The icon lands on the home logo as the title fades in.
       globalThis.launchExit?.((overlay) => {
         const icon = document.getElementById('launch-icon');
-        const name = document.getElementById('launch-name');
-        const logo = document.querySelector('.hero-logo img').getBoundingClientRect();
+        const logo = document.querySelector('.hero-logo img');
         // A short landscape window hides the logo; the plain fade covers that.
-        if (!logo.width) return [];
+        if (!logo.getBoundingClientRect().width) return [];
         const easing = 'cubic-bezier(0.5, 0, 0.2, 1)';
         // Chrome fades its own launch screen out over about 300 ms after first paint; the copy
         // waits under it, so the fade shows no second icon.
         const delay = 300;
-        // Moves el's center onto box's center, scaled, over the same 900 ms path.
-        const fly = (el, box, scale) => {
-          const from = el.getBoundingClientRect();
+        // Moves the icon's center and size onto the logo's.
+        const from = icon.getBoundingClientRect();
+        const target = () => {
+          const box = logo.getBoundingClientRect();
           const dx = box.left + box.width / 2 - (from.left + from.width / 2);
           const dy = box.top + box.height / 2 - (from.top + from.height / 2);
-          return el.animate(
-            { transform: ['none', `translate(${dx}px, ${dy}px) scale(${scale})`] },
-            { duration: 900, delay, easing, fill: 'forwards' }
-          );
+          return { transform: ['none', `translate(${dx}px, ${dy}px) scale(${box.width / from.width})`] };
         };
+        const flight = icon.animate(target(), { duration: 900, delay, easing, fill: 'forwards' });
+        // Home's logo settles its size with a short transition after first paint, so the flight
+        // follows it rather than landing on a box that then grows.
+        const logoSize = new ResizeObserver(() => {
+          if (logo.getBoundingClientRect().width) flight.effect.setKeyframes(target());
+        });
+        logoSize.observe(logo);
         const animations = [
           overlay.animate({ backgroundColor: ['#0B0D26', 'rgb(11 13 38 / 0)'] }, { duration: 600, delay, easing: 'ease-in', fill: 'forwards' }),
-          fly(icon, logo, logo.width / icon.getBoundingClientRect().width)
+          flight
         ];
-        const titleEl = document.querySelector('.hero-title');
-        const title = titleEl.getBoundingClientRect();
-        // The name hands over to the real title, which stays hidden until the name arrives.
-        animations.push(name.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 900, delay, fill: 'forwards' }));
-        if (title.width) {
-          // The title may still be in its rise animation; aim for where it settles.
-          const style = getComputedStyle(titleEl);
-          const settled = { left: title.left, top: title.top - new DOMMatrix(style.transform).m42, width: title.width, height: title.height };
-          animations.push(
-            fly(name, settled, parseFloat(style.fontSize) / 24),
-            titleEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: 900, delay, fill: 'backwards' })
-          );
-        }
+        // Chrome lays its launch screen out against the whole screen, status and navigation bars
+        // included, which the page can't measure, so its name fades out in place.
+        animations.push(
+          document.querySelector('.hero-title').animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: 900, delay, fill: 'backwards' })
+        );
         // A saved room can open before the flight lands; it then ends at once.
         const leftHome = new MutationObserver(() => animations.forEach((a) => a.finish()));
         leftHome.observe(document.getElementById('homeScreen'), { attributeFilter: ['hidden'] });
-        const stop = () => leftHome.disconnect();
+        const stop = () => {
+          leftHome.disconnect();
+          logoSize.disconnect();
+        };
         Promise.all(animations.map((a) => a.finished)).then(stop, stop);
         return animations;
       });
