@@ -74,7 +74,9 @@ jobs:
     needs: check
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Firebase waits up to 25 minutes for a functions update; a shorter limit
+    # could stop a deploy after the rules go out but before Hosting does.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
