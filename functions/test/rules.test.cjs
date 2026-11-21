@@ -308,7 +308,7 @@ test('a departed leader\'s follower can be claimed and can lead once their recor
   await assert.rejects(alice.ref('games/orphans-left/claims/cara').set({ leader: 'alice', by: 'alice' }), /permission/i);
   // A claim that clears the record first, as pages now do, goes through.
   const roster = { alice: player('Alice'), cara: player('Cara') };
-  await clearStaleCaptures(alice.ref('games/orphans-left'), { cara: { leader: 'bob', via: 'cara' } }, roster, ['cara', 'alice']);
+  assert.equal(await clearStaleCaptures(alice.ref('games/orphans-left'), { cara: { leader: 'bob', via: 'cara' } }, roster, ['cara', 'alice']), true);
   await alice.ref('games/orphans-left/claims/cara').set({ leader: 'alice', by: 'alice' });
   // Bob leaves; the update clears what he led.
   await bobCaptures.ref('games/orphans').update({
@@ -328,7 +328,7 @@ test('a claim from a page with an old roster keeps a capture confirmed since', a
   const { clearStaleCaptures } = await import('../../public/captures.js');
   // Alice's page still shows Cara under Bob, who has left, and has not heard that Dan captured her.
   const seen = { cara: { leader: 'bob', via: 'cara' } };
-  await clearStaleCaptures(alice.ref('games/stale-claim'), seen, { alice: users.alice, cara: users.cara }, ['cara', 'alice']);
+  assert.equal(await clearStaleCaptures(alice.ref('games/stale-claim'), seen, { alice: users.alice, cara: users.cara }, ['cara', 'alice']), false);
   await assert.rejects(alice.ref('games/stale-claim/claims/cara').set({ leader: 'alice', by: 'alice' }), /permission/i);
   assert.deepEqual((await cara.ref('games/stale-claim/captures').once('value')).val(), { cara: { leader: 'dan', via: 'cara' } });
 });

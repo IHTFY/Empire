@@ -382,21 +382,27 @@ export function createRooms({
   // Put a player in a leader's empire. A captured leader brings their followers along. Only
   // the captured player or someone in their empire may do this, which settles any claim.
   function capturePlayer(key, leader) {
-    return writeCapture([key, leader], { ...capturePlan(captures, key, leader), [`claims/${key}`]: null });
+    return writeCapture([key, leader], () => ({ ...capturePlan(captures, key, leader), [`claims/${key}`]: null }));
   }
 
   // Anyone else says who captured a player; the captured empire confirms or declines it.
   function claimCapture(key, leader) {
-    return writeCapture([key, leader], { [`claims/${key}`]: { leader, by: getUid() } });
+    return writeCapture([key, leader], () => ({ [`claims/${key}`]: { leader, by: getUid() } }));
   }
 
   // Clearing stale records first also covers ones left by pages from before leaders freed them.
-  async function writeCapture(keys, update) {
+  // The update is planned afterwards, from the records this page knows by then. A stale record
+  // that another page has replaced, or that could not be cleared, stops the write.
+  async function writeCapture(keys, plan) {
     const code = gameID;
     const room = db.ref(`games/${code}`);
-    await clearStaleCaptures(room, captures, users, keys);
+    const cleared = await clearStaleCaptures(room, captures, users, keys);
     if (gameID !== code) return;
-    await room.update(update).catch(() => toast('Could not capture that player'));
+    if (!cleared) {
+      toast('Could not capture that player');
+      return;
+    }
+    await room.update(plan()).catch(() => toast('Could not capture that player'));
   }
 
   function dropClaim(key) {

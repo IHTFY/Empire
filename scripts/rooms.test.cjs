@@ -62,6 +62,8 @@ async function roomHarness({ pauseSignIn = false } = {}) {
         return snapshot;
       },
       async update(updates) { await wait('update', path); return base.update(updates); },
+      child: sub => db.ref(`${path}/${sub}`),
+      async transaction(callback) { await wait('transaction', path); return base.transaction(callback); },
       on(_type, callback) {
         if (!subscriptions.has(path)) subscriptions.set(path, new Set());
         subscriptions.get(path).add(callback);
@@ -564,7 +566,9 @@ test('a claim from a page with an old roster keeps a capture confirmed since', a
   data.games.A.captures.fay = { leader: 'kim', via: 'fay' };
   await rooms.claimCapture('fay', 'me');
   assert.deepEqual(data.games.A.captures, { fay: { leader: 'kim', via: 'fay' } });
+  assert.equal(data.games.A.claims, undefined);
   assert.deepEqual(view().room.captures, { fay: { leader: 'lea', via: 'fay' } }, 'the page was still showing the old capture');
+  assert.deepEqual(view().events.filter(([name]) => name === 'toast'), [['toast', 'Could not capture that player']]);
 });
 
 test('a capture from a page with an old roster keeps its leader\'s capture confirmed since', async () => {
@@ -576,7 +580,37 @@ test('a capture from a page with an old roster keeps its leader\'s capture confi
   // Meanwhile Fay confirmed her capture by Kim on another page.
   data.games.A.captures.fay = { leader: 'kim', via: 'fay' };
   await rooms.capturePlayer('me', 'fay');
-  assert.deepEqual(data.games.A.captures.fay, { leader: 'kim', via: 'fay' });
+  assert.deepEqual(data.games.A.captures, { fay: { leader: 'kim', via: 'fay' } });
+});
+
+test('a capture from a page with an old roster keeps the player\'s own capture confirmed since', async () => {
+  const { rooms, view, data } = await roomHarness();
+  Object.assign(data.games.A.users, { fay: player('Fay'), kim: player('Kim') });
+  // This page still shows its player in the empire of Lea, who has left.
+  data.games.A.captures = { me: { leader: 'lea', via: 'me' } };
+  await rooms.enter('A');
+  // Meanwhile the same player confirmed a capture by Kim on another page.
+  data.games.A.captures.me = { leader: 'kim', via: 'me' };
+  await rooms.capturePlayer('me', 'fay');
+  assert.deepEqual(data.games.A.captures, { me: { leader: 'kim', via: 'me' } });
+  assert.deepEqual(view().events.filter(([name]) => name === 'toast'), [['toast', 'Could not capture that player']]);
+});
+
+test('a capture takes along a follower who joined while a stale record was being cleared', async () => {
+  const { rooms, data, deliver, pause } = await roomHarness();
+  Object.assign(data.games.A.users, { fay: player('Fay'), kim: player('Kim') });
+  data.games.A.captures = { fay: { leader: 'lea', via: 'fay' } };
+  await rooms.enter('A');
+  const clearing = pause('transaction', 'games/A/captures/fay');
+  const captured = rooms.capturePlayer('me', 'fay');
+  await clearing.reached;
+  data.games.A.captures.kim = { leader: 'me', via: 'kim' };
+  deliver('A');
+  clearing.release();
+  await captured;
+  assert.deepEqual(data.games.A.captures, {
+    me: { leader: 'fay', via: 'me' }, kim: { leader: 'fay', via: 'me', back: 'kim' }
+  });
 });
 
 test('a claim or capture still clears a record the room has not replaced', async () => {
