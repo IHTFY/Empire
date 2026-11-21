@@ -16,6 +16,68 @@
     <meta name="apple-mobile-web-app-title" content="Empire" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
+    <!-- Installed-app launch: the first paint copies Chrome's launch screen (manifest background,
+         maskable icon at 128px, name near the bottom), then launchExit() animates out of it.
+         It sits before the stylesheets so the script never waits for them. -->
+    <style>
+      #launch { display: none; }
+      .launching #launch { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #0B0D26; }
+      /* The maskable icon's art spans 67% of its 128px box; the art spans 96% of 256.png. */
+      #launch-icon { width: 89.2px; height: 89.2px; }
+      #launch-name { position: absolute; inset: auto 0 56px; font: 24px/1 Roboto, system-ui, sans-serif; text-align: center; color: #fff; }
+      /* The home logo waits, unmoved, for the launch icon to land on it. */
+      .launching .hero-logo img { visibility: hidden; animation-play-state: paused; }
+    </style>
+    <script>
+      // Plays once per fresh launch of the installed app: never in a browser tab, on reload, or on return.
+      (() => {
+        const root = document.documentElement;
+        try {
+          // The manifest asks for standalone; fullscreen would also match a browser tab in F11.
+          if (!matchMedia('(display-mode: standalone)').matches) return;
+          // Every load marks the app's session, so a reload followed by an in-app navigation never replays it.
+          const seen = sessionStorage.getItem('launched');
+          sessionStorage.setItem('launched', '1');
+          if (seen || performance.getEntriesByType('navigation')[0]?.type !== 'navigate') return;
+        } catch {
+          return;
+        }
+        root.classList.add('launching');
+        const end = () => {
+          clearTimeout(fallback);
+          root.classList.remove('launching');
+          document.getElementById('launch')?.remove();
+        };
+        // The game never stays hidden behind the copy if it fails to call launchExit.
+        const fallback = setTimeout(end, 4000);
+        // play(overlay) starts the game's exit and returns its Web Animations.
+        window.launchExit = (play) => {
+          const overlay = document.getElementById('launch');
+          // Too late: the fallback already removed the copy.
+          if (!overlay) return;
+          let animations = [];
+          if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            try {
+              animations = play(overlay);
+            } catch {
+              animations = [];
+            }
+          }
+          try {
+            if (!animations.length) {
+              animations = [overlay.animate({ opacity: [1, 0] }, { duration: 200, easing: 'ease-out', fill: 'forwards' })];
+            }
+            overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), { once: true });
+            Promise.all(animations.map((a) => a.finished)).then(end, end);
+            // The animations end the copy from here on.
+            clearTimeout(fallback);
+          } catch {
+            end();
+          }
+        };
+      })();
+    </script>
+
     <!-- Fonts: bold italic display (echoes the logo), clean body, monospace secret field -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,6 +101,10 @@
   </head>
 
   <body>
+    <div id="launch" aria-hidden="true">
+      <img id="launch-icon" src="images/icons/256.png" alt="" />
+      <span id="launch-name">Empire</span>
+    </div>
     <noscript>
       <div class="noscript">Oops! Javascript required here! Allow it and try again!</div>
     </noscript>
@@ -416,5 +482,51 @@
       <button id="dismissUpdate" type="button" class="update-dismiss" aria-label="Dismiss update"><svg class="icon"><use href="#i-x" /></svg></button>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      // Home is static markup, so the launch exit starts at first paint instead of waiting for
+      // the game scripts and the server. The icon lands on the home logo and the name on the title.
+      globalThis.launchExit?.((overlay) => {
+        const icon = document.getElementById('launch-icon');
+        const name = document.getElementById('launch-name');
+        const logo = document.querySelector('.hero-logo img').getBoundingClientRect();
+        // A short landscape window hides the logo; the plain fade covers that.
+        if (!logo.width) return [];
+        const easing = 'cubic-bezier(0.5, 0, 0.2, 1)';
+        // Moves el's center onto box's center, scaled, over the same 900 ms path.
+        const fly = (el, box, scale) => {
+          const from = el.getBoundingClientRect();
+          const dx = box.left + box.width / 2 - (from.left + from.width / 2);
+          const dy = box.top + box.height / 2 - (from.top + from.height / 2);
+          return el.animate(
+            { transform: ['none', `translate(${dx}px, ${dy}px) scale(${scale})`] },
+            { duration: 900, easing, fill: 'forwards' }
+          );
+        };
+        const animations = [
+          overlay.animate({ backgroundColor: ['#0B0D26', 'rgb(11 13 38 / 0)'] }, { duration: 600, easing: 'ease-in', fill: 'forwards' }),
+          fly(icon, logo, logo.width / icon.getBoundingClientRect().width)
+        ];
+        const titleEl = document.querySelector('.hero-title');
+        const title = titleEl.getBoundingClientRect();
+        // The name hands over to the real title, which stays hidden until the name arrives.
+        animations.push(name.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 900, fill: 'forwards' }));
+        if (title.width) {
+          // The title may still be in its rise animation; aim for where it settles.
+          const style = getComputedStyle(titleEl);
+          const settled = { left: title.left, top: title.top - new DOMMatrix(style.transform).m42, width: title.width, height: title.height };
+          animations.push(
+            fly(name, settled, parseFloat(style.fontSize) / 24),
+            titleEl.animate([{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }], { duration: 900 })
+          );
+        }
+        // A saved room can open before the flight lands; it then ends at once.
+        const leftHome = new MutationObserver(() => animations.forEach((a) => a.finish()));
+        leftHome.observe(document.getElementById('homeScreen'), { attributeFilter: ['hidden'] });
+        const stop = () => leftHome.disconnect();
+        Promise.all(animations.map((a) => a.finished)).then(stop, stop);
+        return animations;
+      });
+    </script>
   </body>
 </html>
