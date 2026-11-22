@@ -42,8 +42,31 @@
           return;
         }
         root.classList.add('launching');
+        let animations = [];
+        // While the copy shows, a tap or key only skips it: nothing behind it reacts.
+        const swallow = (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          // A touch's click comes after the copy is gone, aimed at whatever is under the finger. A mouse
+          // press on the copy never makes one, so eating it there would eat the next real click.
+          if (event.type === 'pointerdown' && event.pointerType !== 'mouse' && event.isPrimary && event.button === 0) {
+            const spare = () => removeEventListener('click', eat, true);
+            addEventListener('click', eat, { capture: true, once: true });
+            addEventListener('pointercancel', spare, { once: true });
+            // A touch that never makes a click leaves the guard armed: the next press drops it.
+            addEventListener('pointerdown', spare, { capture: true, once: true });
+            setTimeout(spare, 1000);
+          }
+          animations.forEach((a) => a.finish());
+        };
+        const eat = (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        };
         const end = () => {
           clearTimeout(fallback);
+          removeEventListener('pointerdown', swallow, true);
+          removeEventListener('keydown', swallow, true);
           root.classList.remove('launching');
           document.getElementById('launch')?.remove();
         };
@@ -54,7 +77,6 @@
           const overlay = document.getElementById('launch');
           // Too late: the fallback already removed the copy.
           if (!overlay) return;
-          let animations = [];
           if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
             try {
               animations = play(overlay);
@@ -66,7 +88,8 @@
             if (!animations.length) {
               animations = [overlay.animate({ opacity: [1, 0] }, { duration: 200, easing: 'ease-out', fill: 'forwards' })];
             }
-            overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), { once: true });
+            addEventListener('pointerdown', swallow, true);
+            addEventListener('keydown', swallow, true);
             Promise.all(animations.map((a) => a.finished)).then(end, end);
             // The animations end the copy from here on.
             clearTimeout(fallback);
