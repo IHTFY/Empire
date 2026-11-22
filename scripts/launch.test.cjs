@@ -122,6 +122,30 @@ test('a tap or key during the installed launch only skips it', async t => {
     await page.close();
   });
 
+  await t.test('a key while the page is still loading reaches nothing, and the copy goes without its exit', async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
+    await page.addInitScript(installed);
+    // Holds Home's launchExit call back, as if the rest of the page were still on its way.
+    await page.addInitScript(() => {
+      let exit;
+      Object.defineProperty(window, 'launchExit', {
+        get: () => play => { window.release = () => exit(overlay => { window.played = true; return play(overlay); }); },
+        set: fn => { exit = fn; }
+      });
+    });
+    await page.goto(url);
+    await page.waitForFunction(() => window.release);
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('launching')), true);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+    await page.evaluate(() => window.release());
+    assert.equal(await page.evaluate(() => !document.getElementById('launch') && !document.documentElement.classList.contains('launching')), true);
+    assert.equal(await page.evaluate(() => window.played), undefined);
+    await page.close();
+  });
+
   await t.test('a key reaches nothing behind the copy', async () => {
     const page = await launch();
     await page.keyboard.press('Tab');
