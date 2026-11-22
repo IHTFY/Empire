@@ -43,15 +43,23 @@
         }
         root.classList.add('launching');
         let animations = [];
-        // While the copy shows, a tap or key only skips it: nothing behind it reacts.
+        // While the copy shows, a tap, key, or click only skips it: nothing behind it reacts.
         const swallow = (event) => {
           event.preventDefault();
           event.stopImmediatePropagation();
           // A touch's click comes after the copy is gone, aimed at whatever is under the finger. A mouse
           // press on the copy never makes one, so eating it there would eat the next real click.
           if (event.type === 'pointerdown' && event.pointerType !== 'mouse' && event.isPrimary && event.button === 0) {
+            const { pointerId } = event;
+            // Only this touch's own click: a keyboard's click in the meantime still works.
+            const eat = (click) => {
+              if (click.pointerId !== pointerId) return;
+              click.preventDefault();
+              click.stopImmediatePropagation();
+              spare();
+            };
             const spare = () => removeEventListener('click', eat, true);
-            addEventListener('click', eat, { capture: true, once: true });
+            addEventListener('click', eat, true);
             addEventListener('pointercancel', spare, { once: true });
             // A touch that never makes a click leaves the guard armed: the next press drops it.
             addEventListener('pointerdown', spare, { capture: true, once: true });
@@ -59,14 +67,11 @@
           }
           animations.forEach((a) => a.finish());
         };
-        const eat = (event) => {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-        };
         const end = () => {
           clearTimeout(fallback);
           removeEventListener('pointerdown', swallow, true);
           removeEventListener('keydown', swallow, true);
+          removeEventListener('click', swallow, true);
           root.classList.remove('launching');
           document.getElementById('launch')?.remove();
         };
@@ -90,6 +95,8 @@
             }
             addEventListener('pointerdown', swallow, true);
             addEventListener('keydown', swallow, true);
+            // A screen reader activates a control with a click alone.
+            addEventListener('click', swallow, true);
             Promise.all(animations.map((a) => a.finished)).then(end, end);
             // The animations end the copy from here on.
             clearTimeout(fallback);

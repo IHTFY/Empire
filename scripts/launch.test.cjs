@@ -80,9 +80,13 @@ test('a tap or key during the installed launch only skips it', async t => {
     // A press with no click after it, as when the browser drops a touch's click.
     await page.evaluate(() => dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch', isPrimary: true, button: 0 })));
     await ended(page);
+    // A keyboard's click is not the touch's, so the guard lets it through.
+    await page.focus('#homeScreen .sound-btn');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => window.clicks), 1);
     // The guard's own timeout runs tenfold here, so only the next press can drop it.
     await page.touchscreen.tap(x, y);
-    await page.waitForFunction(() => window.clicks === 1, null, { timeout: 2000 });
+    await page.waitForFunction(() => window.clicks === 2, null, { timeout: 2000 });
     await page.close();
   });
 
@@ -96,6 +100,14 @@ test('a tap or key during the installed launch only skips it', async t => {
     // Well inside the second a touch's click would be waited for.
     await page.mouse.click(x, y);
     await page.waitForFunction(() => window.clicks === 1, null, { timeout: 2000 });
+    await page.close();
+  });
+
+  await t.test('a click alone, as from a screen reader, reaches nothing behind the copy', async () => {
+    const page = await launch();
+    await page.evaluate(() => document.querySelector('#homeScreen .sound-btn').click());
+    await ended(page);
+    assert.equal(await page.evaluate(() => window.clicks), 0);
     await page.close();
   });
 
