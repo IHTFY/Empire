@@ -35,7 +35,9 @@ const PLAYER_START_CODES = new Set(['failed-precondition', 'permission-denied', 
 export function startFailureMessage(err) {
   const code = String(err?.code ?? '').replace(/^functions\//, '');
   const text = String(err?.message ?? '').replace(/ \[\d{3}\]$/, '');
-  return PLAYER_START_CODES.has(code) && text && text !== code ? text : "Couldn't start the round. Try again.";
+  // A message that only restates the code ("Unauthenticated" from a rejected token) is the SDK's, not ours.
+  const restatesCode = text.toLowerCase().replace(/[^a-z]/g, '') === code.replace(/-/g, '');
+  return PLAYER_START_CODES.has(code) && text && !restatesCode ? text : "Couldn't start the round. Try again.";
 }
 
 // Owns synchronized playback, its cancellation token, and the bot announcement queue.

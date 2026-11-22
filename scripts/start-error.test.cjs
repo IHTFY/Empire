@@ -45,7 +45,8 @@ test('a missing start function shows a fixed sentence, not the SDK text, and log
 
 test('internal and network failures get the fixed sentence', async () => {
   for (const [code, message] of [['functions/internal', 'internal [500]'], ['functions/unavailable', 'unavailable [503]'],
-    ['functions/permission-denied', 'permission-denied [403]'], ['functions/invalid-argument', 'Invalid game code. [400]']]) {
+    ['functions/permission-denied', 'permission-denied [403]'], ['functions/unauthenticated', 'Unauthenticated [401]'],
+    ['functions/invalid-argument', 'Invalid game code. [400]']]) {
     const { toasts } = await startFailing(Object.assign(new Error(message), { code }));
     assert.deepEqual(toasts, [FALLBACK], message);
   }
