@@ -42,11 +42,45 @@
           return;
         }
         root.classList.add('launching');
+        let animations = [];
+        let skipped = false;
+        // While the copy shows, a tap, key, or click only skips it: nothing behind it reacts.
+        const swallow = (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          // A touch's click comes after the copy is gone, aimed at whatever is under the finger. A mouse
+          // press on the copy never makes one, so eating it there would eat the next real click.
+          if (event.type === 'pointerdown' && event.pointerType !== 'mouse' && event.isPrimary && event.button === 0) {
+            const { pointerId } = event;
+            // Only this touch's own click: a keyboard's click in the meantime still works.
+            const eat = (click) => {
+              if (click.pointerId !== pointerId) return;
+              click.preventDefault();
+              click.stopImmediatePropagation();
+              spare();
+            };
+            const spare = () => removeEventListener('click', eat, true);
+            addEventListener('click', eat, true);
+            addEventListener('pointercancel', spare, { once: true });
+            // A touch that never makes a click leaves the guard armed: the next press drops it.
+            addEventListener('pointerdown', spare, { capture: true, once: true });
+            setTimeout(spare, 1000);
+          }
+          skipped = true;
+          animations.forEach((a) => a.finish());
+        };
         const end = () => {
           clearTimeout(fallback);
+          removeEventListener('pointerdown', swallow, true);
+          removeEventListener('keydown', swallow, true);
+          removeEventListener('click', swallow, true);
           root.classList.remove('launching');
           document.getElementById('launch')?.remove();
         };
+        addEventListener('pointerdown', swallow, true);
+        addEventListener('keydown', swallow, true);
+        // A screen reader activates a control with a click alone.
+        addEventListener('click', swallow, true);
         // The game never stays hidden behind the copy if it fails to call launchExit.
         const fallback = setTimeout(end, 4000);
         // play(overlay) starts the game's exit and returns its Web Animations.
@@ -54,7 +88,8 @@
           const overlay = document.getElementById('launch');
           // Too late: the fallback already removed the copy.
           if (!overlay) return;
-          let animations = [];
+          // A tap or key while the page was loading: show it at once.
+          if (skipped) return end();
           if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
             try {
               animations = play(overlay);
@@ -66,7 +101,9 @@
             if (!animations.length) {
               animations = [overlay.animate({ opacity: [1, 0] }, { duration: 200, easing: 'ease-out', fill: 'forwards' })];
             }
-            overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), { once: true });
+            // A canceled touch makes no click in any browser, even once the copy is gone. Its touch events
+            // still go to the copy, so the window never sees them.
+            overlay.addEventListener('touchstart', (event) => event.preventDefault(), { passive: false });
             Promise.all(animations.map((a) => a.finished)).then(end, end);
             // The animations end the copy from here on.
             clearTimeout(fallback);
