@@ -97,6 +97,9 @@
             addEventListener('keydown', swallow, true);
             // A screen reader activates a control with a click alone.
             addEventListener('click', swallow, true);
+            // A canceled touch makes no click in any browser, even once the copy is gone. Its touch events
+            // still go to the copy, so the window never sees them.
+            overlay.addEventListener('touchstart', (event) => event.preventDefault(), { passive: false });
             Promise.all(animations.map((a) => a.finished)).then(end, end);
             // The animations end the copy from here on.
             clearTimeout(fallback);

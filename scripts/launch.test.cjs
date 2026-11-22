@@ -73,6 +73,17 @@ test('a tap or key during the installed launch only skips it', async t => {
     await page.close();
   });
 
+  await t.test('a touch that starts on the copy is canceled, so it makes no click at all', async () => {
+    const page = await launch({ hasTouch: true, isMobile: true });
+    const box = await page.locator('#homeScreen .sound-btn').boundingBox();
+    // Runs after the copy's own listener, so it sees whether that canceled the touch.
+    await page.evaluate(() => document.getElementById('launch').addEventListener('touchstart', event => { window.canceled = event.defaultPrevented; }));
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await ended(page);
+    assert.equal(await page.evaluate(() => window.canceled), true);
+    await page.close();
+  });
+
   await t.test('a touch that makes no click leaves the next touch working', async () => {
     const page = await launch({ hasTouch: true, isMobile: true });
     const box = await page.locator('#homeScreen .sound-btn').boundingBox();
