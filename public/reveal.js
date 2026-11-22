@@ -29,6 +29,17 @@ export function fitRevealText(screen) {
   }
 }
 
+// The start callable's own failures (not in the room, too few players) are written for players;
+// the SDK appends " [status]" to them. Anything else gets a fixed sentence and is logged.
+const PLAYER_START_CODES = new Set(['failed-precondition', 'permission-denied', 'unauthenticated']);
+export function startFailureMessage(err) {
+  const code = String(err?.code ?? '').replace(/^functions\//, '');
+  const text = String(err?.message ?? '').replace(/ \[\d{3}\]$/, '');
+  // A message that only restates the code ("Unauthenticated" from a rejected token) is the SDK's, not ours.
+  const restatesCode = text.toLowerCase().replace(/[^a-z]/g, '') === code.replace(/-/g, '');
+  return PLAYER_START_CODES.has(code) && text && !restatesCode ? text : "Couldn't start the round. Try again.";
+}
+
 // Owns synchronized playback, its cancellation token, and the bot announcement queue.
 export function createReveal({ db, flashNames, getRoom, getUid, audio, ui, refreshLobby }) {
   const startButton = $('revealSecrets');
@@ -48,7 +59,8 @@ export function createReveal({ db, flashNames, getRoom, getUid, audio, ui, refre
     try {
       await flashNames({ text: getRoom().id });
     } catch (err) {
-      toast(err.message);
+      console.error(err);
+      toast(startFailureMessage(err));
     } finally {
       spinner.hidden = true;
       refreshLobby();
