@@ -73,6 +73,42 @@ test('a tap or key during the installed launch only skips it', async t => {
     await page.close();
   });
 
+  await t.test('a touch held for over a second while the page loads is still covered when it lifts', async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
+    await page.addInitScript(installed);
+    // Holds Home's launchExit call back, as if the rest of the page were still on its way.
+    await page.addInitScript(() => {
+      let exit;
+      Object.defineProperty(window, 'launchExit', {
+        get: () => play => { window.release = () => exit(play); },
+        set: fn => { exit = fn; }
+      });
+    });
+    await page.goto(url);
+    await page.waitForFunction(() => window.release);
+    await page.evaluate(() => {
+      window.clicks = 0;
+      document.querySelector('#homeScreen .sound-btn').addEventListener('click', () => window.clicks++);
+    });
+    const box = await page.locator('#homeScreen .sound-btn').boundingBox();
+    const touchPoints = [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }];
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints });
+    // The page finishes loading while the finger is still down, so the copy goes at once.
+    await page.evaluate(() => window.release());
+    await ended(page);
+    await page.waitForTimeout(1500);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => window.clicks), 0);
+    // The guard drops a second after the release, so the same touch then works.
+    await page.waitForTimeout(1200);
+    await page.touchscreen.tap(touchPoints[0].x, touchPoints[0].y);
+    await page.waitForFunction(() => window.clicks === 1, null, { timeout: 2000 });
+    await page.close();
+  });
+
   await t.test('a touch that starts on the copy is canceled, so it makes no click at all', async () => {
     const page = await launch({ hasTouch: true, isMobile: true });
     const box = await page.locator('#homeScreen .sound-btn').boundingBox();
