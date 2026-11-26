@@ -59,12 +59,21 @@
               click.stopImmediatePropagation();
               spare();
             };
-            const spare = () => removeEventListener('click', eat, true);
+            let timer;
+            const spare = () => {
+              clearTimeout(timer);
+              removeEventListener('click', eat, true);
+              removeEventListener('pointerup', lifted, true);
+            };
+            // A long hold stays covered: the wait for a click starts at this touch's release.
+            const lifted = up => {
+              if (up.pointerId === pointerId) timer = setTimeout(spare, 1000);
+            };
             addEventListener('click', eat, true);
+            addEventListener('pointerup', lifted, true);
             addEventListener('pointercancel', spare, { once: true });
             // A touch that never makes a click leaves the guard armed: the next press drops it.
             addEventListener('pointerdown', spare, { capture: true, once: true });
-            setTimeout(spare, 1000);
           }
           skipped = true;
           animations.forEach((a) => a.finish());
