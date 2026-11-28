@@ -67,6 +67,8 @@
               clearTimeout(timer);
               removeEventListener('click', eat, true);
               removeEventListener('pointerup', lifted, true);
+              removeEventListener('pointercancel', canceled, true);
+              removeEventListener('pointerdown', next, true);
             };
             // A long hold stays covered: the wait for a click starts at this touch's release.
             const lifted = up => {
@@ -74,11 +76,14 @@
               released = true;
               timer = setTimeout(spare, 1000);
             };
+            const canceled = up => up.pointerId === pointerId && spare();
+            // A touch that never makes a click leaves the guard armed: the next press after its release
+            // drops it. A mouse or second finger pressing while this one is still down leaves it armed.
+            const next = () => released && spare();
             addEventListener('click', eat, true);
             addEventListener('pointerup', lifted, true);
-            addEventListener('pointercancel', spare, { once: true });
-            // A touch that never makes a click leaves the guard armed: the next press drops it.
-            addEventListener('pointerdown', spare, { capture: true, once: true });
+            addEventListener('pointercancel', canceled, true);
+            addEventListener('pointerdown', next, true);
           }
           skipped = true;
           animations.forEach((a) => a.finish());

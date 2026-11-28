@@ -182,11 +182,27 @@ test('a tap or key during the installed launch only skips it', async t => {
     await page.evaluate(() => {
       const button = document.querySelector('#homeScreen .sound-btn');
       button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 }));
-      // A keyboard's click has detail 0 and goes through; the pen's click has detail 1.
+      // A keyboard's click has detail 0 and goes through.
       button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 0 }));
-      button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 1 }));
     });
     assert.equal(await page.evaluate(() => window.clicks), 1);
+    // The pen's click has detail 1.
+    await page.evaluate(() => document.querySelector('#homeScreen .sound-btn').dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 1 })));
+    assert.equal(await page.evaluate(() => window.clicks), 1);
+    await page.close();
+  });
+
+  await t.test('a mouse press while a pen is still down leaves the pen\'s click eaten', async () => {
+    const page = await launch();
+    await page.evaluate(() => document.getElementById('launch').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 })));
+    await ended(page);
+    await page.evaluate(() => {
+      const button = document.querySelector('#homeScreen .sound-btn');
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 1 }));
+    });
+    assert.equal(await page.evaluate(() => window.clicks), 0);
     await page.close();
   });
 
