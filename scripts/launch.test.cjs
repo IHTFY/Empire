@@ -1,4 +1,4 @@
-/* global document, window, Element, dispatchEvent, PointerEvent */
+/* global document, window, Element, addEventListener, dispatchEvent, PointerEvent, MouseEvent */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -117,6 +117,76 @@ test('a tap or key during the installed launch only skips it', async t => {
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await ended(page);
     assert.equal(await page.evaluate(() => window.canceled), true);
+    await page.close();
+  });
+
+  await t.test('a touch that starts while the page loads is canceled too', async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
+    await page.addInitScript(installed);
+    // Holds Home's launchExit call back, as if the rest of the page were still on its way.
+    await page.addInitScript(() => {
+      let exit;
+      Object.defineProperty(window, 'launchExit', {
+        get: () => play => { window.release = () => exit(play); },
+        set: fn => { exit = fn; }
+      });
+    });
+    await page.goto(url);
+    await page.waitForFunction(() => window.release);
+    const box = await page.locator('#homeScreen .sound-btn').boundingBox();
+    // Runs after the guard's own listener, so it sees whether that canceled the touch.
+    await page.evaluate(() => addEventListener('touchstart', event => { window.canceled = event.defaultPrevented; }));
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    assert.equal(await page.evaluate(() => window.canceled), true);
+    await page.close();
+  });
+
+  await t.test('a click with no pointerId after a touch that started while the page loads is eaten', async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
+    await page.addInitScript(installed);
+    await page.addInitScript(() => {
+      let exit;
+      Object.defineProperty(window, 'launchExit', {
+        get: () => play => { window.release = () => exit(play); },
+        set: fn => { exit = fn; }
+      });
+    });
+    await page.goto(url);
+    await page.waitForFunction(() => window.release);
+    await page.evaluate(() => {
+      window.clicks = 0;
+      document.querySelector('#homeScreen .sound-btn').addEventListener('click', () => window.clicks++);
+      document.getElementById('launch').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 2, isPrimary: true, button: 0 }));
+      window.release();
+    });
+    await ended(page);
+    // Older Safari sends a touch's click as a plain MouseEvent, so it has no pointerId.
+    await page.evaluate(() => {
+      const button = document.querySelector('#homeScreen .sound-btn');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 2, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    });
+    assert.equal(await page.evaluate(() => window.clicks), 0);
+    // The eaten click ended the guard, so the next one works.
+    await page.evaluate(() => document.querySelector('#homeScreen .sound-btn').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })));
+    assert.equal(await page.evaluate(() => window.clicks), 1);
+    await page.close();
+  });
+
+  await t.test('a click with pointerId -1 after a pen tap during the exit is eaten, and a keyboard click is not', async () => {
+    const page = await launch();
+    await page.evaluate(() => document.getElementById('launch').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 })));
+    await ended(page);
+    await page.evaluate(() => {
+      const button = document.querySelector('#homeScreen .sound-btn');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 }));
+      // A keyboard's click has detail 0 and goes through; the pen's click has detail 1.
+      button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 0 }));
+      button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 1 }));
+    });
+    assert.equal(await page.evaluate(() => window.clicks), 1);
     await page.close();
   });
 
