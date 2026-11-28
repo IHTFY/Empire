@@ -53,11 +53,12 @@
           if (event.type === 'pointerdown' && event.pointerType !== 'mouse' && event.isPrimary && event.button === 0) {
             const { pointerId } = event;
             let released = false;
+            let last;
             // Only this touch's own click: a keyboard's click (detail 0) in the meantime still works.
             // Older Safari and some pens send a click with no pointerId or -1: then it counts as this
-            // press's once the press has lifted.
+            // press's when this press was the last to lift.
             const eat = (click) => {
-              if (click.pointerId >= 0 ? click.pointerId !== pointerId : !released || !click.detail) return;
+              if (click.pointerId >= 0 ? click.pointerId !== pointerId : last !== pointerId || !click.detail) return;
               click.preventDefault();
               click.stopImmediatePropagation();
               spare();
@@ -72,14 +73,16 @@
             };
             // A long hold stays covered: the wait for a click starts at this touch's release.
             const lifted = up => {
-              if (up.pointerId !== pointerId) return;
+              last = up.pointerId;
+              if (up.pointerId !== pointerId || released) return;
               released = true;
               timer = setTimeout(spare, 1000);
             };
             const canceled = up => up.pointerId === pointerId && spare();
             // A touch that never makes a click leaves the guard armed: the next press after its release
-            // drops it. A mouse or second finger pressing while this one is still down leaves it armed.
-            const next = () => released && spare();
+            // drops it, as does a new press with its id if its release never arrived. A mouse or second
+            // finger pressing while this one is still down leaves it armed.
+            const next = down => (released || down.pointerId === pointerId) && spare();
             addEventListener('click', eat, true);
             addEventListener('pointerup', lifted, true);
             addEventListener('pointercancel', canceled, true);

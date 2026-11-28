@@ -206,6 +206,37 @@ test('a tap or key during the installed launch only skips it', async t => {
     await page.close();
   });
 
+  await t.test('a mouse lifting after the pen keeps its own click with no pointerId, and the pen\'s stays eaten', async () => {
+    const page = await launch();
+    await page.evaluate(() => document.getElementById('launch').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 })));
+    await ended(page);
+    await page.evaluate(() => {
+      const button = document.querySelector('#homeScreen .sound-btn');
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    });
+    assert.equal(await page.evaluate(() => window.clicks), 1);
+    await page.evaluate(() => document.querySelector('#homeScreen .sound-btn').dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: 5, detail: 1 })));
+    assert.equal(await page.evaluate(() => window.clicks), 1);
+    await page.close();
+  });
+
+  await t.test('a new press with the same id drops a guard whose release never arrived', async () => {
+    const page = await launch({ hasTouch: true, isMobile: true });
+    await page.evaluate(() => document.getElementById('launch').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, isPrimary: true, button: 0 })));
+    await ended(page);
+    await page.evaluate(() => {
+      const button = document.querySelector('#homeScreen .sound-btn');
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: 7, detail: 1 }));
+    });
+    assert.equal(await page.evaluate(() => window.clicks), 1);
+    await page.close();
+  });
+
   await t.test('a touch that makes no click leaves the next touch working', async () => {
     const page = await launch({ hasTouch: true, isMobile: true });
     const box = await page.locator('#homeScreen .sound-btn').boundingBox();
