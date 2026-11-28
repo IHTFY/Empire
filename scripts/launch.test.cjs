@@ -1,4 +1,4 @@
-/* global document, window, Element, addEventListener, dispatchEvent, PointerEvent, MouseEvent */
+/* global document, window, Element, addEventListener, dispatchEvent, PointerEvent, MouseEvent, Touch, TouchEvent */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -220,6 +220,43 @@ test('a tap or key during the installed launch only skips it', async t => {
     assert.equal(await page.evaluate(() => window.clicks), 1);
     await page.evaluate(() => document.querySelector('#homeScreen .sound-btn').dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: 5, detail: 1 })));
     assert.equal(await page.evaluate(() => window.clicks), 1);
+    await page.close();
+  });
+
+  await t.test('a right-button release while a pen is down leaves the pen\'s click with pointerId -1 eaten', async () => {
+    const page = await launch();
+    await page.evaluate(() => document.getElementById('launch').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 })));
+    await ended(page);
+    await page.evaluate(() => {
+      const button = document.querySelector('#homeScreen .sound-btn');
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'pen', pointerId: 5, isPrimary: true, button: 0 }));
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 2 }));
+      button.dispatchEvent(new PointerEvent('click', { bubbles: true, cancelable: true, pointerId: -1, detail: 1 }));
+    });
+    assert.equal(await page.evaluate(() => window.clicks), 0);
+    await page.close();
+  });
+
+  await t.test('a touchstart alone while the page loads skips the exit', async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
+    await page.addInitScript(installed);
+    await page.addInitScript(() => {
+      let exit;
+      Object.defineProperty(window, 'launchExit', {
+        get: () => play => { window.release = () => exit(overlay => { window.played = true; return play(overlay); }); },
+        set: fn => { exit = fn; }
+      });
+    });
+    await page.goto(url);
+    await page.waitForFunction(() => window.release);
+    await page.evaluate(() => {
+      const touch = new Touch({ identifier: 1, target: document.getElementById('launch'), clientX: 10, clientY: 10 });
+      document.getElementById('launch').dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+      window.release();
+    });
+    await ended(page);
+    assert.equal(await page.evaluate(() => window.played), undefined);
     await page.close();
   });
 

@@ -72,8 +72,9 @@
               removeEventListener('pointerdown', next, true);
             };
             // A long hold stays covered: the wait for a click starts at this touch's release.
+            // Only a primary-button release makes a click, so a right-button release leaves this one last.
             const lifted = up => {
-              last = up.pointerId;
+              if (up.button === 0) last = up.pointerId;
               if (up.pointerId !== pointerId || released) return;
               released = true;
               timer = setTimeout(spare, 1000);
@@ -102,8 +103,13 @@
         };
         // A canceled touch makes no click in any browser, even once the copy is gone, so this also covers
         // older Safari, whose touch clicks have no pointerId. The window sees touches that start while the
-        // copy is up and the page loads; launchExit adds the copy's own listener for the exit.
-        const cancelTouch = (event) => event.preventDefault();
+        // copy is up and the page loads; launchExit adds the copy's own listener for the exit. A browser
+        // with touches but no pointerdown still skips the copy here.
+        const cancelTouch = (event) => {
+          event.preventDefault();
+          skipped = true;
+          animations.forEach((a) => a.finish());
+        };
         addEventListener('touchstart', cancelTouch, { capture: true, passive: false });
         addEventListener('pointerdown', swallow, true);
         addEventListener('keydown', swallow, true);
